@@ -69,9 +69,9 @@
 <body>
 
 <div class="tab-menu">
-    <button id="tabBtnInput" class="active" onclick="switchTab('input')">実績入力</button>
-    <button id="tabBtnBoard" onclick="switchTab('board')">がんばるシート</button>
-    <button id="tabBtnSettings" onclick="switchTab('settings')">🔒 各種設定</button>
+    <button id="tabBtnInput" class="active" onclick="window.switchTab('input')">実績入力</button>
+    <button id="tabBtnBoard" onclick="window.switchTab('board')">がんばるシート</button>
+    <button id="tabBtnSettings" onclick="window.switchTab('settings')">🔒 各種設定</button>
 </div>
 
 <div class="container">
@@ -87,7 +87,7 @@
     <div id="boardView" class="tab-content">
         <div class="header-flex">
             <h2 id="boardTitle">〇/〇のがんばるシート</h2>
-            <button class="export-btn" onclick="exportToExcel()">📊 Excel出力</button>
+            <button class="export-btn" onclick="window.exportToExcel()">📊 Excel出力</button>
         </div>
         <div class="board-table-wrapper"><table id="resultTable"></table></div>
     </div>
@@ -97,18 +97,18 @@
         <div class="settings-grid">
             <div class="settings-card full-width-card">
                 <h3>データ管理</h3>
-                <button class="clear-btn" onclick="clearTodayData()">🗑️ 本日の実績データを全クリア</button>
+                <button class="clear-btn" onclick="window.clearTodayData()">🗑️ 本日の実績データを全クリア</button>
             </div>
             <div class="settings-card">
                 <h3>スタッフ管理</h3>
                 <div class="add-form">
                     <input type="text" id="newStaffInput" placeholder="例: 榎本">
-                    <button onclick="addListItem('staff')">追加</button>
+                    <button onclick="window.addListItem('staff')">追加</button>
                 </div>
                 <ul id="staffListUI" class="list-ui"></ul>
             </div>
             <div class="settings-card">
-                <h3>商材管理 <button class="reset-btn" onclick="resetItems()">25項目リセット</button></h3>
+                <h3>商材管理 <button class="reset-btn" onclick="window.resetItems()">25項目リセット</button></h3>
                 <div class="add-form">
                     <input type="text" id="newItemInput" placeholder="新商材">
                     <select id="newItemColor" onchange="this.style.backgroundColor=this.value" style="background-color: #bae6fd;">
@@ -123,7 +123,7 @@
                         <option value="#f1f5f9" style="background:#f1f5f9;">グレー</option>
                     </select>
                     <input type="number" id="newItemTarget" placeholder="目標">
-                    <button onclick="addListItem('item')">追加</button>
+                    <button onclick="window.addListItem('item')">追加</button>
                 </div>
                 <ul id="itemListUI" class="list-ui"></ul>
             </div>
@@ -143,7 +143,7 @@
         appId: "1:75251515079:web:19acf818476d90588808e2"
     };
 
-    // Firebaseの初期化（Compat版の書き方）
+    // Firebaseの初期化
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
     
@@ -178,31 +178,67 @@
     document.getElementById('boardTitle').textContent = `${dateStr}のがんばるシート`;
     document.getElementById('inputDateTitle').textContent = `実績入力 (${dateStr})`;
 
-    // ★真っ白防止のためのローカル初期描画
+    // ★タブ切り替え関数（確実に動くように明記）
+    window.switchTab = function(tabId) {
+        if(tabId === 'settings') {
+            const pass = prompt("パスワード:");
+            if(pass !== ADMIN_PASSWORD) {
+                if(pass !== null) alert("パスワードが違います。");
+                return;
+            }
+        }
+        document.getElementById('inputView').classList.remove('active');
+        document.getElementById('boardView').classList.remove('active');
+        document.getElementById('settingsView').classList.remove('active');
+        
+        document.getElementById('tabBtnInput').classList.remove('active');
+        document.getElementById('tabBtnBoard').classList.remove('active');
+        document.getElementById('tabBtnSettings').classList.remove('active');
+        
+        document.getElementById(tabId + 'View').classList.add('active');
+        document.getElementById('tabBtn' + tabId.charAt(0).toUpperCase() + tabId.slice(1)).classList.add('active');
+    };
+
+    // ★トースト表示関数
+    window.showToast = function(msg) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.style.display = 'block';
+        setTimeout(function() { t.style.display = 'none'; }, 2000);
+    };
+
+    // 初期描画（真っ白防止）
     staffList = JSON.parse(localStorage.getItem('fb_staff')) || [{id:'s1', name:'榎本', order:0}];
-    items = JSON.parse(localStorage.getItem('fb_items')) || defaultItemsObj.map((it, i) => ({id: 'item_'+i, ...it, order: i}));
+    items = JSON.parse(localStorage.getItem('fb_items')) || defaultItemsObj.map(function(it, i) { return {id: 'item_'+i, name: it.name, color: it.color, target: it.target, order: i}; });
     renderStaffSelect();
     buildInputUI();
     renderSettingsUI();
     window.updateView();
 
-    // 📡 リアルタイム同期
+    // 📡 Firebaseリアルタイム同期
     db.collection("sales_records").where("date", "==", searchDateStr)
-      .onSnapshot((snap) => {
-          testData = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => (a.timestamp?.toMillis() || 0) - (b.timestamp?.toMillis() || 0));
+      .onSnapshot(function(snap) {
+          testData = snap.docs.map(function(d) {
+              const data = d.data();
+              return { id: d.id, staff: data.staff, item: data.item, itemId: data.itemId, timestamp: data.timestamp };
+          }).sort(function(a,b) {
+              const timeA = a.timestamp ? a.timestamp.toMillis() : 0;
+              const timeB = b.timestamp ? b.timestamp.toMillis() : 0;
+              return timeA - timeB;
+          });
           window.updateView();
-      }, (error) => {
+      }, function(error) {
           console.error("Sales Fetch Error:", error);
       });
 
     db.collection("settings").orderBy("order", "asc")
-      .onSnapshot((snap) => {
+      .onSnapshot(function(snap) {
           let newStaff = [];
           let newItems = [];
-          snap.docs.forEach(d => {
+          snap.docs.forEach(function(d) {
               const data = d.data();
-              if(data.type === 'staff') newStaff.push({ id: d.id, ...data });
-              else if(data.type === 'item') newItems.push({ id: d.id, color: '#f1f5f9', target: 0, ...data });
+              if(data.type === 'staff') newStaff.push({ id: d.id, name: data.name, order: data.order });
+              else if(data.type === 'item') newItems.push({ id: d.id, name: data.name, color: data.color || '#f1f5f9', target: data.target || 0, order: data.order });
           });
           
           if (snap.docs.length > 0) {
@@ -210,25 +246,23 @@
               items = newItems;
               localStorage.setItem('fb_staff', JSON.stringify(staffList));
               localStorage.setItem('fb_items', JSON.stringify(items));
+              renderStaffSelect();
+              buildInputUI();
+              renderSettingsUI();
+              window.updateView();
           } else if(!window.isResetting) {
               window.isResetting = true;
-              resetToDefaultItems().then(() => window.isResetting = false);
-              return;
+              resetToDefaultItems().then(function() { window.isResetting = false; });
           }
-
-          renderStaffSelect();
-          buildInputUI();
-          renderSettingsUI();
-          window.updateView();
-      }, (error) => {
+      }, function(error) {
           console.error("Settings Fetch Error:", error);
       });
 
-    // 💾 データ操作関数（★変更点③：すべて安全な「id」で通信処理を行うように統一）
-    async function addRecord(itemId) {
+    // 💾 データ操作関数
+    window.addRec = async function(itemId) {
         const staff = document.getElementById('staffSelect').value;
-        const itemObj = items.find(i => i.id === itemId);
-        if(!staff) return alert("スタッフを選択してください");
+        const itemObj = items.find(function(i) { return i.id === itemId; });
+        if(!staff) { alert("スタッフを選択してください"); return; }
         if(!itemObj) return;
 
         try {
@@ -240,125 +274,77 @@
                 date: searchDateStr, 
                 timestamp: firebase.firestore.FieldValue.serverTimestamp() 
             });
-            showToast(`${staff}: ${itemObj.name} +1`);
+            window.showToast(staff + ": " + itemObj.name + " +1");
         } catch (e) { 
             console.error(e); 
-            alert("エラーが発生しました。");
         }
-    }
+    };
 
-    async function removeRecord(itemId) {
+    window.remRec = async function(itemId) {
         const staff = document.getElementById('staffSelect').value;
-        const itemObj = items.find(i => i.id === itemId);
+        const itemObj = items.find(function(i) { return i.id === itemId; });
         if(!itemObj) return;
 
-        const target = testData.filter(d => d.staff === staff && d.item === itemObj.name).pop();
-        if (target) {
-            await db.collection("sales_records").doc(target.id).delete();
+        let targetRecord = null;
+        for (let i = testData.length - 1; i >= 0; i--) {
+            if (testData[i].staff === staff && testData[i].item === itemObj.name) {
+                targetRecord = testData[i];
+                break;
+            }
         }
-    }
+        if (targetRecord) {
+            await db.collection("sales_records").doc(targetRecord.id).delete();
+        }
+    };
 
     async function resetToDefaultItems() {
         const batch = db.batch();
-        defaultItemsObj.forEach((obj, i) => {
-            const docRef = db.collection("settings").doc(`item_${i}`);
-            batch.set(docRef, { type: 'item', ...obj, order: i });
+        defaultItemsObj.forEach(function(obj, i) {
+            const docRef = db.collection("settings").doc("item_" + i);
+            batch.set(docRef, { type: 'item', name: obj.name, color: obj.color, target: obj.target, order: i });
         });
         await batch.commit();
     }
 
-    window.addListItem = async (type) => {
-        const val = document.getElementById(type === 'staff' ? 'newStaffInput' : 'newItemInput').value.trim();
+    window.addListItem = async function(type) {
+        const inputId = type === 'staff' ? 'newStaffInput' : 'newItemInput';
+        const val = document.getElementById(inputId).value.trim();
         if(!val) return;
-        const id = `${type}_${Date.now()}`;
+        
+        const newId = type + "_" + Date.now();
         
         if (type === 'staff') {
-            await db.collection("settings").doc(id).set({ type, name: val, order: staffList.length });
+            await db.collection("settings").doc(newId).set({ type: type, name: val, order: staffList.length });
             document.getElementById('newStaffInput').value = '';
         } else {
             const color = document.getElementById('newItemColor').value;
             const target = parseInt(document.getElementById('newItemTarget').value) || 0;
-            await db.collection("settings").doc(id).set({ type, name: val, color, target, order: items.length });
+            await db.collection("settings").doc(newId).set({ type: type, name: val, color: color, target: target, order: items.length });
             document.getElementById('newItemInput').value = '';
             document.getElementById('newItemTarget').value = '';
         }
     };
 
-    window.deleteListItem = async (id, name) => {
-        if(!confirm(`${name} を削除しますか？`)) return;
+    window.deleteListItem = async function(id, name) {
+        if(!confirm(name + " を削除しますか？")) return;
         await db.collection("settings").doc(id).delete();
     };
 
-    window.editListItem = async (type, id) => {
+    window.editListItem = async function(type, id) {
         const list = type === 'staff' ? staffList : items;
-        const itemObj = list.find(i => i.id === id);
+        const itemObj = list.find(function(i) { return i.id === id; });
         if(!itemObj) return;
 
         const typeName = type === 'staff' ? 'スタッフ名' : '商材名';
-        const newName = prompt(`新しい${typeName}を入力してください:`, itemObj.name);
+        const newName = prompt("新しい" + typeName + "を入力してください:", itemObj.name);
         
         if (newName && newName.trim() !== "" && newName !== itemObj.name) {
             const trimmedName = newName.trim();
-            // 1. 設定を更新
             await db.collection("settings").doc(id).set({ name: trimmedName }, { merge: true });
             
-            // 2. 過去の記録も安全に更新（バッチ処理）
             const fieldToUpdate = type === 'staff' ? 'staff' : 'item';
             const snap = await db.collection("sales_records").where("date", "==", searchDateStr).where(fieldToUpdate, "==", itemObj.name).get();
             const batch = db.batch();
-            snap.forEach(doc => {
-                batch.update(doc.ref, { [fieldToUpdate]: trimmedName });
-            });
-            await batch.commit();
-            
-            showToast(`名称を「${trimmedName}」に変更しました`);
-        }
-    };
-
-    window.updateItemTarget = async (id, val) => {
-        await db.collection("settings").doc(id).set({ target: parseInt(val) || 0 }, { merge: true });
-    };
-
-    window.moveItem = async (type, id, dir) => {
-        const list = type === 'staff' ? [...staffList] : [...items];
-        const idx = list.findIndex(i => i.id === id);
-        if(idx < 0 || idx + dir < 0 || idx + dir >= list.length) return;
-        
-        const temp = list[idx];
-        list[idx] = list[idx + dir];
-        list[idx + dir] = temp;
-        
-        const batch = db.batch();
-        list.forEach((item, i) => {
-            const ref = db.collection("settings").doc(item.id);
-            batch.update(ref, { order: i });
-        });
-        await batch.commit();
-    };
-
-    window.clearTodayData = async () => {
-        if (!confirm("本日の実績データを全消去しますか？")) return;
-        const snap = await db.collection("sales_records").where("date", "==", searchDateStr).get();
-        const batch = db.batch();
-        snap.forEach(doc => {
-            batch.delete(doc.ref);
-        });
-        await batch.commit();
-        showToast("本日のデータを全クリアしました");
-    };
-
-    // 🖥 UI構築・更新（★変更点④：DOM IDに安全なFirestoreのIDを使用）
-    function renderStaffSelect() {
-        const sel = document.getElementById('staffSelect');
-        const prev = sel.value;
-        sel.innerHTML = staffList.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
-        const exists = staffList.find(s => s.name === prev);
-        if(exists) sel.value = prev;
-    }
-
-    function buildInputUI() {
-        document.getElementById('btnContainer').innerHTML = items.map(it => `
-            <div class="item-card">
-                <button class="item-card-btn" style="background:${it.color}" onclick="window.addRec('${it.id}')">
-                    ${it.name}
-                    <div class="remain-text hidden" id="
+            snap.forEach(function(doc) {
+                let updateData = {};
+                updateData[fieldToU
