@@ -27,19 +27,28 @@
         
         .btn-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; }
         .item-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; display: flex; flex-direction: column; box-shadow: 0 2px 4px rgba(0,0,0,0.03); overflow: hidden; }
-        .item-card-btn { color: #1e293b; border: none; font-size: 16px; font-weight: bold; cursor: pointer; padding: 20px 10px; width: 100%; }
+        
+        .item-card-btn { color: #1e293b; border: none; font-size: 16px; font-weight: bold; cursor: pointer; padding: 15px 10px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 6px; }
         .item-card-btn:active { opacity: 0.7; }
+        
+        .remain-text { font-size: 13px; font-weight: bold; color: #e11d48; background: #ffe4e6; padding: 3px 10px; border-radius: 12px; display: inline-block; transition: 0.3s; box-shadow: 0 1px 2px rgba(0,0,0,0.1);}
+        .remain-text.achieved { color: #059669; background: #d1fae5; }
+        .remain-text.hidden { display: none; }
+
         .count-area { display: flex; align-items: center; justify-content: space-between; padding: 10px 15px; background: #ffffff; border-top: 1px solid #f1f5f9; }
         .my-count { font-size: 16px; font-weight: bold; color: #475569; }
         .minus-btn { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; border-radius: 4px; padding: 5px 10px; font-size: 13px; font-weight: bold; cursor: pointer; }
 
-        .board-table-wrapper { overflow-x: auto; margin-top: 10px; }
+        .board-table-wrapper { overflow-x: auto; margin-top: 10px; padding-bottom: 10px; }
         table { border-collapse: collapse; width: max-content; }
         th, td { border: 1px solid #cbd5e0; text-align: center; vertical-align: middle; }
         .row-header { padding: 8px 12px; font-weight: bold; position: sticky; left: 0; z-index: 1; border-right: 2px solid #cbd5e0; white-space: nowrap; font-size: 14px; }
         .square-cell { width: 50px; height: 50px; min-width: 50px; box-sizing: border-box; font-size: 12px; line-height: 1.2; word-break: break-all; }
         .name-cell { background: #e0f2fe; color: #0369a1; font-weight: bold; }
         
+        .target-bg { background-color: #fef9c3; }
+        .target-border { border-right: 3px solid #f59e0b; }
+
         .export-btn, .clear-btn { color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 14px; cursor: pointer; font-weight: bold; }
         .export-btn { background: #10b981; }
         .clear-btn { background: #ef4444; }
@@ -50,11 +59,24 @@
         .full-width-card { grid-column: 1 / -1; }
         .settings-card h3 { margin-top: 0; border-bottom: 1px solid #cbd5e0; padding-bottom: 5px; display: flex; justify-content: space-between; align-items: center;}
         .reset-btn { background: #fbbf24; border: none; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer; }
-        .add-form { display: flex; gap: 10px; margin-top: 15px; }
-        .add-form input { flex: 1; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; }
+        
+        .add-form { display: flex; gap: 8px; margin-top: 15px; align-items: center; flex-wrap: wrap;}
+        .add-form input[type="text"] { flex: 1; min-width: 100px; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; }
+        .add-form input[type="number"] { width: 60px; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; }
+        .add-form select { padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; cursor: pointer; }
         .add-form button { padding: 10px 15px; background: #64748b; color: white; border: none; border-radius: 6px; cursor: pointer; }
-        .list-ui { list-style: none; padding: 0; margin-top: 10px; max-height: 400px; overflow-y: auto; }
+        
+        .list-ui { list-style: none; padding: 0; margin-top: 10px; max-height: 500px; overflow-y: auto; }
         .list-ui li { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #edf2f7; background: white; margin-bottom: 5px; border-radius: 4px; }
+        
+        .item-info { display: flex; align-items: center; gap: 10px; flex: 1; }
+        .item-name { font-weight: bold; min-width: 120px; }
+        .target-input { width: 50px; padding: 4px; border: 1px solid #cbd5e0; border-radius: 4px; text-align: center; }
+
+        .action-btns { display: flex; gap: 4px; }
+        
+        /* 編集ボタンのスタイル追加 */
+        .edit-btn { background: #3b82f6; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; }
         .delete-btn { background: #fca5a5; color: #7f1d1d; border: none; padding: 5px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; }
         .move-btn { background: #f1f5f9; border: 1px solid #cbd5e0; border-radius: 4px; padding: 5px 8px; cursor: pointer; }
 
@@ -74,7 +96,7 @@
         <div class="header-flex"><h2 id="inputDateTitle">実績入力</h2></div>
         <div class="staff-selector">
             <label>スタッフ選択: </label>
-            <select id="staffSelect" onchange="updateView()"></select>
+            <select id="staffSelect" onchange="window.updateView()"></select>
         </div>
         <div class="btn-grid" id="btnContainer"></div>
     </div>
@@ -94,6 +116,7 @@
                 <h3>データ管理</h3>
                 <button class="clear-btn" onclick="clearTodayData()">🗑️ 本日の実績データを全クリア</button>
             </div>
+            
             <div class="settings-card">
                 <h3>スタッフ管理</h3>
                 <div class="add-form">
@@ -102,10 +125,23 @@
                 </div>
                 <ul id="staffListUI" class="list-ui"></ul>
             </div>
+
             <div class="settings-card">
                 <h3>商材管理 <button class="reset-btn" onclick="resetItems()">25項目リセット</button></h3>
                 <div class="add-form">
-                    <input type="text" id="newItemInput" placeholder="例: 新商材">
+                    <input type="text" id="newItemInput" placeholder="新商材">
+                    <select id="newItemColor" onchange="this.style.backgroundColor=this.value" style="background-color: #bae6fd;">
+                        <option value="#bae6fd" style="background:#bae6fd;">水色</option>
+                        <option value="#fef08a" style="background:#fef08a;">黄色</option>
+                        <option value="#bbf7d0" style="background:#bbf7d0;">緑色</option>
+                        <option value="#e9d5ff" style="background:#e9d5ff;">紫色</option>
+                        <option value="#d9ead3" style="background:#d9ead3;">黄緑</option>
+                        <option value="#fed7aa" style="background:#fed7aa;">オレンジ</option>
+                        <option value="#fecdd3" style="background:#fecdd3;">ピンク</option>
+                        <option value="#fecaca" style="background:#fecaca;">赤色</option>
+                        <option value="#f1f5f9" style="background:#f1f5f9;">グレー</option>
+                    </select>
+                    <input type="number" id="newItemTarget" placeholder="目標">
                     <button onclick="addListItem('item')">追加</button>
                 </div>
                 <ul id="itemListUI" class="list-ui"></ul>
@@ -130,14 +166,41 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    const ADMIN_PASSWORD = "9135"; // パスワード変更が必要な場合はここを修正
+    const ADMIN_PASSWORD = "0000"; 
+    const successSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3');
+    successSound.volume = 0.5;
 
     let testData = []; 
-    let staffNames = [];
-    let itemNames = [];
+    let staffList = []; 
+    let items = []; 
 
-    const defaultItems = ["光10GB", "光1GB", "HOME5G", "GOLD", "GOLDU", "PLATINUM", "ドコモMAX", "ポイ活MAX", "d払い初回利用", "ドコモでんき", "ドコモガス", "守くん", "内) プレミアム", "ニフティ", "内) NiftyB・C", "Nkeep", "アドクリ", "ダレカナ", "保存君", "コドマモ", "あんセキ", "Amazon", "Disney", "Lemino", "マイショップ"];
-    const colorMap = { "光10GB": "#bae6fd", "光1GB": "#bae6fd", "HOME5G": "#bae6fd", "GOLD": "#fef08a", "GOLDU": "#fef08a", "PLATINUM": "#fef08a", "ドコモでんき": "#bbf7d0", "ドコモガス": "#bbf7d0", "守くん": "#e9d5ff", "内) プレミアム": "#e9d5ff", "ニフティ": "#e9d5ff", "内) NiftyB・C": "#e9d5ff", "Nkeep": "#e9d5ff", "アドクリ": "#e9d5ff", "ダレカナ": "#e9d5ff", "保存君": "#e9d5ff", "Amazon": "#d9ead3", "Disney": "#d9ead3", "Lemino": "#fed7aa", "コーティング": "#fecdd3", "PI": "#fecaca" };
+    const defaultItemsObj = [
+        { name: "光10GB", color: "#bae6fd", target: 15 },
+        { name: "光1GB", color: "#bae6fd", target: 18 },
+        { name: "HOME5G", color: "#bae6fd", target: 43 },
+        { name: "GOLD", color: "#fef08a", target: 95 },
+        { name: "GOLDU", color: "#fef08a", target: 12 },
+        { name: "PLATINUM", color: "#fef08a", target: 34 },
+        { name: "ドコモMAX", color: "#fef08a", target: 164 },
+        { name: "ポイ活MAX", color: "#fef08a", target: 113 },
+        { name: "d払い初回利用", color: "#fecaca", target: 50 },
+        { name: "ドコモでんき", color: "#bbf7d0", target: 41 },
+        { name: "ドコモガス", color: "#bbf7d0", target: 25 },
+        { name: "守くん", color: "#e9d5ff", target: 118 },
+        { name: "内) プレミアム", color: "#e9d5ff", target: 88 },
+        { name: "ニフティ", color: "#e9d5ff", target: 62 },
+        { name: "内) NiftyB・C", color: "#e9d5ff", target: 49 },
+        { name: "Nkeep", color: "#e9d5ff", target: 43 },
+        { name: "アドクリ", color: "#e9d5ff", target: 92 },
+        { name: "ダレカナ", color: "#e9d5ff", target: 60 },
+        { name: "保存君", color: "#e9d5ff", target: 60 },
+        { name: "コドマモ", color: "#e9d5ff", target: 1 },
+        { name: "あんセキ", color: "#e9d5ff", target: 14 },
+        { name: "Amazon", color: "#d9ead3", target: 52 },
+        { name: "Disney", color: "#d9ead3", target: 23 },
+        { name: "Lemino", color: "#fed7aa", target: 11 },
+        { name: "マイショップ", color: "#f1f5f9", target: 83 }
+    ];
 
     const today = new Date();
     const dateStr = `${today.getMonth() + 1}/${today.getDate()}`;
@@ -146,16 +209,30 @@
     document.getElementById('boardTitle').textContent = `${dateStr}のがんばるシート`;
     document.getElementById('inputDateTitle').textContent = `実績入力 (${dateStr})`;
 
-    // 📡 リアルタイム同期（実績・スタッフ・商材）
+    // 📡 リアルタイム同期
     onSnapshot(query(collection(db, "sales_records"), where("date", "==", searchDateStr)), (snap) => {
         testData = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => (a.timestamp?.toMillis() || 0) - (b.timestamp?.toMillis() || 0));
         window.updateView();
     });
 
     onSnapshot(query(collection(db, "settings"), orderBy("order", "asc")), (snap) => {
-        staffNames = snap.docs.filter(d => d.data().type === 'staff').map(d => d.data().name);
-        itemNames = snap.docs.filter(d => d.data().type === 'item').map(d => d.data().name);
-        if(itemNames.length === 0) { resetToDefaultItems(); }
+        let newStaff = [];
+        let newItems = [];
+        snap.docs.forEach(d => {
+            const data = d.data();
+            if(data.type === 'staff') newStaff.push({ id: d.id, ...data });
+            else if(data.type === 'item') newItems.push({ id: d.id, color: '#f1f5f9', target: 0, ...data });
+        });
+        
+        staffList = newStaff;
+        items = newItems;
+
+        if(items.length === 0 && !window.isResetting) {
+            window.isResetting = true;
+            resetToDefaultItems().then(() => window.isResetting = false);
+            return;
+        }
+
         renderStaffSelect();
         buildInputUI();
         renderSettingsUI();
@@ -166,8 +243,11 @@
     async function addRecord(item) {
         const staff = document.getElementById('staffSelect').value;
         if(!staff) return alert("スタッフを選択してください");
-        await addDoc(collection(db, "sales_records"), { staff, item, date: searchDateStr, timestamp: serverTimestamp() });
-        showToast(`${staff}: ${item} +1`);
+        try {
+            successSound.currentTime = 0; successSound.play();
+            await addDoc(collection(db, "sales_records"), { staff, item, date: searchDateStr, timestamp: serverTimestamp() });
+            showToast(`${staff}: ${item} +1`);
+        } catch (e) { console.error(e); }
     }
 
     async function removeRecord(item) {
@@ -177,8 +257,8 @@
     }
 
     async function resetToDefaultItems() {
-        for(let i=0; i<defaultItems.length; i++) {
-            await setDoc(doc(db, "settings", `item_${i}`), { type: 'item', name: defaultItems[i], order: i });
+        for(let i=0; i<defaultItemsObj.length; i++) {
+            await setDoc(doc(db, "settings", `item_${i}`), { type: 'item', ...defaultItemsObj[i], order: i });
         }
     }
 
@@ -186,90 +266,110 @@
         const val = document.getElementById(type === 'staff' ? 'newStaffInput' : 'newItemInput').value.trim();
         if(!val) return;
         const id = `${type}_${Date.now()}`;
-        const order = (type === 'staff' ? staffNames.length : itemNames.length);
-        await setDoc(doc(db, "settings", id), { type, name: val, order });
-        document.getElementById(type === 'staff' ? 'newStaffInput' : 'newItemInput').value = '';
-    };
-
-    window.deleteListItem = async (type, name) => {
-        if(!confirm(`${name}を削除しますか？`)) return;
-        const snap = await getDocs(query(collection(db, "settings"), where("type", "==", type), where("name", "==", name)));
-        snap.forEach(async (d) => await deleteDoc(doc(db, "settings", d.id)));
-    };
-
-    window.moveItem = async (type, name, dir) => {
-        const list = type === 'staff' ? staffNames : itemNames;
-        const idx = list.indexOf(name);
-        if(idx + dir < 0 || idx + dir >= list.length) return;
         
-        const snap = await getDocs(query(collection(db, "settings"), where("type", "==", type), orderBy("order", "asc")));
-        const docs = snap.docs;
-        const tempOrder = docs[idx].data().order;
-        await setDoc(doc(db, "settings", docs[idx].id), { ...docs[idx].data(), order: docs[idx + dir].data().order });
-        await setDoc(doc(db, "settings", docs[idx + dir].id), { ...docs[idx + dir].data(), order: tempOrder });
+        if (type === 'staff') {
+            await setDoc(doc(db, "settings", id), { type, name: val, order: staffList.length });
+            document.getElementById('newStaffInput').value = '';
+        } else {
+            const color = document.getElementById('newItemColor').value;
+            const target = parseInt(document.getElementById('newItemTarget').value) || 0;
+            await setDoc(doc(db, "settings", id), { type, name: val, color, target, order: items.length });
+            document.getElementById('newItemInput').value = '';
+            document.getElementById('newItemTarget').value = '';
+        }
+    };
+
+    window.deleteListItem = async (id, name) => {
+        if(!confirm(`${name} を削除しますか？`)) return;
+        await deleteDoc(doc(db, "settings", id));
+    };
+
+    // ★ 編集機能 ★
+    window.editListItem = async (type, id, currentName) => {
+        const typeName = type === 'staff' ? 'スタッフ名' : '商材名';
+        const newName = prompt(`新しい${typeName}を入力してください:`, currentName);
+        
+        if (newName && newName.trim() !== "" && newName !== currentName) {
+            const trimmedName = newName.trim();
+            
+            // 1. 設定データの名前を更新
+            await setDoc(doc(db, "settings", id), { name: trimmedName }, { merge: true });
+            
+            // 2. 今日の実績データも更新（過去に押した分が消えないようにする）
+            const fieldToUpdate = type === 'staff' ? 'staff' : 'item';
+            const snap = await getDocs(query(collection(db, "sales_records"), where("date", "==", searchDateStr), where(fieldToUpdate, "==", currentName)));
+            snap.forEach(async (d) => {
+                await setDoc(doc(db, "sales_records", d.id), { [fieldToUpdate]: trimmedName }, { merge: true });
+            });
+            
+            showToast(`名称を「${trimmedName}」に変更しました`);
+        }
+    };
+
+    window.updateItemTarget = async (id, val) => {
+        await setDoc(doc(db, "settings", id), { target: parseInt(val) || 0 }, { merge: true });
+    };
+
+    window.moveItem = async (type, id, dir) => {
+        const list = type === 'staff' ? [...staffList] : [...items];
+        const idx = list.findIndex(i => i.id === id);
+        if(idx < 0 || idx + dir < 0 || idx + dir >= list.length) return;
+        
+        const temp = list[idx];
+        list[idx] = list[idx + dir];
+        list[idx + dir] = temp;
+        
+        list.forEach(async (item, i) => {
+            await setDoc(doc(db, "settings", item.id), { order: i }, { merge: true });
+        });
     };
 
     window.clearTodayData = async () => {
         if (!confirm("本日の実績データを全消去しますか？")) return;
         const snap = await getDocs(query(collection(db, "sales_records"), where("date", "==", searchDateStr)));
         snap.forEach(async (d) => await deleteDoc(doc(db, "sales_records", d.id)));
+        showToast("本日のデータを全クリアしました");
     };
 
-    // 🖥 UI更新
+    // 🖥 UI構築・更新
     function renderStaffSelect() {
         const sel = document.getElementById('staffSelect');
         const prev = sel.value;
-        sel.innerHTML = staffNames.map(n => `<option value="${n}">${n}</option>`).join('');
-        if(staffNames.includes(prev)) sel.value = prev;
+        sel.innerHTML = staffList.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
+        const exists = staffList.find(s => s.name === prev);
+        if(exists) sel.value = prev;
     }
 
     function buildInputUI() {
-        document.getElementById('btnContainer').innerHTML = itemNames.map(item => `
+        document.getElementById('btnContainer').innerHTML = items.map(it => `
             <div class="item-card">
-                <button class="item-card-btn" style="background:${colorMap[item] || '#f1f5f9'}" onclick="window.addRec('${item}')">${item}</button>
-                <div class="count-area"><span class="my-count" id="count-${item}">0件</span><button class="minus-btn" onclick="window.remRec('${item}')">− 取消</button></div>
+                <button class="item-card-btn" style="background:${it.color}" onclick="window.addRec('${it.name}')">
+                    ${it.name}
+                    <div class="remain-text hidden" id="remain-${it.name}"></div>
+                </button>
+                <div class="count-area">
+                    <span class="my-count" id="count-${it.name}">0件</span>
+                    <button class="minus-btn" onclick="window.remRec('${it.name}')">− 取消</button>
+                </div>
             </div>`).join('');
     }
 
     window.updateView = () => {
         const currentStaff = document.getElementById('staffSelect').value;
         const boardData = {}; 
-        itemNames.forEach(it => boardData[it] = testData.filter(d => d.item === it).map(d => d.staff));
-        
-        let maxCols = Math.max(20, ...itemNames.map(it => boardData[it].length));
-        let html = `<thead><tr><th class="row-header" style="background:#f8fafc">商材名</th>${Array.from({length:maxCols}, (_,i)=>`<th class="square-cell">${i+1}</th>`).join('')}</tr></thead><tbody>`;
-        
-        itemNames.forEach(it => {
-            html += `<tr><td class="row-header" style="background:${colorMap[it] || '#f1f5f9'}">${it}</td>`;
-            for(let i=0; i<maxCols; i++){
-                const name = boardData[it][i] || '';
-                html += `<td class="square-cell ${name?'name-cell':''}">${name}</td>`;
-            }
-            html += `</tr>`;
-            const cEl = document.getElementById(`count-${it}`);
-            if(cEl) cEl.textContent = `${testData.filter(d => d.item === it && d.staff === currentStaff).length}件`;
+        const myCounts = {};
+
+        items.forEach(it => {
+            boardData[it.name] = testData.filter(d => d.item === it.name).map(d => d.staff);
+            myCounts[it.name] = testData.filter(d => d.item === it.name && d.staff === currentStaff).length;
         });
-        document.getElementById('resultTable').innerHTML = html + `</tbody>`;
-    };
-
-    function renderSettingsUI() {
-        document.getElementById('staffListUI').innerHTML = staffNames.map(n => `<li>${n} <button class="delete-btn" onclick="window.deleteListItem('staff','${n}')">削除</button></li>`).join('');
-        document.getElementById('itemListUI').innerHTML = itemNames.map(n => `<li><span>${n}</span><div class="action-btns"><button class="move-btn" onclick="window.moveItem('item','${n}',-1)">↑</button><button class="move-btn" onclick="window.moveItem('item','${n}',1)">↓</button><button class="delete-btn" onclick="window.deleteListItem('item','${n}')">削除</button></div></li>`).join('');
-    }
-
-    // グローバル関数登録
-    window.addRec = addRecord; window.remRec = removeRecord;
-    window.showToast = (m) => { const t = document.getElementById('toast'); t.textContent = m; t.style.display = 'block'; setTimeout(()=>t.style.display='none',2000); };
-    window.switchTab = (id) => {
-        if(id === 'settings' && prompt("パスワード:") !== ADMIN_PASSWORD) return;
-        ['input','board','settings'].forEach(t => { document.getElementById(t+'View').classList.toggle('active', t===id); document.getElementById('tabBtn'+t.charAt(0).toUpperCase()+t.slice(1)).classList.toggle('active', t===id); });
-    };
-    window.exportToExcel = () => {
-        const html = `<html><head><meta charset="utf-8"><style>table{border-collapse:collapse;} th,td{border:1px solid #ccc; text-align:center; width:40pt; height:40pt;} .name-cell{background:#e0f2fe;}</style></head><body><table>${document.getElementById("resultTable").innerHTML}</table></body></html>`;
-        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([html], {type:'application/vnd.ms-excel'})); a.download = `${dateStr.replace('/','-')}のがんばるシート.xls`; a.click();
-    };
-    window.resetItems = async () => { if(confirm("25項目に戻しますか？")) { const snap = await getDocs(query(collection(db, "settings"), where("type", "==", "item"))); snap.forEach(async d => await deleteDoc(doc(db, "settings", d.id))); await resetToDefaultItems(); }};
-</script>
-</body>
-</html>
-
+        
+        let maxCols = Math.max(20, ...items.map(it => boardData[it.name].length), ...items.map(it => it.target));
+        
+        let html = `<thead><tr><th class="row-header" style="background:#f8fafc">商材名</th>`;
+        for(let i=1; i<=maxCols; i++) html += `<th class="square-cell">${i}</th>`;
+        html += `</tr></thead><tbody>`;
+        
+        items.forEach(it => {
+            html += `<tr><td class="row-header" style="background:${it.color}">${it.name}</td>`;
+            for(let i=1; i<=maxCols; i+
