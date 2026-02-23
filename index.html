@@ -74,8 +74,6 @@
         .target-input { width: 50px; padding: 4px; border: 1px solid #cbd5e0; border-radius: 4px; text-align: center; }
 
         .action-btns { display: flex; gap: 4px; }
-        
-        /* 編集ボタンのスタイル追加 */
         .edit-btn { background: #3b82f6; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; }
         .delete-btn { background: #fca5a5; color: #7f1d1d; border: none; padding: 5px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; }
         .move-btn { background: #f1f5f9; border: 1px solid #cbd5e0; border-radius: 4px; padding: 5px 8px; cursor: pointer; }
@@ -167,13 +165,8 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const ADMIN_PASSWORD = "0000"; 
-    const successSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3');
-    successSound.volume = 0.5;
-
-    let testData = []; 
-    let staffList = []; 
-    let items = []; 
-
+    
+    // エラーが起きても画面が真っ白にならないように、初期データを準備
     const defaultItemsObj = [
         { name: "光10GB", color: "#bae6fd", target: 15 },
         { name: "光1GB", color: "#bae6fd", target: 18 },
@@ -202,6 +195,11 @@
         { name: "マイショップ", color: "#f1f5f9", target: 83 }
     ];
 
+    let testData = []; 
+    // ローカルから読み込むか、初期データを入れる（真っ白防止）
+    let staffList = JSON.parse(localStorage.getItem('fb_staff')) || [{id:'s1', name:'榎本', order:0}, {id:'s2', name:'スタッフB', order:1}];
+    let items = JSON.parse(localStorage.getItem('fb_items')) || defaultItemsObj.map((it, i) => ({id: 'item_'+i, ...it, order: i}));
+
     const today = new Date();
     const dateStr = `${today.getMonth() + 1}/${today.getDate()}`;
     const searchDateStr = today.toLocaleDateString('ja-JP');
@@ -209,10 +207,19 @@
     document.getElementById('boardTitle').textContent = `${dateStr}のがんばるシート`;
     document.getElementById('inputDateTitle').textContent = `実績入力 (${dateStr})`;
 
-    // 📡 リアルタイム同期
+    // ★真っ白防止のため、通信前でも一旦画面を描画しておく
+    renderStaffSelect();
+    buildInputUI();
+    renderSettingsUI();
+    window.updateView();
+
+    // 📡 リアルタイム同期（エラー検知付き）
     onSnapshot(query(collection(db, "sales_records"), where("date", "==", searchDateStr)), (snap) => {
         testData = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => (a.timestamp?.toMillis() || 0) - (b.timestamp?.toMillis() || 0));
         window.updateView();
+    }, (error) => {
+        console.error(error);
+        alert("【実績データの通信エラー】\nFirebaseのルール設定が拒否になっている可能性があります。");
     });
 
     onSnapshot(query(collection(db, "settings"), orderBy("order", "asc")), (snap) => {
@@ -224,10 +231,13 @@
             else if(data.type === 'item') newItems.push({ id: d.id, color: '#f1f5f9', target: 0, ...data });
         });
         
-        staffList = newStaff;
-        items = newItems;
-
-        if(items.length === 0 && !window.isResetting) {
+        if (snap.docs.length > 0) {
+            staffList = newStaff;
+            items = newItems;
+            // ローカルにも保存しておく
+            localStorage.setItem('fb_staff', JSON.stringify(staffList));
+            localStorage.setItem('fb_items', JSON.stringify(items));
+        } else if(!window.isResetting) {
             window.isResetting = true;
             resetToDefaultItems().then(() => window.isResetting = false);
             return;
@@ -237,6 +247,9 @@
         buildInputUI();
         renderSettingsUI();
         window.updateView();
+    }, (error) => {
+        console.error(error);
+        alert("【データベース接続エラー】\n設定データを読み込めませんでした。\n\n原因: Firebase側の「Firestore Database」のルールが『書き込み不可（if false）』のままになっている可能性が高いです！");
     });
 
     // 💾 データ操作関数
@@ -244,10 +257,12 @@
         const staff = document.getElementById('staffSelect').value;
         if(!staff) return alert("スタッフを選択してください");
         try {
-            successSound.currentTime = 0; successSound.play();
             await addDoc(collection(db, "sales_records"), { staff, item, date: searchDateStr, timestamp: serverTimestamp() });
             showToast(`${staff}: ${item} +1`);
-        } catch (e) { console.error(e); }
+        } catch (e) { 
+            alert("送信エラー: データベースの権限がありません！"); 
+            console.error(e); 
+        }
     }
 
     async function removeRecord(item) {
@@ -267,15 +282,19 @@
         if(!val) return;
         const id = `${type}_${Date.now()}`;
         
-        if (type === 'staff') {
-            await setDoc(doc(db, "settings", id), { type, name: val, order: staffList.length });
-            document.getElementById('newStaffInput').value = '';
-        } else {
-            const color = document.getElementById('newItemColor').value;
-            const target = parseInt(document.getElementById('newItemTarget').value) || 0;
-            await setDoc(doc(db, "settings", id), { type, name: val, color, target, order: items.length });
-            document.getElementById('newItemInput').value = '';
-            document.getElementById('newItemTarget').value = '';
+        try {
+            if (type === 'staff') {
+                await setDoc(doc(db, "settings", id), { type, name: val, order: staffList.length });
+                document.getElementById('newStaffInput').value = '';
+            } else {
+                const color = document.getElementById('newItemColor').value;
+                const target = parseInt(document.getElementById('newItemTarget').value) || 0;
+                await setDoc(doc(db, "settings", id), { type, name: val, color, target, order: items.length });
+                document.getElementById('newItemInput').value = '';
+                document.getElementById('newItemTarget').value = '';
+            }
+        } catch (e) {
+            alert("保存エラー: データベースの権限がありません！");
         }
     };
 
@@ -284,24 +303,19 @@
         await deleteDoc(doc(db, "settings", id));
     };
 
-    // ★ 編集機能 ★
     window.editListItem = async (type, id, currentName) => {
         const typeName = type === 'staff' ? 'スタッフ名' : '商材名';
         const newName = prompt(`新しい${typeName}を入力してください:`, currentName);
         
         if (newName && newName.trim() !== "" && newName !== currentName) {
             const trimmedName = newName.trim();
-            
-            // 1. 設定データの名前を更新
             await setDoc(doc(db, "settings", id), { name: trimmedName }, { merge: true });
             
-            // 2. 今日の実績データも更新（過去に押した分が消えないようにする）
             const fieldToUpdate = type === 'staff' ? 'staff' : 'item';
             const snap = await getDocs(query(collection(db, "sales_records"), where("date", "==", searchDateStr), where(fieldToUpdate, "==", currentName)));
             snap.forEach(async (d) => {
                 await setDoc(doc(db, "sales_records", d.id), { [fieldToUpdate]: trimmedName }, { merge: true });
             });
-            
             showToast(`名称を「${trimmedName}」に変更しました`);
         }
     };
@@ -357,19 +371,4 @@
     window.updateView = () => {
         const currentStaff = document.getElementById('staffSelect').value;
         const boardData = {}; 
-        const myCounts = {};
-
-        items.forEach(it => {
-            boardData[it.name] = testData.filter(d => d.item === it.name).map(d => d.staff);
-            myCounts[it.name] = testData.filter(d => d.item === it.name && d.staff === currentStaff).length;
-        });
-        
-        let maxCols = Math.max(20, ...items.map(it => boardData[it.name].length), ...items.map(it => it.target));
-        
-        let html = `<thead><tr><th class="row-header" style="background:#f8fafc">商材名</th>`;
-        for(let i=1; i<=maxCols; i++) html += `<th class="square-cell">${i}</th>`;
-        html += `</tr></thead><tbody>`;
-        
-        items.forEach(it => {
-            html += `<tr><td class="row-header" style="background:${it.color}">${it.name}</td>`;
-            for(let i=1; i<=maxCols; i+
+        const myCou
