@@ -10,7 +10,6 @@
         
         .tab-menu { display: flex; background: #ffffff; border-bottom: 2px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.02); margin-bottom: 20px; }
         .tab-menu button { flex: 1; padding: 15px; background: none; border: none; color: #94a3b8; font-size: 16px; cursor: pointer; transition: 0.3s; font-weight: bold; }
-        .tab-menu button:hover { background: #f8fafc; color: #475569; }
         #tabBtnInput.active { color: #3b82f6; border-bottom: 3px solid #3b82f6; background: #eff6ff; }
         #tabBtnBoard.active { color: #10b981; border-bottom: 3px solid #10b981; background: #ecfdf5; }
         #tabBtnSettings.active { color: #64748b; border-bottom: 3px solid #64748b; background: #f8fafc; }
@@ -18,58 +17,48 @@
         .tab-content { display: none; background: #ffffff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.03); border: 1px solid #e2e8f0; }
         .tab-content.active { display: block; }
 
-        .header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; margin-top: 0; }
-        #inputDateTitle { border-bottom: 2px solid #3b82f6; padding-bottom: 5px; margin: 0; font-size: 22px; color: #1e293b; }
-        #boardTitle { border-bottom: 2px solid #10b981; padding-bottom: 5px; margin: 0; font-size: 22px; color: #1e293b; }
-        #settingsTitle { border-bottom: 2px solid #64748b; padding-bottom: 5px; margin: 0; font-size: 22px; color: #1e293b; }
+        .header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        #inputDateTitle { border-bottom: 2px solid #3b82f6; padding-bottom: 5px; margin: 0; font-size: 22px; }
+        #boardTitle { border-bottom: 2px solid #10b981; padding-bottom: 5px; margin: 0; font-size: 22px; }
+        #settingsTitle { border-bottom: 2px solid #64748b; padding-bottom: 5px; margin: 0; font-size: 22px; }
 
-        .staff-selector { margin-bottom: 25px; font-size: 16px; font-weight: bold; color: #475569; }
-        .staff-selector select { font-size: 16px; padding: 10px; width: 100%; max-width: 300px; border-radius: 8px; border: 1px solid #cbd5e0; background: #f8fafc; color: #1e293b; margin-top: 5px;}
+        .staff-selector { margin-bottom: 25px; font-weight: bold; color: #475569; }
+        .staff-selector select { font-size: 16px; padding: 10px; width: 100%; max-width: 300px; border-radius: 8px; border: 1px solid #cbd5e0; background: #f8fafc; margin-top: 5px;}
         
         .btn-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; }
-        .item-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; display: flex; flex-direction: column; box-shadow: 0 2px 4px rgba(0,0,0,0.03); overflow: hidden; transition: 0.2s; }
-        .item-card:hover { box-shadow: 0 4px 8px rgba(0,0,0,0.08); transform: translateY(-1px); }
-        .item-card-btn { color: #1e293b; border: none; font-size: 16px; font-weight: bold; cursor: pointer; padding: 20px 10px; transition: 0.1s; width: 100%; }
-        .item-card-btn:active { opacity: 0.7; transform: scale(0.98); }
+        .item-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; display: flex; flex-direction: column; box-shadow: 0 2px 4px rgba(0,0,0,0.03); overflow: hidden; }
+        .item-card-btn { color: #1e293b; border: none; font-size: 16px; font-weight: bold; cursor: pointer; padding: 20px 10px; width: 100%; }
+        .item-card-btn:active { opacity: 0.7; }
         .count-area { display: flex; align-items: center; justify-content: space-between; padding: 10px 15px; background: #ffffff; border-top: 1px solid #f1f5f9; }
         .my-count { font-size: 16px; font-weight: bold; color: #475569; }
-        .minus-btn { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; border-radius: 4px; padding: 5px 10px; font-size: 13px; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        .minus-btn:hover { background: #e2e8f0; color: #ef4444; }
+        .minus-btn { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; border-radius: 4px; padding: 5px 10px; font-size: 13px; font-weight: bold; cursor: pointer; }
 
-        .board-table-wrapper { overflow-x: auto; margin-top: 10px; padding-bottom: 10px; }
+        .board-table-wrapper { overflow-x: auto; margin-top: 10px; }
         table { border-collapse: collapse; width: max-content; }
         th, td { border: 1px solid #cbd5e0; text-align: center; vertical-align: middle; }
-        .row-header { padding: 8px 12px; font-weight: bold; color: #1e293b; position: sticky; left: 0; z-index: 1; border-right: 2px solid #cbd5e0; white-space: nowrap; font-size: 14px; }
-        th.row-header { background: #f8fafc; }
-        .square-cell { width: 50px; height: 50px; min-width: 50px; max-width: 50px; box-sizing: border-box; padding: 2px; font-size: 12px; line-height: 1.2; word-break: break-all; white-space: normal; overflow: hidden; }
-        th.square-cell { background: #f8fafc; color: #475569; font-weight: bold; font-size: 14px; }
+        .row-header { padding: 8px 12px; font-weight: bold; position: sticky; left: 0; z-index: 1; border-right: 2px solid #cbd5e0; white-space: nowrap; font-size: 14px; }
+        .square-cell { width: 50px; height: 50px; min-width: 50px; box-sizing: border-box; font-size: 12px; line-height: 1.2; word-break: break-all; }
         .name-cell { background: #e0f2fe; color: #0369a1; font-weight: bold; }
         
-        .export-btn { background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 5px; font-weight: bold; transition: 0.2s;}
-        .export-btn:hover { background: #059669; }
-        .clear-btn { background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 5px; font-weight: bold; transition: 0.2s;}
-        .clear-btn:hover { background: #dc2626; }
+        .export-btn, .clear-btn { color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 14px; cursor: pointer; font-weight: bold; }
+        .export-btn { background: #10b981; }
+        .clear-btn { background: #ef4444; }
 
         .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
         @media (max-width: 768px) { .settings-grid { grid-template-columns: 1fr; } }
         .settings-card { background: #f8fafc; border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; }
-        .full-width-card { grid-column: 1 / -1; } 
-        
-        .settings-card h3 { margin-top: 0; color: #475569; border-bottom: 1px solid #cbd5e0; padding-bottom: 5px; display: flex; justify-content: space-between; align-items: center;}
-        .reset-btn { background: #fbbf24; color: #78350f; border: none; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer; }
-        .reset-btn:hover { background: #f59e0b; }
-        .add-form { display: flex; gap: 10px; margin-bottom: 15px; margin-top: 15px; }
-        .add-form input { flex: 1; padding: 10px; font-size: 15px; border: 1px solid #cbd5e0; border-radius: 6px; outline: none; }
-        .add-form input:focus { border-color: #3b82f6; }
-        .add-form button { padding: 10px 15px; font-size: 15px; background: #64748b; color: white; border: none; border-radius: 6px; cursor: pointer; }
-        .list-ui { list-style: none; padding: 0; margin: 0; max-height: 500px; overflow-y: auto; }
-        .list-ui li { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-bottom: 1px solid #edf2f7; font-size: 15px; background: white; margin-bottom: 5px; border-radius: 4px; }
-        .action-btns { display: flex; gap: 5px; }
-        .move-btn { background: #f1f5f9; border: 1px solid #cbd5e0; border-radius: 4px; padding: 5px 8px; cursor: pointer; color: #475569; }
-        .move-btn:hover { background: #e2e8f0; }
-        .delete-btn { background: #fca5a5; color: #7f1d1d; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; }
-        
-        #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(30, 41, 59, 0.9); color: white; padding: 12px 24px; border-radius: 30px; display: none; z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .full-width-card { grid-column: 1 / -1; }
+        .settings-card h3 { margin-top: 0; border-bottom: 1px solid #cbd5e0; padding-bottom: 5px; display: flex; justify-content: space-between; align-items: center;}
+        .reset-btn { background: #fbbf24; border: none; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer; }
+        .add-form { display: flex; gap: 10px; margin-top: 15px; }
+        .add-form input { flex: 1; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; }
+        .add-form button { padding: 10px 15px; background: #64748b; color: white; border: none; border-radius: 6px; cursor: pointer; }
+        .list-ui { list-style: none; padding: 0; margin-top: 10px; max-height: 400px; overflow-y: auto; }
+        .list-ui li { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #edf2f7; background: white; margin-bottom: 5px; border-radius: 4px; }
+        .delete-btn { background: #fca5a5; color: #7f1d1d; border: none; padding: 5px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; }
+        .move-btn { background: #f1f5f9; border: 1px solid #cbd5e0; border-radius: 4px; padding: 5px 8px; cursor: pointer; }
+
+        #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(30, 41, 59, 0.9); color: white; padding: 12px 24px; border-radius: 30px; display: none; z-index: 1000; }
     </style>
 </head>
 <body>
@@ -82,9 +71,7 @@
 
 <div class="container">
     <div id="inputView" class="tab-content active">
-        <div class="header-flex">
-            <h2 id="inputDateTitle">実績入力</h2>
-        </div>
+        <div class="header-flex"><h2 id="inputDateTitle">実績入力</h2></div>
         <div class="staff-selector">
             <label>スタッフ選択: </label>
             <select id="staffSelect" onchange="updateView()"></select>
@@ -97,22 +84,16 @@
             <h2 id="boardTitle">〇/〇のがんばるシート</h2>
             <button class="export-btn" onclick="exportToExcel()">📊 Excel出力</button>
         </div>
-        <div class="board-table-wrapper">
-            <table id="resultTable"></table>
-        </div>
+        <div class="board-table-wrapper"><table id="resultTable"></table></div>
     </div>
 
     <div id="settingsView" class="tab-content">
-        <div class="header-flex">
-            <h2 id="settingsTitle">🔒 各種設定</h2>
-        </div>
+        <div class="header-flex"><h2 id="settingsTitle">🔒 各種設定</h2></div>
         <div class="settings-grid">
             <div class="settings-card full-width-card">
                 <h3>データ管理</h3>
-                <p style="font-size: 14px; margin-bottom: 15px; color: #475569;">本日の入力データをすべてゼロに戻します。（※Firebase連携済み：操作すると全員の画面に反映されます）</p>
-                <button class="clear-btn" onclick="clearTodayData()">🗑️ 本日のデータを全クリア</button>
+                <button class="clear-btn" onclick="clearTodayData()">🗑️ 本日の実績データを全クリア</button>
             </div>
-
             <div class="settings-card">
                 <h3>スタッフ管理</h3>
                 <div class="add-form">
@@ -121,14 +102,10 @@
                 </div>
                 <ul id="staffListUI" class="list-ui"></ul>
             </div>
-            
             <div class="settings-card">
-                <h3>
-                    商材管理
-                    <button class="reset-btn" onclick="resetItems()">初期の25項目に戻す</button>
-                </h3>
+                <h3>商材管理 <button class="reset-btn" onclick="resetItems()">25項目リセット</button></h3>
                 <div class="add-form">
-                    <input type="text" id="newItemInput" placeholder="例: 新しい商材">
+                    <input type="text" id="newItemInput" placeholder="例: 新商材">
                     <button onclick="addListItem('item')">追加</button>
                 </div>
                 <ul id="itemListUI" class="list-ui"></ul>
@@ -136,14 +113,12 @@
         </div>
     </div>
 </div>
-
-<div id="toast">登録しました</div>
+<div id="toast"></div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, query, where, onSnapshot, serverTimestamp, deleteDoc, doc, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, query, where, onSnapshot, serverTimestamp, deleteDoc, doc, getDocs, setDoc, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-    // いただいたFirebaseの鍵情報
     const firebaseConfig = {
         apiKey: "AIzaSyCmerraKVr1iJsRoiW53lxUtgDUcOGVXtY",
         authDomain: "ganbaru-sheet-a32f3.firebaseapp.com",
@@ -155,324 +130,146 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+    const ADMIN_PASSWORD = "9135"; // パスワード変更が必要な場合はここを修正
 
-    const ADMIN_PASSWORD = "0000";
-
-    // ローカルで保持する本日のデータ一覧
     let testData = []; 
-    
-    const defaultItems = [
-        "光10GB", "光1GB", "HOME5G", "GOLD", "GOLDU", "PLATINUM", "ドコモMAX", "ポイ活MAX", 
-        "d払い初回利用", "ドコモでんき", "ドコモガス", "守くん", "内) プレミアム", "ニフティ", 
-        "内) NiftyB・C", "Nkeep", "アドクリ", "ダレカナ", "保存君", "コドマモ", "あんセキ", 
-        "Amazon", "Disney", "Lemino", "マイショップ"
-    ];
+    let staffNames = [];
+    let itemNames = [];
 
-    const colorMap = {
-        "光10GB": "#bae6fd", "光1GB": "#bae6fd", "HOME5G": "#bae6fd", 
-        "GOLD": "#fef08a", "GOLDU": "#fef08a", "PLATINUM": "#fef08a", 
-        "ドコモでんき": "#bbf7d0", "ドコモガス": "#bbf7d0", 
-        "守くん": "#e9d5ff", "内) プレミアム": "#e9d5ff", "ニフティ": "#e9d5ff", 
-        "内) NiftyB・C": "#e9d5ff", "Nkeep": "#e9d5ff", "アドクリ": "#e9d5ff", 
-        "ダレカナ": "#e9d5ff", "保存君": "#e9d5ff", 
-        "Amazon": "#d9ead3", "Disney": "#d9ead3", 
-        "Lemino": "#fed7aa", 
-        "コーティング": "#fecdd3", "PI": "#fecaca" 
-    };
-
-    function getItemColor(item) { return colorMap[item] || "#f1f5f9"; }
-
-    let staffNames = JSON.parse(localStorage.getItem('shopStaffList')) || ["榎本", "スタッフB"];
-    let itemNames = JSON.parse(localStorage.getItem('shopItemList')) || defaultItems;
+    const defaultItems = ["光10GB", "光1GB", "HOME5G", "GOLD", "GOLDU", "PLATINUM", "ドコモMAX", "ポイ活MAX", "d払い初回利用", "ドコモでんき", "ドコモガス", "守くん", "内) プレミアム", "ニフティ", "内) NiftyB・C", "Nkeep", "アドクリ", "ダレカナ", "保存君", "コドマモ", "あんセキ", "Amazon", "Disney", "Lemino", "マイショップ"];
+    const colorMap = { "光10GB": "#bae6fd", "光1GB": "#bae6fd", "HOME5G": "#bae6fd", "GOLD": "#fef08a", "GOLDU": "#fef08a", "PLATINUM": "#fef08a", "ドコモでんき": "#bbf7d0", "ドコモガス": "#bbf7d0", "守くん": "#e9d5ff", "内) プレミアム": "#e9d5ff", "ニフティ": "#e9d5ff", "内) NiftyB・C": "#e9d5ff", "Nkeep": "#e9d5ff", "アドクリ": "#e9d5ff", "ダレカナ": "#e9d5ff", "保存君": "#e9d5ff", "Amazon": "#d9ead3", "Disney": "#d9ead3", "Lemino": "#fed7aa", "コーティング": "#fecdd3", "PI": "#fecaca" };
 
     const today = new Date();
     const dateStr = `${today.getMonth() + 1}/${today.getDate()}`;
-    const searchDateStr = today.toLocaleDateString('ja-JP'); // Firebase検索用の YYYY/MM/DD形式
+    const searchDateStr = today.toLocaleDateString('ja-JP');
 
     document.getElementById('boardTitle').textContent = `${dateStr}のがんばるシート`;
     document.getElementById('inputDateTitle').textContent = `実績入力 (${dateStr})`;
 
-    // ==========================================
-    // 📡 Firebase リアルタイムデータ取得
-    // ==========================================
-    const q = query(collection(db, "sales_records"), where("date", "==", searchDateStr));
-    
-    onSnapshot(q, (snapshot) => {
-        let tempData = [];
-        snapshot.forEach((doc) => {
-            tempData.push({ id: doc.id, ...doc.data() });
-        });
-        
-        // 追加された時間順に並び替え（エラー防止のためアプリ側でソート）
-        tempData.sort((a, b) => {
-            const timeA = a.timestamp ? a.timestamp.toMillis() : Date.now();
-            const timeB = b.timestamp ? b.timestamp.toMillis() : Date.now();
-            return timeA - timeB;
-        });
-        
-        testData = tempData; // データを丸ごと最新に入れ替え
-        window.updateView(); // 画面を更新
+    // 📡 リアルタイム同期（実績・スタッフ・商材）
+    onSnapshot(query(collection(db, "sales_records"), where("date", "==", searchDateStr)), (snap) => {
+        testData = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => (a.timestamp?.toMillis() || 0) - (b.timestamp?.toMillis() || 0));
+        window.updateView();
     });
 
-    // ==========================================
-    // 💾 Firebase データ追加・削除
-    // ==========================================
+    onSnapshot(query(collection(db, "settings"), orderBy("order", "asc")), (snap) => {
+        staffNames = snap.docs.filter(d => d.data().type === 'staff').map(d => d.data().name);
+        itemNames = snap.docs.filter(d => d.data().type === 'item').map(d => d.data().name);
+        if(itemNames.length === 0) { resetToDefaultItems(); }
+        renderStaffSelect();
+        buildInputUI();
+        renderSettingsUI();
+        window.updateView();
+    });
+
+    // 💾 データ操作関数
     async function addRecord(item) {
-        const staffSelect = document.getElementById('staffSelect');
-        if(staffSelect.options.length === 0) {
-            alert("「各種設定」からスタッフを追加してください。"); return;
-        }
-        
-        // データベースに送信
-        await addDoc(collection(db, "sales_records"), {
-            staff: staffSelect.value,
-            item: item,
-            date: searchDateStr,
-            timestamp: serverTimestamp()
-        });
-        showToast(`${staffSelect.value} : ${item} +1`);
+        const staff = document.getElementById('staffSelect').value;
+        if(!staff) return alert("スタッフを選択してください");
+        await addDoc(collection(db, "sales_records"), { staff, item, date: searchDateStr, timestamp: serverTimestamp() });
+        showToast(`${staff}: ${item} +1`);
     }
 
     async function removeRecord(item) {
-        const staffName = document.getElementById('staffSelect').value;
-        // 自分の・その商材のデータを抽出
-        const records = testData.filter(d => d.staff === staffName && d.item === item);
+        const staff = document.getElementById('staffSelect').value;
+        const target = testData.filter(d => d.staff === staff && d.item === item).pop();
+        if (target) await deleteDoc(doc(db, "sales_records", target.id));
+    }
+
+    async function resetToDefaultItems() {
+        for(let i=0; i<defaultItems.length; i++) {
+            await setDoc(doc(db, "settings", `item_${i}`), { type: 'item', name: defaultItems[i], order: i });
+        }
+    }
+
+    window.addListItem = async (type) => {
+        const val = document.getElementById(type === 'staff' ? 'newStaffInput' : 'newItemInput').value.trim();
+        if(!val) return;
+        const id = `${type}_${Date.now()}`;
+        const order = (type === 'staff' ? staffNames.length : itemNames.length);
+        await setDoc(doc(db, "settings", id), { type, name: val, order });
+        document.getElementById(type === 'staff' ? 'newStaffInput' : 'newItemInput').value = '';
+    };
+
+    window.deleteListItem = async (type, name) => {
+        if(!confirm(`${name}を削除しますか？`)) return;
+        const snap = await getDocs(query(collection(db, "settings"), where("type", "==", type), where("name", "==", name)));
+        snap.forEach(async (d) => await deleteDoc(doc(db, "settings", d.id)));
+    };
+
+    window.moveItem = async (type, name, dir) => {
+        const list = type === 'staff' ? staffNames : itemNames;
+        const idx = list.indexOf(name);
+        if(idx + dir < 0 || idx + dir >= list.length) return;
         
-        if (records.length > 0) {
-            // 一番最後に押したデータ（配列の最後）のIDを取得して削除
-            const lastRecord = records[records.length - 1];
-            await deleteDoc(doc(db, "sales_records", lastRecord.id));
-            showToast(`${staffName} : ${item} 取消`);
-        }
+        const snap = await getDocs(query(collection(db, "settings"), where("type", "==", type), orderBy("order", "asc")));
+        const docs = snap.docs;
+        const tempOrder = docs[idx].data().order;
+        await setDoc(doc(db, "settings", docs[idx].id), { ...docs[idx].data(), order: docs[idx + dir].data().order });
+        await setDoc(doc(db, "settings", docs[idx + dir].id), { ...docs[idx + dir].data(), order: tempOrder });
+    };
+
+    window.clearTodayData = async () => {
+        if (!confirm("本日の実績データを全消去しますか？")) return;
+        const snap = await getDocs(query(collection(db, "sales_records"), where("date", "==", searchDateStr)));
+        snap.forEach(async (d) => await deleteDoc(doc(db, "sales_records", d.id)));
+    };
+
+    // 🖥 UI更新
+    function renderStaffSelect() {
+        const sel = document.getElementById('staffSelect');
+        const prev = sel.value;
+        sel.innerHTML = staffNames.map(n => `<option value="${n}">${n}</option>`).join('');
+        if(staffNames.includes(prev)) sel.value = prev;
     }
 
-    window.clearTodayData = async function() {
-        if (confirm("本日の入力データをすべてゼロにリセットしますか？\n（※Firebase上の本日のデータが全削除され、全員の画面がリセットされます）")) {
-            const querySnapshot = await getDocs(q);
-            querySnapshot.forEach(async (document) => {
-                await deleteDoc(doc(db, "sales_records", document.id));
-            });
-            showToast("本日のデータを全クリアしました");
-        }
-    }
-
-    // ==========================================
-    // 🖥 UIの構築と更新
-    // ==========================================
     function buildInputUI() {
-        const btnContainer = document.getElementById('btnContainer');
-        btnContainer.innerHTML = '';
-        
-        itemNames.forEach(item => {
-            const card = document.createElement('div');
-            card.className = 'item-card';
-            
-            const btn = document.createElement('button');
-            btn.className = 'item-card-btn';
-            btn.textContent = item;
-            btn.style.backgroundColor = getItemColor(item); 
-            btn.onclick = () => addRecord(item);
-            
-            const countArea = document.createElement('div');
-            countArea.className = 'count-area';
-            
-            const countSpan = document.createElement('span');
-            countSpan.className = 'my-count';
-            countSpan.id = `count-${item}`;
-            countSpan.textContent = '0件';
-            
-            const minusBtn = document.createElement('button');
-            minusBtn.className = 'minus-btn';
-            minusBtn.textContent = '− 取消';
-            minusBtn.onclick = () => removeRecord(item);
-
-            countArea.appendChild(countSpan);
-            countArea.appendChild(minusBtn);
-            
-            card.appendChild(btn);
-            card.appendChild(countArea);
-            btnContainer.appendChild(card);
-        });
+        document.getElementById('btnContainer').innerHTML = itemNames.map(item => `
+            <div class="item-card">
+                <button class="item-card-btn" style="background:${colorMap[item] || '#f1f5f9'}" onclick="window.addRec('${item}')">${item}</button>
+                <div class="count-area"><span class="my-count" id="count-${item}">0件</span><button class="minus-btn" onclick="window.remRec('${item}')">− 取消</button></div>
+            </div>`).join('');
     }
 
-    window.updateView = function() {
+    window.updateView = () => {
         const currentStaff = document.getElementById('staffSelect').value;
         const boardData = {}; 
-        const myCounts = {}; 
-
-        itemNames.forEach(item => { boardData[item] = []; myCounts[item] = 0; });
-
-        testData.forEach(data => {
-            if (boardData[data.item]) boardData[data.item].push(data.staff);
-            if (currentStaff && data.staff === currentStaff && myCounts[data.item] !== undefined) {
-                myCounts[data.item]++;
+        itemNames.forEach(it => boardData[it] = testData.filter(d => d.item === it).map(d => d.staff));
+        
+        let maxCols = Math.max(20, ...itemNames.map(it => boardData[it].length));
+        let html = `<thead><tr><th class="row-header" style="background:#f8fafc">商材名</th>${Array.from({length:maxCols}, (_,i)=>`<th class="square-cell">${i+1}</th>`).join('')}</tr></thead><tbody>`;
+        
+        itemNames.forEach(it => {
+            html += `<tr><td class="row-header" style="background:${colorMap[it] || '#f1f5f9'}">${it}</td>`;
+            for(let i=0; i<maxCols; i++){
+                const name = boardData[it][i] || '';
+                html += `<td class="square-cell ${name?'name-cell':''}">${name}</td>`;
             }
+            html += `</tr>`;
+            const cEl = document.getElementById(`count-${it}`);
+            if(cEl) cEl.textContent = `${testData.filter(d => d.item === it && d.staff === currentStaff).length}件`;
         });
+        document.getElementById('resultTable').innerHTML = html + `</tbody>`;
+    };
 
-        let maxCols = 20;
-        itemNames.forEach(item => {
-            if (boardData[item].length > maxCols) maxCols = boardData[item].length;
-        });
-
-        let tableHtml = `<thead><tr><th class="row-header" style="background-color: #f8fafc;">商材名</th>`;
-        for (let i = 1; i <= maxCols; i++) {
-            tableHtml += `<th class="square-cell">${i}</th>`;
-        }
-        tableHtml += `</tr></thead><tbody>`;
-
-        itemNames.forEach(item => {
-            const bgColor = getItemColor(item);
-            tableHtml += `<tr><td class="row-header" style="background-color: ${bgColor};">${item}</td>`;
-            for (let i = 0; i < maxCols; i++) {
-                const name = boardData[item][i] || '';
-                const cellClass = name ? 'square-cell name-cell' : 'square-cell';
-                tableHtml += `<td class="${cellClass}">${name}</td>`;
-            }
-            tableHtml += `</tr>`;
-            
-            const countSpan = document.getElementById(`count-${item}`);
-            if (countSpan) countSpan.textContent = `${myCounts[item]}件`;
-        });
-        tableHtml += `</tbody>`;
-        document.getElementById('resultTable').innerHTML = tableHtml;
-    }
-
-    // ==========================================
-    // ⚙️ 設定関連（HTMLから呼べるようにwindowに紐付け）
-    // ==========================================
     function renderSettingsUI() {
-        const selectEl = document.getElementById('staffSelect');
-        const staffListEl = document.getElementById('staffListUI');
-        const currentStaff = selectEl.value;
-        
-        selectEl.innerHTML = ''; staffListEl.innerHTML = '';
-        staffNames.forEach((name, idx) => {
-            selectEl.add(new Option(name, name));
-            staffListEl.innerHTML += `<li>${name} <button class="delete-btn" onclick="deleteListItem('staff', ${idx})">削除</button></li>`;
-        });
-        if (staffNames.includes(currentStaff)) selectEl.value = currentStaff;
-
-        const itemListEl = document.getElementById('itemListUI');
-        itemListEl.innerHTML = '';
-        itemNames.forEach((name, idx) => {
-            const bgColor = getItemColor(name);
-            itemListEl.innerHTML += `
-                <li style="border-left: 5px solid ${bgColor};">
-                    <span>${name}</span>
-                    <div class="action-btns">
-                        <button class="move-btn" onclick="moveItem(${idx}, -1)">↑</button>
-                        <button class="move-btn" onclick="moveItem(${idx}, 1)">↓</button>
-                        <button class="delete-btn" onclick="deleteListItem('item', ${idx})">削除</button>
-                    </div>
-                </li>`;
-        });
-
-        localStorage.setItem('shopStaffList', JSON.stringify(staffNames));
-        localStorage.setItem('shopItemList', JSON.stringify(itemNames));
+        document.getElementById('staffListUI').innerHTML = staffNames.map(n => `<li>${n} <button class="delete-btn" onclick="window.deleteListItem('staff','${n}')">削除</button></li>`).join('');
+        document.getElementById('itemListUI').innerHTML = itemNames.map(n => `<li><span>${n}</span><div class="action-btns"><button class="move-btn" onclick="window.moveItem('item','${n}',-1)">↑</button><button class="move-btn" onclick="window.moveItem('item','${n}',1)">↓</button><button class="delete-btn" onclick="window.deleteListItem('item','${n}')">削除</button></div></li>`).join('');
     }
 
-    window.addListItem = function(type) {
-        const inputId = type === 'staff' ? 'newStaffInput' : 'newItemInput';
-        const targetList = type === 'staff' ? staffNames : itemNames;
-        const newName = document.getElementById(inputId).value.trim();
-        
-        if (newName && !targetList.includes(newName)) {
-            targetList.push(newName);
-            document.getElementById(inputId).value = '';
-            if (type === 'item') { buildInputUI(); renderSettingsUI(); window.updateView(); } 
-            else { renderSettingsUI(); window.updateView(); }
-        }
-    }
-
-    window.deleteListItem = function(type, index) {
-        const targetList = type === 'staff' ? staffNames : itemNames;
-        if (confirm(`「${targetList[index]}」を削除しますか？`)) {
-            targetList.splice(index, 1);
-            if (type === 'item') { buildInputUI(); renderSettingsUI(); window.updateView(); } 
-            else { renderSettingsUI(); window.updateView(); }
-        }
-    }
-
-    window.moveItem = function(index, direction) {
-        if (index + direction < 0 || index + direction >= itemNames.length) return;
-        const temp = itemNames[index];
-        itemNames[index] = itemNames[index + direction];
-        itemNames[index + direction] = temp;
-        buildInputUI(); renderSettingsUI(); window.updateView();
-    }
-
-    window.resetItems = function() {
-        if (confirm("商材リストを初期の25項目にリセットしますか？\n（※本日の入力データは消えません）")) {
-            itemNames = [...defaultItems]; 
-            buildInputUI();
-            renderSettingsUI();
-            window.updateView();
-            showToast("商材リストを25項目にリセットしました");
-        }
-    }
-
-    window.exportToExcel = function() {
-        const table = document.getElementById("resultTable");
-        const htmlTemplate = `
-            <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-            <head>
-                <meta charset="utf-8">
-                <style>
-                    table { border-collapse: collapse; font-family: sans-serif; }
-                    th, td { border: 1px solid #cbd5e0; text-align: center; vertical-align: middle; }
-                    th.row-header { background-color: #f8fafc; }
-                    .row-header { font-weight: bold; white-space: nowrap; padding: 5px; }
-                    .square-cell { width: 35pt; height: 35pt; font-size: 10pt; word-wrap: break-word; }
-                    .name-cell { background-color: #e0f2fe; color: #0369a1; font-weight: bold; }
-                </style>
-            </head>
-            <body>
-                <h2>${dateStr}のがんばるシート</h2>
-                <table>${table.innerHTML}</table>
-            </body>
-            </html>
-        `;
-        const blob = new Blob([htmlTemplate], { type: 'application/vnd.ms-excel' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${dateStr.replace('/', '-')}のがんばるシート.xls`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    }
-
-    function showToast(msg) {
-        const toast = document.getElementById('toast');
-        toast.textContent = msg;
-        toast.style.display = 'block';
-        setTimeout(() => toast.style.display = 'none', 2000);
-    }
-
-    window.switchTab = function(tabId) {
-        if (tabId === 'settings') {
-            const inputPass = prompt("設定画面を開くにはパスワードを入力してください:");
-            if (inputPass !== ADMIN_PASSWORD) {
-                if (inputPass !== null) alert("パスワードが違います。");
-                return; 
-            }
-        }
-
-        ['input', 'board', 'settings'].forEach(id => {
-            document.getElementById(`${id}View`).classList.remove('active');
-            document.getElementById(`tabBtn${id.charAt(0).toUpperCase() + id.slice(1)}`).classList.remove('active');
-        });
-        document.getElementById(`${tabId}View`).classList.add('active');
-        document.getElementById(`tabBtn${tabId.charAt(0).toUpperCase() + tabId.slice(1)}`).classList.add('active');
-    }
-
-    // 初回実行
-    buildInputUI();
-    renderSettingsUI();
-    // （※Firebaseからのデータ受信時に自動でupdateViewが走るため、ここでは呼ばなくてOK）
-
+    // グローバル関数登録
+    window.addRec = addRecord; window.remRec = removeRecord;
+    window.showToast = (m) => { const t = document.getElementById('toast'); t.textContent = m; t.style.display = 'block'; setTimeout(()=>t.style.display='none',2000); };
+    window.switchTab = (id) => {
+        if(id === 'settings' && prompt("パスワード:") !== ADMIN_PASSWORD) return;
+        ['input','board','settings'].forEach(t => { document.getElementById(t+'View').classList.toggle('active', t===id); document.getElementById('tabBtn'+t.charAt(0).toUpperCase()+t.slice(1)).classList.toggle('active', t===id); });
+    };
+    window.exportToExcel = () => {
+        const html = `<html><head><meta charset="utf-8"><style>table{border-collapse:collapse;} th,td{border:1px solid #ccc; text-align:center; width:40pt; height:40pt;} .name-cell{background:#e0f2fe;}</style></head><body><table>${document.getElementById("resultTable").innerHTML}</table></body></html>`;
+        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([html], {type:'application/vnd.ms-excel'})); a.download = `${dateStr.replace('/','-')}のがんばるシート.xls`; a.click();
+    };
+    window.resetItems = async () => { if(confirm("25項目に戻しますか？")) { const snap = await getDocs(query(collection(db, "settings"), where("type", "==", "item"))); snap.forEach(async d => await deleteDoc(doc(db, "settings", d.id))); await resetToDefaultItems(); }};
 </script>
-
 </body>
 </html>
+
