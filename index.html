@@ -51,13 +51,16 @@
         .settings-card h3 { margin-top: 0; border-bottom: 1px solid #cbd5e0; padding-bottom: 5px; display: flex; justify-content: space-between; align-items: center;}
         .reset-btn { background: #fbbf24; border: none; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer; }
         .add-form { display: flex; gap: 10px; margin-top: 15px; }
-        .add-form input { flex: 1; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; }
+        .add-form input[type="text"] { flex: 1; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; }
+        .color-picker { width: 42px; height: 42px; padding: 0; border: 1px solid #cbd5e0; border-radius: 6px; cursor: pointer; background: white;}
         .add-form button { padding: 10px 15px; background: #64748b; color: white; border: none; border-radius: 6px; cursor: pointer; }
+        
         .list-ui { list-style: none; padding: 0; margin-top: 10px; max-height: 400px; overflow-y: auto; }
         .list-ui li { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #edf2f7; background: white; margin-bottom: 5px; border-radius: 4px; }
         .delete-btn { background: #fca5a5; color: #7f1d1d; border: none; padding: 5px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; }
         .edit-btn { background: #e2e8f0; color: #475569; border: none; padding: 5px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; margin-right: 4px; }
         .move-btn { background: #f1f5f9; border: 1px solid #cbd5e0; border-radius: 4px; padding: 5px 8px; cursor: pointer; }
+        .list-color-input { width: 28px; height: 28px; padding: 0; border: 1px solid #cbd5e0; border-radius: 4px; cursor: pointer; }
 
         #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(30, 41, 59, 0.9); color: white; padding: 12px 24px; border-radius: 30px; display: none; z-index: 1000; }
     </style>
@@ -106,6 +109,7 @@
             <div class="settings-card">
                 <h3>商材管理 <button class="reset-btn" onclick="resetItems()">25項目リセット</button></h3>
                 <div class="add-form">
+                    <input type="color" id="newItemColor" class="color-picker" value="#bae6fd" title="パネルの色を選ぶ">
                     <input type="text" id="newItemInput" placeholder="例: 新商材">
                     <button onclick="addListItem('item')">追加</button>
                 </div>
@@ -136,6 +140,7 @@
     let testData = []; 
     let staffNames = [];
     let itemNames = [];
+    let itemColors = {}; // 各商材の色を保持
 
     const defaultItems = ["光10GB", "光1GB", "HOME5G", "GOLD", "GOLDU", "PLATINUM", "ドコモMAX", "ポイ活MAX", "d払い初回利用", "ドコモでんき", "ドコモガス", "守くん", "内) プレミアム", "ニフティ", "内) NiftyB・C", "Nkeep", "アドクリ", "ダレカナ", "保存君", "コドマモ", "あんセキ", "Amazon", "Disney", "Lemino", "マイショップ"];
     const colorMap = { "光10GB": "#bae6fd", "光1GB": "#bae6fd", "HOME5G": "#bae6fd", "GOLD": "#fef08a", "GOLDU": "#fef08a", "PLATINUM": "#fef08a", "ドコモでんき": "#bbf7d0", "ドコモガス": "#bbf7d0", "守くん": "#e9d5ff", "内) プレミアム": "#e9d5ff", "ニフティ": "#e9d5ff", "内) NiftyB・C": "#e9d5ff", "Nkeep": "#e9d5ff", "アドクリ": "#e9d5ff", "ダレカナ": "#e9d5ff", "保存君": "#e9d5ff", "Amazon": "#d9ead3", "Disney": "#d9ead3", "Lemino": "#fed7aa", "コーティング": "#fecdd3", "PI": "#fecaca" };
@@ -147,7 +152,7 @@
     document.getElementById('boardTitle').textContent = `${dateStr}のがんばるシート`;
     document.getElementById('inputDateTitle').textContent = `実績入力 (${dateStr})`;
 
-    // 📡 リアルタイム同期（実績・スタッフ・商材）
+    // 📡 リアルタイム同期
     onSnapshot(query(collection(db, "sales_records"), where("date", "==", searchDateStr)), (snap) => {
         testData = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => (a.timestamp?.toMillis() || 0) - (b.timestamp?.toMillis() || 0));
         window.updateView();
@@ -155,7 +160,16 @@
 
     onSnapshot(query(collection(db, "settings"), orderBy("order", "asc")), (snap) => {
         staffNames = snap.docs.filter(d => d.data().type === 'staff').map(d => d.data().name);
-        itemNames = snap.docs.filter(d => d.data().type === 'item').map(d => d.data().name);
+        itemNames = [];
+        itemColors = {};
+        
+        snap.docs.filter(d => d.data().type === 'item').forEach(d => {
+            const data = d.data();
+            itemNames.push(data.name);
+            // データベースに色がなければ、従来のcolorMapかデフォルト色（白っぽいグレー）を適用
+            itemColors[data.name] = data.color || colorMap[data.name] || '#f8fafc';
+        });
+
         if(itemNames.length === 0) { resetToDefaultItems(); }
         renderStaffSelect();
         buildInputUI();
@@ -179,17 +193,34 @@
 
     async function resetToDefaultItems() {
         for(let i=0; i<defaultItems.length; i++) {
-            await setDoc(doc(db, "settings", `item_${i}`), { type: 'item', name: defaultItems[i], order: i });
+            const name = defaultItems[i];
+            const color = colorMap[name] || '#f8fafc';
+            await setDoc(doc(db, "settings", `item_${i}`), { type: 'item', name: name, order: i, color: color });
         }
     }
 
     window.addListItem = async (type) => {
-        const val = document.getElementById(type === 'staff' ? 'newStaffInput' : 'newItemInput').value.trim();
+        const inputEl = document.getElementById(type === 'staff' ? 'newStaffInput' : 'newItemInput');
+        const val = inputEl.value.trim();
         if(!val) return;
         const id = `${type}_${Date.now()}`;
         const order = (type === 'staff' ? staffNames.length : itemNames.length);
-        await setDoc(doc(db, "settings", id), { type, name: val, order });
-        document.getElementById(type === 'staff' ? 'newStaffInput' : 'newItemInput').value = '';
+        
+        let data = { type, name: val, order };
+        if (type === 'item') {
+            data.color = document.getElementById('newItemColor').value;
+        }
+
+        await setDoc(doc(db, "settings", id), data);
+        inputEl.value = '';
+    };
+
+    // リストの横から直接色を変更する機能
+    window.updateItemColor = async (name, newColor) => {
+        const settingSnap = await getDocs(query(collection(db, "settings"), where("type", "==", "item"), where("name", "==", name)));
+        settingSnap.forEach(async (d) => {
+            await setDoc(doc(db, "settings", d.id), { ...d.data(), color: newColor }, { merge: true });
+        });
     };
 
     window.editListItem = async (type, oldName) => {
@@ -198,13 +229,16 @@
         
         const cleanName = newName.trim();
 
-        // 1. 設定(settings)の名称を更新
         const settingSnap = await getDocs(query(collection(db, "settings"), where("type", "==", type), where("name", "==", oldName)));
         settingSnap.forEach(async (d) => {
-            await setDoc(doc(db, "settings", d.id), { ...d.data(), name: cleanName });
+            let newData = { ...d.data(), name: cleanName };
+            // 商材の場合は、設定済みの色を引き継ぐ
+            if (type === 'item') {
+                newData.color = itemColors[oldName] || colorMap[oldName] || '#f8fafc';
+            }
+            await setDoc(doc(db, "settings", d.id), newData);
         });
 
-        // 2. 既に入力されている実績(sales_records)の名称も一括で更新
         const fieldName = type === 'staff' ? 'staff' : 'item';
         const recordSnap = await getDocs(query(collection(db, "sales_records"), where(fieldName, "==", oldName)));
         recordSnap.forEach(async (d) => {
@@ -247,9 +281,10 @@
     }
 
     function buildInputUI() {
+        // 色をデータベース（itemColors）から取得するように変更
         document.getElementById('btnContainer').innerHTML = itemNames.map(item => `
             <div class="item-card">
-                <button class="item-card-btn" style="background:${colorMap[item] || '#f1f5f9'}" onclick="window.addRec('${item}')">${item}</button>
+                <button class="item-card-btn" style="background:${itemColors[item]}" onclick="window.addRec('${item}')">${item}</button>
                 <div class="count-area"><span class="my-count" id="count-${item}">0件</span><button class="minus-btn" onclick="window.remRec('${item}')">− 取消</button></div>
             </div>`).join('');
     }
@@ -263,7 +298,8 @@
         let html = `<thead><tr><th class="row-header" style="background:#f8fafc">商材名</th>${Array.from({length:maxCols}, (_,i)=>`<th class="square-cell">${i+1}</th>`).join('')}</tr></thead><tbody>`;
         
         itemNames.forEach(it => {
-            html += `<tr><td class="row-header" style="background:${colorMap[it] || '#f1f5f9'}">${it}</td>`;
+            // 表の左ヘッダーの色もデータベースから取得
+            html += `<tr><td class="row-header" style="background:${itemColors[it]}">${it}</td>`;
             for(let i=0; i<maxCols; i++){
                 const name = boardData[it][i] || '';
                 html += `<td class="square-cell ${name?'name-cell':''}">${name}</td>`;
@@ -276,8 +312,28 @@
     };
 
     function renderSettingsUI() {
-        document.getElementById('staffListUI').innerHTML = staffNames.map(n => `<li>${n} <div class="action-btns"><button class="edit-btn" onclick="window.editListItem('staff','${n}')">編集</button><button class="delete-btn" onclick="window.deleteListItem('staff','${n}')">削除</button></div></li>`).join('');
-        document.getElementById('itemListUI').innerHTML = itemNames.map(n => `<li><span>${n}</span><div class="action-btns"><button class="move-btn" onclick="window.moveItem('item','${n}',-1)">↑</button><button class="move-btn" onclick="window.moveItem('item','${n}',1)">↓</button><button class="edit-btn" onclick="window.editListItem('item','${n}')">編集</button><button class="delete-btn" onclick="window.deleteListItem('item','${n}')">削除</button></div></li>`).join('');
+        document.getElementById('staffListUI').innerHTML = staffNames.map(n => `
+            <li>${n} 
+                <div class="action-btns">
+                    <button class="edit-btn" onclick="window.editListItem('staff','${n}')">編集</button>
+                    <button class="delete-btn" onclick="window.deleteListItem('staff','${n}')">削除</button>
+                </div>
+            </li>`).join('');
+
+        // 商材の横にカラーピッカーを設置して、直感的に色を変えられるように変更
+        document.getElementById('itemListUI').innerHTML = itemNames.map(n => `
+            <li>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <input type="color" class="list-color-input" value="${itemColors[n]}" onchange="window.updateItemColor('${n}', this.value)" title="色を変更">
+                    <span>${n}</span>
+                </div>
+                <div class="action-btns">
+                    <button class="move-btn" onclick="window.moveItem('item','${n}',-1)">↑</button>
+                    <button class="move-btn" onclick="window.moveItem('item','${n}',1)">↓</button>
+                    <button class="edit-btn" onclick="window.editListItem('item','${n}')">編集</button>
+                    <button class="delete-btn" onclick="window.deleteListItem('item','${n}')">削除</button>
+                </div>
+            </li>`).join('');
     }
 
     // グローバル関数登録
@@ -289,10 +345,4 @@
     };
     window.exportToExcel = () => {
         const html = `<html><head><meta charset="utf-8"><style>table{border-collapse:collapse;} th,td{border:1px solid #ccc; text-align:center; width:40pt; height:40pt;} .name-cell{background:#e0f2fe;}</style></head><body><table>${document.getElementById("resultTable").innerHTML}</table></body></html>`;
-        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([html], {type:'application/vnd.ms-excel'})); a.download = `${dateStr.replace('/','-')}のがんばるシート.xls`; a.click();
-    };
-    window.resetItems = async () => { if(confirm("25項目に戻しますか？")) { const snap = await getDocs(query(collection(db, "settings"), where("type", "==", "item"))); snap.forEach(async d => await deleteDoc(doc(db, "settings", d.id))); await resetToDefaultItems(); }};
-</script>
-</body>
-</html>
-
+        co
