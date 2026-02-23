@@ -4,74 +4,91 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>がんばるシート</title>
-    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
     <style>
         body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f0fdf4; color: #334155; margin: 0; padding: 0; }
         .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        
         .tab-menu { display: flex; background: #ffffff; border-bottom: 2px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.02); margin-bottom: 20px; }
         .tab-menu button { flex: 1; padding: 15px; background: none; border: none; color: #94a3b8; font-size: 16px; cursor: pointer; transition: 0.3s; font-weight: bold; }
         #tabBtnInput.active { color: #3b82f6; border-bottom: 3px solid #3b82f6; background: #eff6ff; }
         #tabBtnBoard.active { color: #10b981; border-bottom: 3px solid #10b981; background: #ecfdf5; }
         #tabBtnSettings.active { color: #64748b; border-bottom: 3px solid #64748b; background: #f8fafc; }
+        
         .tab-content { display: none; background: #ffffff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.03); border: 1px solid #e2e8f0; }
         .tab-content.active { display: block; }
+
         .header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         #inputDateTitle { border-bottom: 2px solid #3b82f6; padding-bottom: 5px; margin: 0; font-size: 22px; }
         #boardTitle { border-bottom: 2px solid #10b981; padding-bottom: 5px; margin: 0; font-size: 22px; }
         #settingsTitle { border-bottom: 2px solid #64748b; padding-bottom: 5px; margin: 0; font-size: 22px; }
+
         .staff-selector { margin-bottom: 25px; font-weight: bold; color: #475569; }
         .staff-selector select { font-size: 16px; padding: 10px; width: 100%; max-width: 300px; border-radius: 8px; border: 1px solid #cbd5e0; background: #f8fafc; margin-top: 5px;}
+        
         .btn-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; }
         .item-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; display: flex; flex-direction: column; box-shadow: 0 2px 4px rgba(0,0,0,0.03); overflow: hidden; }
+        
+        /* 変更：ボタンの中身を縦並びにして、あと何件かを表示 */
         .item-card-btn { color: #1e293b; border: none; font-size: 16px; font-weight: bold; cursor: pointer; padding: 15px 10px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 6px; }
         .item-card-btn:active { opacity: 0.7; }
+        
+        /* あと◯件のバッジ */
         .remain-text { font-size: 13px; font-weight: bold; color: #e11d48; background: #ffe4e6; padding: 3px 10px; border-radius: 12px; display: inline-block; transition: 0.3s; box-shadow: 0 1px 2px rgba(0,0,0,0.1);}
         .remain-text.achieved { color: #059669; background: #d1fae5; }
         .remain-text.hidden { display: none; }
+
         .count-area { display: flex; align-items: center; justify-content: space-between; padding: 10px 15px; background: #ffffff; border-top: 1px solid #f1f5f9; }
         .my-count { font-size: 16px; font-weight: bold; color: #475569; }
         .minus-btn { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; border-radius: 4px; padding: 5px 10px; font-size: 13px; font-weight: bold; cursor: pointer; }
+
         .board-table-wrapper { overflow-x: auto; margin-top: 10px; padding-bottom: 10px; }
         table { border-collapse: collapse; width: max-content; }
         th, td { border: 1px solid #cbd5e0; text-align: center; vertical-align: middle; }
         .row-header { padding: 8px 12px; font-weight: bold; position: sticky; left: 0; z-index: 1; border-right: 2px solid #cbd5e0; white-space: nowrap; font-size: 14px; }
         .square-cell { width: 50px; height: 50px; min-width: 50px; box-sizing: border-box; font-size: 12px; line-height: 1.2; word-break: break-all; }
         .name-cell { background: #e0f2fe; color: #0369a1; font-weight: bold; }
+        
+        /* 変更：目標マス用の背景色と強調線 */
         .target-bg { background-color: #fef9c3; }
         .target-border { border-right: 3px solid #f59e0b; }
+
         .export-btn, .clear-btn { color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 14px; cursor: pointer; font-weight: bold; }
         .export-btn { background: #10b981; }
         .clear-btn { background: #ef4444; }
+
         .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
         @media (max-width: 768px) { .settings-grid { grid-template-columns: 1fr; } }
         .settings-card { background: #f8fafc; border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; }
         .full-width-card { grid-column: 1 / -1; }
         .settings-card h3 { margin-top: 0; border-bottom: 1px solid #cbd5e0; padding-bottom: 5px; display: flex; justify-content: space-between; align-items: center;}
         .reset-btn { background: #fbbf24; border: none; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer; }
+        
         .add-form { display: flex; gap: 8px; margin-top: 15px; align-items: center; flex-wrap: wrap;}
         .add-form input[type="text"] { flex: 1; min-width: 100px; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; }
         .add-form input[type="number"] { width: 60px; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; }
         .add-form select { padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; cursor: pointer; }
         .add-form button { padding: 10px 15px; background: #64748b; color: white; border: none; border-radius: 6px; cursor: pointer; }
+        
         .list-ui { list-style: none; padding: 0; margin-top: 10px; max-height: 500px; overflow-y: auto; }
         .list-ui li { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #edf2f7; background: white; margin-bottom: 5px; border-radius: 4px; }
+        
         .item-info { display: flex; align-items: center; gap: 10px; flex: 1; }
         .item-name { font-weight: bold; min-width: 120px; }
         .target-input { width: 50px; padding: 4px; border: 1px solid #cbd5e0; border-radius: 4px; text-align: center; }
+
         .action-btns { display: flex; gap: 4px; }
-        .edit-btn { background: #3b82f6; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; }
         .delete-btn { background: #fca5a5; color: #7f1d1d; border: none; padding: 5px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; }
         .move-btn { background: #f1f5f9; border: 1px solid #cbd5e0; border-radius: 4px; padding: 5px 8px; cursor: pointer; }
+
         #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(30, 41, 59, 0.9); color: white; padding: 12px 24px; border-radius: 30px; display: none; z-index: 1000; }
     </style>
 </head>
 <body>
 
 <div class="tab-menu">
-    <button id="tabBtnInput" class="active" onclick="window.switchTab('input')">実績入力</button>
-    <button id="tabBtnBoard" onclick="window.switchTab('board')">がんばるシート</button>
-    <button id="tabBtnSettings" onclick="window.switchTab('settings')">🔒 各種設定</button>
+    <button id="tabBtnInput" class="active" onclick="switchTab('input')">実績入力</button>
+    <button id="tabBtnBoard" onclick="switchTab('board')">がんばるシート</button>
+    <button id="tabBtnSettings" onclick="switchTab('settings')">🔒 各種設定</button>
 </div>
 
 <div class="container">
@@ -87,7 +104,7 @@
     <div id="boardView" class="tab-content">
         <div class="header-flex">
             <h2 id="boardTitle">〇/〇のがんばるシート</h2>
-            <button class="export-btn" onclick="window.exportToExcel()">📊 Excel出力</button>
+            <button class="export-btn" onclick="exportToExcel()">📊 Excel出力</button>
         </div>
         <div class="board-table-wrapper"><table id="resultTable"></table></div>
     </div>
@@ -97,18 +114,20 @@
         <div class="settings-grid">
             <div class="settings-card full-width-card">
                 <h3>データ管理</h3>
-                <button class="clear-btn" onclick="window.clearTodayData()">🗑️ 本日の実績データを全クリア</button>
+                <button class="clear-btn" onclick="clearTodayData()">🗑️ 本日の実績データを全クリア</button>
             </div>
+            
             <div class="settings-card">
                 <h3>スタッフ管理</h3>
                 <div class="add-form">
                     <input type="text" id="newStaffInput" placeholder="例: 榎本">
-                    <button onclick="window.addListItem('staff')">追加</button>
+                    <button onclick="addListItem('staff')">追加</button>
                 </div>
                 <ul id="staffListUI" class="list-ui"></ul>
             </div>
+
             <div class="settings-card">
-                <h3>商材管理 <button class="reset-btn" onclick="window.resetItems()">25項目リセット</button></h3>
+                <h3>商材管理 <button class="reset-btn" onclick="resetItems()">25項目リセット</button></h3>
                 <div class="add-form">
                     <input type="text" id="newItemInput" placeholder="新商材">
                     <select id="newItemColor" onchange="this.style.backgroundColor=this.value" style="background-color: #bae6fd;">
@@ -123,7 +142,7 @@
                         <option value="#f1f5f9" style="background:#f1f5f9;">グレー</option>
                     </select>
                     <input type="number" id="newItemTarget" placeholder="目標">
-                    <button onclick="window.addListItem('item')">追加</button>
+                    <button onclick="addListItem('item')">追加</button>
                 </div>
                 <ul id="itemListUI" class="list-ui"></ul>
             </div>
@@ -132,7 +151,10 @@
 </div>
 <div id="toast"></div>
 
-<script>
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, query, where, onSnapshot, serverTimestamp, deleteDoc, doc, getDocs, setDoc, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
     const firebaseConfig = {
         apiKey: "AIzaSyCmerraKVr1iJsRoiW53lxUtgDUcOGVXtY",
         authDomain: "ganbaru-sheet-a32f3.firebaseapp.com",
@@ -142,189 +164,215 @@
         appId: "1:75251515079:web:19acf818476d90588808e2"
     };
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-    
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
     const ADMIN_PASSWORD = "0000"; 
     const successSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3');
     successSound.volume = 0.5;
 
     let testData = []; 
-    let staffList = []; 
-    let items = []; 
+    let staffList = []; // {id, name, order}
+    let items = []; // {id, name, color, target, order}
 
+    // デフォルトの商材データ（仮の目標件数を設定しています。設定画面から変更可能）
     const defaultItemsObj = [
-        { name: "光10GB", color: "#bae6fd", target: 15 }, { name: "光1GB", color: "#bae6fd", target: 18 },
-        { name: "HOME5G", color: "#bae6fd", target: 43 }, { name: "GOLD", color: "#fef08a", target: 95 },
-        { name: "GOLDU", color: "#fef08a", target: 12 }, { name: "PLATINUM", color: "#fef08a", target: 34 },
-        { name: "ドコモMAX", color: "#fef08a", target: 164 }, { name: "ポイ活MAX", color: "#fef08a", target: 113 },
-        { name: "d払い初回利用", color: "#fecaca", target: 50 }, { name: "ドコモでんき", color: "#bbf7d0", target: 41 },
-        { name: "ドコモガス", color: "#bbf7d0", target: 25 }, { name: "守くん", color: "#e9d5ff", target: 118 },
-        { name: "内) プレミアム", color: "#e9d5ff", target: 88 }, { name: "ニフティ", color: "#e9d5ff", target: 62 },
-        { name: "内) NiftyB・C", color: "#e9d5ff", target: 49 }, { name: "Nkeep", color: "#e9d5ff", target: 43 },
-        { name: "アドクリ", color: "#e9d5ff", target: 92 }, { name: "ダレカナ", color: "#e9d5ff", target: 60 },
-        { name: "保存君", color: "#e9d5ff", target: 60 }, { name: "コドマモ", color: "#e9d5ff", target: 1 },
-        { name: "あんセキ", color: "#e9d5ff", target: 14 }, { name: "Amazon", color: "#d9ead3", target: 52 },
-        { name: "Disney", color: "#d9ead3", target: 23 }, { name: "Lemino", color: "#fed7aa", target: 11 },
+        { name: "光10GB", color: "#bae6fd", target: 15 },
+        { name: "光1GB", color: "#bae6fd", target: 18 },
+        { name: "HOME5G", color: "#bae6fd", target: 43 },
+        { name: "GOLD", color: "#fef08a", target: 95 },
+        { name: "GOLDU", color: "#fef08a", target: 12 },
+        { name: "PLATINUM", color: "#fef08a", target: 34 },
+        { name: "ドコモMAX", color: "#fef08a", target: 164 },
+        { name: "ポイ活MAX", color: "#fef08a", target: 113 },
+        { name: "d払い初回利用", color: "#fecaca", target: 50 },
+        { name: "ドコモでんき", color: "#bbf7d0", target: 41 },
+        { name: "ドコモガス", color: "#bbf7d0", target: 25 },
+        { name: "守くん", color: "#e9d5ff", target: 118 },
+        { name: "内) プレミアム", color: "#e9d5ff", target: 88 },
+        { name: "ニフティ", color: "#e9d5ff", target: 62 },
+        { name: "内) NiftyB・C", color: "#e9d5ff", target: 49 },
+        { name: "Nkeep", color: "#e9d5ff", target: 43 },
+        { name: "アドクリ", color: "#e9d5ff", target: 92 },
+        { name: "ダレカナ", color: "#e9d5ff", target: 60 },
+        { name: "保存君", color: "#e9d5ff", target: 60 },
+        { name: "コドマモ", color: "#e9d5ff", target: 1 },
+        { name: "あんセキ", color: "#e9d5ff", target: 14 },
+        { name: "Amazon", color: "#d9ead3", target: 52 },
+        { name: "Disney", color: "#d9ead3", target: 23 },
+        { name: "Lemino", color: "#fed7aa", target: 11 },
         { name: "マイショップ", color: "#f1f5f9", target: 83 }
     ];
 
     const today = new Date();
-    const dateStr = (today.getMonth() + 1) + '/' + today.getDate();
+    const dateStr = `${today.getMonth() + 1}/${today.getDate()}`;
     const searchDateStr = today.toLocaleDateString('ja-JP');
 
-    document.getElementById('boardTitle').textContent = dateStr + 'のがんばるシート';
-    document.getElementById('inputDateTitle').textContent = '実績入力 (' + dateStr + ')';
+    document.getElementById('boardTitle').textContent = `${dateStr}のがんばるシート`;
+    document.getElementById('inputDateTitle').textContent = `実績入力 (${dateStr})`;
 
-    window.switchTab = function(tabId) {
-        if(tabId === 'settings') {
-            const pass = prompt("パスワード:");
-            if(pass !== ADMIN_PASSWORD) {
-                if(pass !== null) alert("パスワードが違います。");
-                return;
-            }
+    // 📡 リアルタイム同期
+    onSnapshot(query(collection(db, "sales_records"), where("date", "==", searchDateStr)), (snap) => {
+        testData = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => (a.timestamp?.toMillis() || 0) - (b.timestamp?.toMillis() || 0));
+        window.updateView();
+    });
+
+    onSnapshot(query(collection(db, "settings"), orderBy("order", "asc")), (snap) => {
+        let newStaff = [];
+        let newItems = [];
+        snap.docs.forEach(d => {
+            const data = d.data();
+            if(data.type === 'staff') newStaff.push({ id: d.id, ...data });
+            else if(data.type === 'item') newItems.push({ id: d.id, color: '#f1f5f9', target: 0, ...data });
+        });
+        
+        staffList = newStaff;
+        items = newItems;
+
+        if(items.length === 0 && !window.isResetting) {
+            window.isResetting = true;
+            resetToDefaultItems().then(() => window.isResetting = false);
+            return;
         }
-        document.getElementById('inputView').classList.remove('active');
-        document.getElementById('boardView').classList.remove('active');
-        document.getElementById('settingsView').classList.remove('active');
-        document.getElementById('tabBtnInput').classList.remove('active');
-        document.getElementById('tabBtnBoard').classList.remove('active');
-        document.getElementById('tabBtnSettings').classList.remove('active');
-        document.getElementById(tabId + 'View').classList.add('active');
-        document.getElementById('tabBtn' + tabId.charAt(0).toUpperCase() + tabId.slice(1)).classList.add('active');
-    };
 
-    window.showToast = function(msg) {
-        const t = document.getElementById('toast');
-        t.textContent = msg;
-        t.style.display = 'block';
-        setTimeout(function() { t.style.display = 'none'; }, 2000);
-    };
+        renderStaffSelect();
+        buildInputUI();
+        renderSettingsUI();
+        window.updateView();
+    });
 
-    // 初期データのロード（真っ白防止策）
-    staffList = JSON.parse(localStorage.getItem('fb_staff')) || [{id:'s1', name:'榎本', order:0}];
-    items = JSON.parse(localStorage.getItem('fb_items')) || defaultItemsObj.map(function(it, i) { return {id: 'item_'+i, name: it.name, color: it.color, target: it.target, order: i}; });
-
-    // Firebase同期
-    db.collection("sales_records").where("date", "==", searchDateStr)
-      .onSnapshot(function(snap) {
-          testData = snap.docs.map(function(d) {
-              const data = d.data();
-              return { id: d.id, staff: data.staff, item: data.item, itemId: data.itemId, timestamp: data.timestamp };
-          }).sort(function(a,b) {
-              const timeA = a.timestamp ? a.timestamp.toMillis() : 0;
-              const timeB = b.timestamp ? b.timestamp.toMillis() : 0;
-              return timeA - timeB;
-          });
-          window.updateView();
-      }, function(error) {
-          console.error("Fetch Error:", error);
-      });
-
-    db.collection("settings").orderBy("order", "asc")
-      .onSnapshot(function(snap) {
-          if (snap.docs.length > 0) {
-              let newStaff = [];
-              let newItems = [];
-              snap.docs.forEach(function(d) {
-                  const data = d.data();
-                  if(data.type === 'staff') newStaff.push({ id: d.id, name: data.name, order: data.order });
-                  else if(data.type === 'item') newItems.push({ id: d.id, name: data.name, color: data.color || '#f1f5f9', target: data.target || 0, order: data.order });
-              });
-              staffList = newStaff;
-              items = newItems;
-              localStorage.setItem('fb_staff', JSON.stringify(staffList));
-              localStorage.setItem('fb_items', JSON.stringify(items));
-          } else {
-              // 空っぽの時は初期データをFirebaseに書き込む
-              if(!window.isResetting) {
-                  window.isResetting = true;
-                  resetToDefaultItems().then(function() {
-                      db.collection("settings").doc("staff_" + Date.now()).set({ type: 'staff', name: '榎本', order: 0 });
-                      window.isResetting = false;
-                  }).catch(function(e) {
-                      console.error("初期化失敗 (ルールの権限を確認してください):", e);
-                      window.isResetting = false;
-                  });
-              }
-          }
-          // ★絶対に画面を描画する！
-          renderStaffSelect();
-          buildInputUI();
-          renderSettingsUI();
-          window.updateView();
-      }, function(error) {
-          console.error("Settings Error:", error);
-          alert("データ取得に失敗しました。Firebaseのルール設定を確認してください。");
-      });
-
-    // 各種関数
-    window.addRec = async function(itemId) {
+    // 💾 データ操作関数
+    async function addRecord(item) {
         const staff = document.getElementById('staffSelect').value;
-        const itemObj = items.find(function(i) { return i.id === itemId; });
-        if(!staff) { alert("スタッフを選択してください"); return; }
-        if(!itemObj) return;
+        if(!staff) return alert("スタッフを選択してください");
         try {
             successSound.currentTime = 0; successSound.play();
-            await db.collection("sales_records").add({ staff: staff, item: itemObj.name, itemId: itemId, date: searchDateStr, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
-            window.showToast(staff + ": " + itemObj.name + " +1");
-        } catch (e) { alert("書き込みエラー：Firebaseのルールを確認してください。"); }
-    };
-
-    window.remRec = async function(itemId) {
-        const staff = document.getElementById('staffSelect').value;
-        const itemObj = items.find(function(i) { return i.id === itemId; });
-        if(!itemObj) return;
-        let targetRecord = null;
-        for (let i = testData.length - 1; i >= 0; i--) {
-            if (testData[i].staff === staff && testData[i].item === itemObj.name) {
-                targetRecord = testData[i]; break;
-            }
-        }
-        if (targetRecord) await db.collection("sales_records").doc(targetRecord.id).delete();
-    };
-
-    async function resetToDefaultItems() {
-        const batch = db.batch();
-        defaultItemsObj.forEach(function(obj, i) {
-            const docRef = db.collection("settings").doc("item_" + i);
-            batch.set(docRef, { type: 'item', name: obj.name, color: obj.color, target: obj.target, order: i });
-        });
-        await batch.commit();
+            await addDoc(collection(db, "sales_records"), { staff, item, date: searchDateStr, timestamp: serverTimestamp() });
+            showToast(`${staff}: ${item} +1`);
+        } catch (e) { console.error(e); }
     }
 
-    window.addListItem = async function(type) {
-        const inputId = type === 'staff' ? 'newStaffInput' : 'newItemInput';
-        const val = document.getElementById(inputId).value.trim();
+    async function removeRecord(item) {
+        const staff = document.getElementById('staffSelect').value;
+        const target = testData.filter(d => d.staff === staff && d.item === item).pop();
+        if (target) await deleteDoc(doc(db, "sales_records", target.id));
+    }
+
+    async function resetToDefaultItems() {
+        for(let i=0; i<defaultItemsObj.length; i++) {
+            await setDoc(doc(db, "settings", `item_${i}`), { type: 'item', ...defaultItemsObj[i], order: i });
+        }
+    }
+
+    window.addListItem = async (type) => {
+        const val = document.getElementById(type === 'staff' ? 'newStaffInput' : 'newItemInput').value.trim();
         if(!val) return;
-        const newId = type + "_" + Date.now();
+        const id = `${type}_${Date.now()}`;
+        
         if (type === 'staff') {
-            await db.collection("settings").doc(newId).set({ type: type, name: val, order: staffList.length });
+            await setDoc(doc(db, "settings", id), { type, name: val, order: staffList.length });
             document.getElementById('newStaffInput').value = '';
         } else {
             const color = document.getElementById('newItemColor').value;
             const target = parseInt(document.getElementById('newItemTarget').value) || 0;
-            await db.collection("settings").doc(newId).set({ type: type, name: val, color: color, target: target, order: items.length });
+            await setDoc(doc(db, "settings", id), { type, name: val, color, target, order: items.length });
             document.getElementById('newItemInput').value = '';
             document.getElementById('newItemTarget').value = '';
         }
     };
 
-    window.deleteListItem = async function(id, name) {
-        if(!confirm(name + " を削除しますか？")) return;
-        await db.collection("settings").doc(id).delete();
+    window.deleteListItem = async (id, name) => {
+        if(!confirm(`${name} を削除しますか？`)) return;
+        await deleteDoc(doc(db, "settings", id));
     };
 
-    window.editListItem = async function(type, id) {
-        const list = type === 'staff' ? staffList : items;
-        const itemObj = list.find(function(i) { return i.id === id; });
-        if(!itemObj) return;
-        const typeName = type === 'staff' ? 'スタッフ名' : '商材名';
-        const newName = prompt("新しい" + typeName + "を入力してください:", itemObj.name);
-        if (newName && newName.trim() !== "" && newName !== itemObj.name) {
-            const trimmedName = newName.trim();
-            await db.collection("settings").doc(id).set({ name: trimmedName }, { merge: true });
-            const fieldToUpdate = type === 'staff' ? 'staff' : 'item';
-            const snap = await db.collection("sales_records").where("date", "==", searchDateStr).where(fieldToUpdate, "==", itemObj.name).get();
-            const batch = db.batch();
-            sna
+    window.updateItemTarget = async (id, val) => {
+        await setDoc(doc(db, "settings", id), { target: parseInt(val) || 0 }, { merge: true });
+    };
+
+    // 並べ替えバグ修正：リストをローカルで入れ替えてから全体を更新する
+    window.moveItem = async (type, id, dir) => {
+        const list = type === 'staff' ? [...staffList] : [...items];
+        const idx = list.findIndex(i => i.id === id);
+        if(idx < 0 || idx + dir < 0 || idx + dir >= list.length) return;
+        
+        // 入れ替え
+        const temp = list[idx];
+        list[idx] = list[idx + dir];
+        list[idx + dir] = temp;
+        
+        // 順番を一括更新
+        list.forEach(async (item, i) => {
+            await setDoc(doc(db, "settings", item.id), { order: i }, { merge: true });
+        });
+    };
+
+    window.clearTodayData = async () => {
+        if (!confirm("本日の実績データを全消去しますか？")) return;
+        const snap = await getDocs(query(collection(db, "sales_records"), where("date", "==", searchDateStr)));
+        snap.forEach(async (d) => await deleteDoc(doc(db, "sales_records", d.id)));
+        showToast("本日のデータを全クリアしました");
+    };
+
+    // 🖥 UI構築・更新
+    function renderStaffSelect() {
+        const sel = document.getElementById('staffSelect');
+        const prev = sel.value;
+        sel.innerHTML = staffList.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
+        const exists = staffList.find(s => s.name === prev);
+        if(exists) sel.value = prev;
+    }
+
+    function buildInputUI() {
+        document.getElementById('btnContainer').innerHTML = items.map(it => `
+            <div class="item-card">
+                <button class="item-card-btn" style="background:${it.color}" onclick="window.addRec('${it.name}')">
+                    ${it.name}
+                    <div class="remain-text hidden" id="remain-${it.name}"></div>
+                </button>
+                <div class="count-area">
+                    <span class="my-count" id="count-${it.name}">0件</span>
+                    <button class="minus-btn" onclick="window.remRec('${it.name}')">− 取消</button>
+                </div>
+            </div>`).join('');
+    }
+
+    window.updateView = () => {
+        const currentStaff = document.getElementById('staffSelect').value;
+        const boardData = {}; 
+        const myCounts = {};
+
+        items.forEach(it => {
+            boardData[it.name] = testData.filter(d => d.item === it.name).map(d => d.staff);
+            myCounts[it.name] = testData.filter(d => d.item === it.name && d.staff === currentStaff).length;
+        });
+        
+        // 最大列数の計算（データの最大数、または目標件数の大きい方に合わせる）
+        let maxCols = Math.max(20, ...items.map(it => boardData[it.name].length), ...items.map(it => it.target));
+        
+        let html = `<thead><tr><th class="row-header" style="background:#f8fafc">商材名</th>`;
+        for(let i=1; i<=maxCols; i++) html += `<th class="square-cell">${i}</th>`;
+        html += `</tr></thead><tbody>`;
+        
+        items.forEach(it => {
+            html += `<tr><td class="row-header" style="background:${it.color}">${it.name}</td>`;
+            for(let i=1; i<=maxCols; i++){
+                const name = boardData[it.name][i-1] || '';
+                
+                // 目標までのマスに色を付け、境界線を引く
+                const isTargetBg = (i <= it.target) ? 'target-bg' : '';
+                const isTargetBorder = (i === it.target) ? 'target-border' : '';
+                const cellClass = `square-cell ${isTargetBg} ${isTargetBorder} ${name?'name-cell':''}`;
+                
+                html += `<td class="${cellClass}">${name}</td>`;
+            }
+            html += `</tr>`;
+            
+            // 件数の更新
+            const cEl = document.getElementById(`count-${it.name}`);
+            if(cEl) cEl.textContent = `${myCounts[it.name]}件`;
+
+            // あと何件の更新
+            const rEl = document.getElementById(`remain-${it.name}`);
+            if(rEl) {
+                if(it.target > 0) {
+                    const remain = it.target - myCounts[it.name]
