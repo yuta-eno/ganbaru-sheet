@@ -9,74 +9,127 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
 
 <style>
-/* ===== UI 見栄え（以前の綺麗なデザインを統合） ===== */
-body { margin:0; font-family:'Helvetica Neue', Arial, sans-serif; background-color:#f0fdf4; color:#334155; }
+/* ===== UI ===== */
+body{
+ margin:0;
+ font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+ background:#f3f4f6;
+}
 
 /* Tabs */
-header { display:flex; background:#ffffff; border-bottom:2px solid #e2e8f0; box-shadow:0 2px 4px rgba(0,0,0,0.02); margin-bottom:20px; padding:0; }
-.tab { flex:1; padding:15px; background:none; border:none; color:#94a3b8; font-size:16px; cursor:pointer; transition:0.3s; font-weight:bold; text-align:center; }
-.tab.active { color:#3b82f6; border-bottom:3px solid #3b82f6; background:#eff6ff; }
+header{
+ display:flex;
+ gap:10px;
+ padding:8px;
+ background:white;
+ border-bottom:1px solid #ddd;
+}
+.tab{
+ padding:6px 14px;
+ border-radius:8px;
+ cursor:pointer;
+ background:#e5e7eb;
+}
+.tab.active{background:#2563eb;color:white;font-weight:bold;}
 
-.page { display:none; padding:0 20px 20px 20px; max-width:1200px; margin:0 auto; }
-.page.active { display:block; }
+.page{display:none;padding:12px;}
+.page.active{display:block;}
 
 /* Cards */
-.card { background:#ffffff; border-radius:12px; padding:25px; box-shadow:0 4px 6px rgba(0,0,0,0.03); border:1px solid #e2e8f0; margin-bottom:20px; }
-.card h3 { margin-top:0; border-bottom:2px solid #e2e8f0; padding-bottom:8px; color:#334155; margin-bottom:15px; }
-
-/* Staff selector & Lock */
-.staff-selector { display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-weight:bold; color:#475569; }
-.staff-selector select { font-size:16px; padding:10px; flex:1; min-width:150px; max-width:300px; border-radius:8px; border:1px solid #cbd5e0; background:#f8fafc; }
-#lockBtn { padding:10px 15px; border:1px solid #cbd5e0; background:#f1f5f9; color:#64748b; border-radius:8px; cursor:pointer; font-weight:bold; white-space:nowrap; transition:0.3s; }
-#lockBtn.locked { background:#3b82f6; color:white; border-color:#2563eb; }
+.card{
+ background:white;
+ border-radius:12px;
+ padding:12px;
+ box-shadow:0 2px 8px rgba(0,0,0,.08);
+ margin-bottom:12px;
+}
 
 /* Input buttons */
-.items { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:15px; }
-.item-card { background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; display:flex; flex-direction:column; box-shadow:0 2px 4px rgba(0,0,0,0.03); overflow:hidden; }
-.item-btn { color:#1e293b; border:none; font-size:16px; font-weight:bold; cursor:pointer; padding:20px 10px; width:100%; transition:0.2s; }
-.item-btn:active { opacity:0.7; }
-.item-footer { display:flex; align-items:center; justify-content:space-between; padding:10px 15px; background:#ffffff; border-top:1px solid #f1f5f9; }
-.my-count { font-size:16px; font-weight:bold; color:#475569; }
-.minus { background:#f1f5f9; color:#64748b; border:1px solid #e2e8f0; border-radius:4px; padding:5px 10px; font-size:13px; font-weight:bold; cursor:pointer; }
-.rank-mini { font-size:12px; color:#64748b; margin-top:2px; font-weight:normal; }
+.items{
+ display:grid;
+ grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+ gap:10px;
+}
+.item-box{
+ border:1px solid #ddd;
+ border-radius:10px;
+ padding:8px;
+ background:white;
+}
+.item-btn{
+ width:100%;
+ padding:12px;
+ border:none;
+ border-radius:8px;
+ font-size:16px;
+ font-weight:bold;
+ color:white;
+ cursor:pointer;
+}
+.item-footer{
+ display:flex;
+ justify-content:space-between;
+ margin-top:6px;
+ font-size:14px;
+}
+.minus{
+ background:#ef4444;color:white;border:none;padding:4px 10px;border-radius:6px;
+}
+.rank-mini{
+ font-size:12px;color:#374151;margin-top:4px;
+}
 
-/* Board Table (横長デザイン) */
-.board-wrap { overflow-x:auto; margin-top:10px; padding-bottom:10px; }
-table { border-collapse:collapse; width:max-content; background:white; }
-th, td { border:1px solid #cbd5e0; text-align:center; vertical-align:middle; }
-.row-header { padding:8px 12px; font-weight:bold; position:sticky; left:0; z-index:1; border-right:2px solid #cbd5e0; white-space:nowrap; font-size:14px; background:#f8fafc; }
-.square-cell { width:50px; height:50px; min-width:50px; box-sizing:border-box; font-size:12px; line-height:1.2; word-break:break-all; }
-.name-cell { background:#e0f2fe; color:#0369a1; font-weight:bold; }
+/* Board Table */
+.board-wrap{
+ background:white;
+ padding:10px;
+ border-radius:12px;
+}
+table{
+ border-collapse:collapse;
+ width:100%;
+ background:white;
+}
+th,td{
+ border:1px solid #999;
+ padding:4px;
+ text-align:center;
+ font-size:12px;
+}
+.square{
+ width:100px;
+ height:100px;
+ overflow:auto;
+ font-size:11px;
+ background:#fff;
+}
+th{
+ background:#f9fafb;
+}
 
 /* Settings */
-.add-form { display:flex; gap:8px; align-items:center; margin-bottom:15px; }
-.add-form input[type="text"] { flex:1; padding:10px; border:1px solid #cbd5e0; border-radius:6px; font-size:14px; }
-.add-form input[type="color"] { width:50px; height:40px; padding:2px; border:1px solid #cbd5e0; border-radius:6px; cursor:pointer; }
-.add-form button { padding:10px 15px; background:#64748b; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold; }
-
-.list-ui { list-style:none; padding:0; margin:0; max-height:400px; overflow-y:auto; }
-.list-ui li { display:flex; justify-content:space-between; align-items:center; padding:8px; border-bottom:1px solid #edf2f7; background:white; margin-bottom:5px; border-radius:4px; }
-.delete-btn { background:#fca5a5; color:#7f1d1d; border:none; padding:8px 12px; border-radius:6px; font-size:12px; cursor:pointer; font-weight:bold; }
-.setting-input { flex:1; padding:8px; border:1px solid #cbd5e0; border-radius:6px; font-weight:bold; }
+.setting-row{
+ display:flex;
+ gap:6px;
+ margin-bottom:6px;
+}
 </style>
 </head>
 
 <body>
 
 <header>
- <div class="tab active" onclick="showTab('input')">実績入力</div>
- <div class="tab" onclick="showTab('board')">がんばるシート</div>
- <div class="tab" onclick="showTab('settings')">🔒 各種設定</div>
+ <div class="tab active" onclick="showTab('input')">入力</div>
+ <div class="tab" onclick="showTab('board')">ボード</div>
+ <div class="tab" onclick="showTab('settings')">設定</div>
 </header>
 
 <div id="input" class="page active">
 
 <div class="card">
- <div class="staff-selector">
-  <label>スタッフ選択:</label>
-  <select id="staffSelect"></select>
-  <button onclick="toggleLock()" id="lockBtn">🔓 固定OFF</button>
- </div>
+ スタッフ:
+ <select id="staffSelect"></select>
+ <button onclick="toggleLock()" id="lockBtn">🔓 固定OFF</button>
 </div>
 
 <div class="card">
@@ -86,40 +139,28 @@ th, td { border:1px solid #cbd5e0; text-align:center; vertical-align:middle; }
 </div>
 
 <div id="board" class="page">
- <div class="card">
-  <h3>本日の成約ボード</h3>
-  <div class="board-wrap">
-   <table id="boardTable"></table>
-  </div>
+ <div class="board-wrap">
+  <h3>本日の成約ボード（紙帳票風）</h3>
+  <table id="boardTable"></table>
  </div>
 </div>
 
 <div id="settings" class="page">
 
+<datalist id="paleColors">
+ <option value="#e0f2fe"></option> <option value="#fce7f3"></option> <option value="#dcfce7"></option> <option value="#fef9c3"></option> <option value="#f3e8ff"></option> <option value="#ffedd5"></option> <option value="#ccfbf1"></option> <option value="#f1f5f9"></option> </datalist>
+
 <div class="card">
  <h3>スタッフ管理</h3>
- <div class="add-form">
-  <input type="text" id="newStaff" placeholder="例: 榎本">
-  <button onclick="addStaff()">追加</button>
- </div>
+ <input id="newStaff"><button onclick="addStaff()">追加</button>
  <div id="staffListUI"></div>
 </div>
 
 <div class="card">
  <h3>商材管理</h3>
- <div class="add-form">
-  <input type="text" id="newItem" placeholder="新商材">
-  <select id="newColor" onchange="this.style.backgroundColor=this.value" style="background-color: #e0f2fe; padding:10px; border:1px solid #cbd5e0; border-radius:6px; cursor:pointer;">
-      <option value="#e0f2fe" style="background:#e0f2fe;">ペールブルー</option>
-      <option value="#fce7f3" style="background:#fce7f3;">ペールピンク</option>
-      <option value="#dcfce7" style="background:#dcfce7;">ペールグリーン</option>
-      <option value="#fef9c3" style="background:#fef9c3;">ペールイエロー</option>
-      <option value="#f3e8ff" style="background:#f3e8ff;">ペールパープル</option>
-      <option value="#ffedd5" style="background:#ffedd5;">ペールオレンジ</option>
-      <option value="#f1f5f9" style="background:#f1f5f9;">ライトグレー</option>
-  </select>
-  <button onclick="addItem()">追加</button>
- </div>
+ <input id="newItem">
+ <input type="color" id="newColor" value="#e0f2fe" list="paleColors">
+ <button onclick="addItem()">追加</button>
  <div id="itemListUI"></div>
 </div>
 
@@ -127,30 +168,28 @@ th, td { border:1px solid #cbd5e0; text-align:center; vertical-align:middle; }
 
 <script>
 /* ================= Firebase ================= */
+// ★店長の本物のキーに直してあります
 const firebaseConfig={
  apiKey: "AIzaSyCmerraKVr1iJsRoiW53lxUtgDUcOGVXtY",
  authDomain: "ganbaru-sheet-a32f3.firebaseapp.com",
- projectId: "ganbaru-sheet-a32f3",
- storageBucket: "ganbaru-sheet-a32f3.firebasestorage.app",
- messagingSenderId: "75251515079",
- appId: "1:75251515079:web:19acf818476d90588808e2"
+ projectId: "ganbaru-sheet-a32f3"
 };
 firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore();
 
-/* ================= Tabs (★変更点：パスワード保護) ================= */
-const ADMIN_PASSWORD = "0000"; // ★管理用パスワード（好きな数字に変更可能です）
+/* ================= Tabs ================= */
+const ADMIN_PASSWORD = "0000"; // ★管理用パスワード
 
 function showTab(id){
- // 設定タブを開く時だけパスワードを求める
+ // ★設定タブを開く時だけパスワードを求める
  if(id === 'settings') {
   const pass = prompt("管理用パスワードを入力してください:");
   if(pass !== ADMIN_PASSWORD) {
    if(pass !== null) alert("パスワードが違います。");
-   return; // パスワードが違う場合はタブ切り替えをキャンセル
+   return;
   }
  }
- 
+
  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
  document.getElementById(id).classList.add("active");
  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
@@ -158,12 +197,13 @@ function showTab(id){
 }
 
 /* ================= Seed (初回のみ) ================= */
-const pastel=["#e0f2fe","#fef9c3","#dcfce7","#f3e8ff","#fce7f3"]; // ★初期カラーもペールトーンに
+// ★最初の5色もオシャレなペールトーンに変更
+const pastel=["#e0f2fe","#fce7f3","#dcfce7","#fef9c3","#f3e8ff"];
 async function seed(){
  const s=await db.collection("settings").get();
- if(!s.empty) return;
+ if(!s.empty) return; // ★ここ重要
  ["榎本","田中","佐藤"].forEach((n,i)=>db.collection("settings").add({type:"staff",name:n,order:i}));
- ["光10GB","GOLD","ドコモでんき","守くん","Amazon"].forEach((n,i)=>db.collection("settings").add({type:"item",name:n,color:pastel[i] || "#f1f5f9",order:i}));
+ ["ひかり","カード","でんき","スマホ"].forEach((n,i)=>db.collection("settings").add({type:"item",name:n,color:pastel[i],order:i}));
 }
 seed();
 
@@ -201,14 +241,11 @@ function toggleLock(){
   lockedStaff="";
   localStorage.removeItem("lockedStaff");
   lockBtn.textContent="🔓 固定OFF";
-  lockBtn.classList.remove("locked");
  }else{
   lockedStaff=staffSelect.value;
   localStorage.setItem("lockedStaff",lockedStaff);
   lockBtn.textContent="🔒 固定ON";
-  lockBtn.classList.add("locked");
  }
- renderAll(); 
 }
 
 function renderAll(){
@@ -217,41 +254,34 @@ function renderAll(){
   staffSelect.value=lockedStaff;
   staffSelect.disabled=true;
   lockBtn.textContent="🔒 固定ON";
-  lockBtn.classList.add("locked");
  }else{
   staffSelect.disabled=false;
   lockBtn.textContent="🔓 固定OFF";
-  lockBtn.classList.remove("locked");
  }
 
  btnContainer.innerHTML=itemList.map(it=>`
- <div class="item-card">
+ <div class="item-box">
   <button class="item-btn" style="background:${it.color}" onclick="addRecord('${it.name}')">${it.name}</button>
   <div class="item-footer">
-   <div style="display:flex; flex-direction:column;">
-    <span class="my-count" id="count_${it.name}">0件</span>
-    <div class="rank-mini" id="rank_${it.name}"></div>
-   </div>
-   <button class="minus" onclick="removeRecord('${it.name}')">− 取消</button>
+   <span id="count_${it.name}">0件</span>
+   <button class="minus" onclick="removeRecord('${it.name}')">−</button>
   </div>
+  <div class="rank-mini" id="rank_${it.name}"></div>
  </div>`).join("");
 
- staffListUI.innerHTML=`<ul class="list-ui">` + staffList.map(s=>`
- <li>
-  <div style="display:flex; align-items:center; gap:10px; width:100%;">
-   <input class="setting-input" value="${s.name}" onchange="editSetting('${s.id}',this.value,null)">
-   <button class="delete-btn" onclick="deleteSetting('${s.id}')">削除</button>
-  </div>
- </li>`).join("") + `</ul>`;
+ staffListUI.innerHTML=staffList.map(s=>`
+ <div class="setting-row">
+  <input value="${s.name}" onchange="editSetting('${s.id}',this.value,null)">
+  <button onclick="deleteSetting('${s.id}')">削除</button>
+ </div>`).join("");
 
- itemListUI.innerHTML=`<ul class="list-ui">` + itemList.map(it=>`
- <li style="border-left: 5px solid ${it.color};">
-  <div style="display:flex; align-items:center; gap:10px; width:100%;">
-   <input class="setting-input" value="${it.name}" onchange="editSetting('${it.id}',this.value,'${it.color}')">
-   <input type="color" value="${it.color}" onchange="editSetting('${it.id}','${it.name}',this.value)" style="cursor:pointer; width:40px; height:36px; border:1px solid #cbd5e0; border-radius:4px; padding:2px;">
-   <button class="delete-btn" onclick="deleteSetting('${it.id}')">削除</button>
-  </div>
- </li>`).join("") + `</ul>`;
+ // ★編集用のカラーピッカーにも list="paleColors" を付けてオシャレな色を呼び出します
+ itemListUI.innerHTML=itemList.map(it=>`
+ <div class="setting-row">
+  <input value="${it.name}" onchange="editSetting('${it.id}',this.value,'${it.color}')">
+  <input type="color" value="${it.color}" list="paleColors" onchange="editSetting('${it.id}','${it.name}',this.value)">
+  <button onclick="deleteSetting('${it.id}')">削除</button>
+ </div>`).join("");
 
  updateCounts();
  renderBoard();
@@ -277,61 +307,46 @@ function updateCounts(){
 
  itemList.forEach(it=>{
   const c=records.filter(r=>r.item==it.name&&r.staff==staff&&r.date==today).length;
-  const countEl = document.getElementById("count_"+it.name);
-  if(countEl) countEl.textContent=c+"件";
+  document.getElementById("count_"+it.name).textContent=c+"件";
 
   const rank={};
   records.filter(r=>r.item==it.name&&r.date==today).forEach(r=>{
    rank[r.staff]=(rank[r.staff]||0)+1;
   });
   const sorted=Object.entries(rank).sort((a,b)=>b[1]-a[1]).slice(0,3);
-  const rankEl = document.getElementById("rank_"+it.name);
-  if(rankEl) rankEl.innerHTML=sorted.map((r,i)=>`${i+1}位 ${r[0]}:${r[1]}件`).join("<br>");
+  document.getElementById("rank_"+it.name).innerHTML=sorted.map((r,i)=>`${i+1}位 ${r[0]}:${r[1]}件`).join("<br>");
  });
 }
 
 /* ================= Board Table ================= */
 function renderBoard(){
  const today=new Date().toISOString().slice(0,10);
- let maxCols = 20;
+ let html="<tr><th>商材\\スタッフ</th>";
+ staffList.forEach(s=>html+=`<th>${s.name}</th>`);
+ html+="</tr>";
 
  itemList.forEach(it=>{
-  const count = records.filter(r=>r.item==it.name&&r.date==today).length;
-  if(count > maxCols) maxCols = count;
- });
-
- let html="<thead><tr><th class='row-header'>商材名</th>";
- for(let i=1; i<=maxCols; i++){
-  html+=`<th class='square-cell'>${i}</th>`;
- }
- html+="</tr></thead><tbody>";
-
- itemList.forEach(it=>{
-  html+=`<tr><td class='row-header' style='background:${it.color}'>${it.name}</td>`;
-  const itemRecords = records.filter(r=>r.item==it.name&&r.date==today);
-  for(let i=0; i<maxCols; i++){
-   const staffName = itemRecords[i] ? itemRecords[i].staff : '';
-   const cellClass = staffName ? 'name-cell' : '';
-   html+=`<td class='square-cell ${cellClass}'>${staffName}</td>`;
-  }
+  html+=`<tr><th>${it.name}</th>`;
+  staffList.forEach(s=>{
+   const names=records.filter(r=>r.item==it.name&&r.staff==s.name&&r.date==today)
+     .map(()=>s.name).join("<br>");
+   html+=`<td class="square">${names}</td>`;
+  });
   html+="</tr>";
  });
- html+="</tbody>";
 
  boardTable.innerHTML=html;
 }
 
 /* ================= Settings CRUD ================= */
 function addStaff(){
- const n=document.getElementById("newStaff").value;
+ const n=newStaff.value;
  if(n) db.collection("settings").add({type:"staff",name:n,order:Date.now()});
- document.getElementById("newStaff").value = "";
 }
 function addItem(){
- const n=document.getElementById("newItem").value;
- const c=document.getElementById("newColor").value;
+ const n=newItem.value;
+ const c=newColor.value;
  if(n) db.collection("settings").add({type:"item",name:n,color:c,order:Date.now()});
- document.getElementById("newItem").value = "";
 }
 function editSetting(id,name,color){
  const data={name};
@@ -339,9 +354,10 @@ function editSetting(id,name,color){
  db.collection("settings").doc(id).update(data);
 }
 function deleteSetting(id){
- if(confirm("本当に削除しますか？")) db.collection("settings").doc(id).delete();
+ db.collection("settings").doc(id).delete();
 }
 </script>
 
 </body>
 </html>
+
