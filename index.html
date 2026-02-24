@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>GANBARU SHEET PRO</title>
 
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
@@ -10,239 +10,251 @@
 
 <style>
 :root{
- --glass: rgba(255,255,255,0.18);
- --border: rgba(255,255,255,0.3);
- --blur: 18px;
+ --glass-bg: rgba(255,255,255,0.18);
+ --glass-border: rgba(255,255,255,0.3);
+ --blur: 20px;
  --bg: linear-gradient(135deg,#667eea,#764ba2);
- --accent:#6366f1;
 }
-*{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;box-sizing:border-box;}
-body{margin:0;background:var(--bg);color:white;}
 
-.tab-menu{
+*{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;}
+body{
+ margin:0;
+ background:var(--bg);
+ color:white;
+ height:100vh;
  display:flex;
- backdrop-filter:blur(var(--blur));
- background:var(--glass);
- border-bottom:1px solid var(--border);
-}
-.tab-menu button{
- flex:1;padding:12px;font-size:16px;border:none;background:none;color:#ddd;
-}
-.tab-menu button.active{
- color:white;border-bottom:3px solid var(--accent);
- font-weight:600;
+ flex-direction:column;
+ overflow:hidden;
 }
 
-.container{padding:12px;}
-.tab-content{display:none;}
-.tab-content.active{display:block;}
+header{
+ padding:14px 20px;
+ font-size:22px;
+ font-weight:600;
+ backdrop-filter: blur(var(--blur));
+ background: var(--glass-bg);
+ border-bottom:1px solid var(--glass-border);
+}
+
+.dashboard{
+ display:grid;
+ grid-template-columns: 2fr 1fr;
+ gap:16px;
+ padding:16px;
+ height:100%;
+}
 
 .card{
- background:var(--glass);
- backdrop-filter:blur(var(--blur));
- border:1px solid var(--border);
- border-radius:18px;
- padding:12px;
- margin-bottom:12px;
- box-shadow:0 10px 25px rgba(0,0,0,.25);
+ background:var(--glass-bg);
+ backdrop-filter: blur(var(--blur));
+ border:1px solid var(--glass-border);
+ border-radius:22px;
+ padding:16px;
+ box-shadow:0 20px 40px rgba(0,0,0,.25);
 }
 
-.btn-grid{
+.big-title{
+ font-size:26px;
+ font-weight:700;
+ margin-bottom:10px;
+}
+
+.items{
  display:grid;
- grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
- gap:10px;
+ grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+ gap:12px;
 }
 
-.item-card{border-radius:14px;overflow:hidden;}
-.item-card button{
- width:100%;padding:16px;font-size:18px;font-weight:bold;border:none;color:white;
-}
-.count-area{
- display:flex;justify-content:space-between;
- padding:4px 10px;font-size:14px;
+.item-box{
  background:rgba(0,0,0,.25);
+ border-radius:18px;
+ padding:8px;
 }
-.minus{background:#ef4444;color:white;border:none;padding:4px 10px;border-radius:8px;}
 
-table{border-collapse:collapse;width:100%;}
-td,th{border:1px solid rgba(255,255,255,.2);padding:6px;text-align:center;font-size:12px;}
-.name-cell{background:#2563eb;color:white;font-weight:bold;}
+.item-btn{
+ width:100%;
+ border-radius:14px;
+ padding:16px;
+ font-size:20px;
+ font-weight:600;
+ color:white;
+ border:none;
+ cursor:pointer;
+ backdrop-filter: blur(8px);
+ box-shadow:0 10px 20px rgba(0,0,0,.25);
+ transition:0.15s;
+}
+.item-btn:active{transform:scale(.95);}
 
-.list-ui li{
- display:flex;justify-content:space-between;
- padding:6px;border-bottom:1px solid rgba(255,255,255,.2);
+.item-footer{
+ display:flex;
+ justify-content:space-between;
+ align-items:center;
+ font-size:16px;
+ padding:6px 6px 0;
+}
+
+.minus{
+ background:#ef4444;
+ border:none;
+ color:white;
+ padding:4px 10px;
+ border-radius:10px;
+ font-size:16px;
+ cursor:pointer;
+}
+
+.counter{
+ font-size:50px;
+ font-weight:700;
+}
+
+.rank-list li{
+ font-size:20px;
+ padding:6px 0;
 }
 </style>
 </head>
 
 <body>
 
-<div class="tab-menu">
-<button id="tabInput" class="active" onclick="switchTab('input')">頑張るシート</button>
-<button id="tabBoard" onclick="switchTab('board')">ボード</button>
-<button id="tabSettings" onclick="switchTab('settings')">設定</button>
-</div>
+<header>📊 GANBARU SHEET PRO Dashboard</header>
 
-<div class="container">
+<div class="dashboard">
 
-<!-- ================= 入力 ================= -->
-<div id="inputView" class="tab-content active">
+<!-- 左：入力 -->
 <div class="card">
-<h2 id="inputTitle"></h2>
-<select id="staffSelect" style="font-size:16px;padding:6px;border-radius:10px;"></select>
-<div id="btnContainer" class="btn-grid"></div>
-</div>
-</div>
-
-<!-- ================= ボード ================= -->
-<div id="boardView" class="tab-content">
-<div class="card">
-<h2 id="boardTitle"></h2>
-<table id="resultTable"></table>
-</div>
+ <div class="big-title">商材タップで成約登録</div>
+ <select id="staffSelect" style="font-size:20px;padding:8px;border-radius:10px;border:none;"></select>
+ <div class="items" id="btnContainer"></div>
 </div>
 
-<!-- ================= 設定 ================= -->
-<div id="settingsView" class="tab-content">
+<!-- 右：ダッシュボード -->
 <div class="card">
-<h3>スタッフ</h3>
-<input id="newStaff"><button onclick="addStaff()">追加</button>
-<ul id="staffUI" class="list-ui"></ul>
-</div>
+ <div class="big-title">本日の成約数</div>
+ <div id="todayCount" class="counter">0</div>
 
-<div class="card">
-<h3>商材</h3>
-<input id="newItem"><input type="color" id="newColor" value="#6366f1">
-<button onclick="addItem()">追加</button>
-<ul id="itemUI" class="list-ui"></ul>
-</div>
+ <div class="big-title" style="margin-top:20px;">月間ランキング</div>
+ <ul id="rankingUI" class="rank-list"></ul>
 </div>
 
 </div>
 
 <script>
 /* ================= Firebase ================= */
-const firebaseConfig={
- apiKey:"YOUR_API_KEY",
- authDomain:"YOUR_PROJECT.firebaseapp.com",
- projectId:"YOUR_PROJECT_ID"
+const firebaseConfig = {
+ apiKey: "YOUR_API_KEY",
+ authDomain: "YOUR_PROJECT.firebaseapp.com",
+ projectId: "YOUR_PROJECT_ID"
 };
 firebase.initializeApp(firebaseConfig);
-const db=firebase.firestore();
+const db = firebase.firestore();
 
-/* ================= 日付 ================= */
-const today=new Date();
-const dateKey=today.toISOString().slice(0,10);
-inputTitle.textContent="頑張るシート "+dateKey;
-boardTitle.textContent=dateKey+" 成績ボード";
+/* DOM */
+const staffSelect=document.getElementById("staffSelect");
+const btnContainer=document.getElementById("btnContainer");
+const todayCountUI=document.getElementById("todayCount");
+const rankingUI=document.getElementById("rankingUI");
 
-/* ================= データ ================= */
-let staff=[],items=[],records=[];
+/* 初期色 */
+const pastel=["#60a5fa","#a78bfa","#34d399","#fbbf24","#f472b6","#38bdf8"];
 
-/* ===== 設定同期 ===== */
+/* Seed */
+async function seed(){
+ const s=await db.collection("settings").get();
+ if(!s.empty) return;
+ ["榎本","田中","佐藤"].forEach((n,i)=>{
+  db.collection("settings").doc("staff_"+i).set({type:"staff",name:n,order:i});
+ });
+ ["ひかり","カード","でんき","スマホ"].forEach((n,i)=>{
+  db.collection("settings").doc("item_"+i).set({type:"item",name:n,color:pastel[i],order:i});
+ });
+}
+seed();
+
+/* 設定 */
+let staffList=[], itemList=[];
 db.collection("settings").onSnapshot(snap=>{
- staff=[];items=[];
+ staffList=[]; itemList=[];
  snap.forEach(d=>{
-  const v=d.data();v.id=d.id;
-  if(v.type=="staff") staff.push(v);
-  if(v.type=="item") items.push(v);
+  const v=d.data();
+  if(v.type=="staff") staffList.push(v);
+  if(v.type=="item") itemList.push(v);
  });
- staff.sort((a,b)=>a.order-b.order);
- items.sort((a,b)=>a.order-b.order);
- renderStaff();
- renderItems();
- buildButtons();
+ renderUI();
 });
 
-/* ===== 実績同期 ===== */
-db.collection("sales").where("date","==",dateKey).onSnapshot(snap=>{
+/* レコード */
+let records=[];
+db.collection("sales").onSnapshot(snap=>{
  records=snap.docs.map(d=>({id:d.id,...d.data()}));
- updateBoard();
+ updateCounts();
 });
 
-/* ================= UI ================= */
-function renderStaff(){
- staffSelect.innerHTML=staff.map(s=>`<option>${s.name}</option>`).join("");
- staffUI.innerHTML=staff.map(s=>`
- <li>${s.name}
- <button onclick="editStaff('${s.id}','${s.name}')">編集</button>
- <button onclick="delSetting('${s.id}')">削除</button>
- </li>`).join("");
-}
+/* UI生成 */
+function renderUI(){
+ staffSelect.innerHTML=staffList.sort((a,b)=>a.order-b.order)
+  .map(s=>`<option>${s.name}</option>`).join("");
 
-function renderItems(){
- itemUI.innerHTML=items.map(it=>`
- <li style="border-left:5px solid ${it.color}">
- ${it.name}
- <button onclick="editItem('${it.id}','${it.name}','${it.color}')">編集</button>
- <button onclick="delSetting('${it.id}')">削除</button>
- </li>`).join("");
-}
-
-function buildButtons(){
- btnContainer.innerHTML=items.map(it=>`
- <div class="item-card">
- <button style="background:${it.color}" onclick="addRecord('${it.id}','${it.name}')">${it.name}</button>
- <div class="count-area">
- <span id="c_${it.id}">0</span>
- <button class="minus" onclick="removeRecord('${it.id}')">−</button>
+ btnContainer.innerHTML=itemList.sort((a,b)=>a.order-b.order).map(it=>`
+ <div class="item-box">
+  <button class="item-btn" style="background:${it.color}" onclick="addRecord('${it.name}')">${it.name}</button>
+  <div class="item-footer">
+   <span id="count_${it.name}">0件</span>
+   <button class="minus" onclick="removeRecord('${it.name}')">−</button>
+  </div>
  </div>
- </div>`).join("");
+ `).join("");
 }
 
-/* ================= 記録 ================= */
-function addRecord(itemId,name){
- const staffName=staffSelect.value;
- db.collection("sales").add({staff:staffName,itemId,name,date:dateKey,time:firebase.firestore.FieldValue.serverTimestamp()});
-}
-function removeRecord(itemId){
- const staffName=staffSelect.value;
- const r=records.filter(r=>r.itemId==itemId && r.staff==staffName).pop();
- if(r) db.collection("sales").doc(r.id).delete();
-}
+/* 成約追加 */
+function addRecord(item){
+ const staff=staffSelect.value;
+ const now=new Date();
+ const date=now.toISOString().slice(0,10);
+ const month=now.getFullYear()+"-"+(now.getMonth()+1);
 
-/* ================= ボード ================= */
-function updateBoard(){
- const board={};
- items.forEach(it=>board[it.id]=records.filter(r=>r.itemId==it.id).map(r=>r.staff));
- const max=Math.max(5,...items.map(it=>board[it.id].length));
-
- let html=`<tr><th>商材</th>${[...Array(max)].map((_,i)=>`<th>${i+1}</th>`).join("")}</tr>`;
- items.forEach(it=>{
-  html+=`<tr><td style="background:${it.color}">${it.name}</td>`;
-  for(let i=0;i<max;i++){
-   const n=board[it.id][i]||"";
-   html+=`<td class="${n?'name-cell':''}">${n}</td>`;
-  }
-  html+="</tr>";
-
-  const c=document.getElementById("c_"+it.id);
-  if(c) c.textContent=records.filter(r=>r.itemId==it.id && r.staff==staffSelect.value).length;
- });
- resultTable.innerHTML=html;
-}
-
-/* ================= 設定操作 ================= */
-function addStaff(){ db.collection("settings").doc("staff_"+Date.now()).set({type:"staff",name:newStaff.value,order:Date.now()}); }
-function addItem(){ db.collection("settings").doc("item_"+Date.now()).set({type:"item",name:newItem.value,color:newColor.value,order:Date.now()}); }
-function editStaff(id,old){
- const n=prompt("新スタッフ名",old);
- if(n) db.collection("settings").doc(id).set({name:n},{merge:true});
-}
-function editItem(id,old,c){
- const n=prompt("新商材名",old);
- const col=prompt("色",c);
- db.collection("settings").doc(id).set({name:n,color:col},{merge:true});
-}
-function delSetting(id){ if(confirm("削除?")) db.collection("settings").doc(id).delete(); }
-
-/* ================= タブ ================= */
-function switchTab(t){
- ["input","board","settings"].forEach(x=>{
-  document.getElementById(x+"View").classList.toggle("active",x==t);
-  document.getElementById("tab"+x.charAt(0).toUpperCase()+x.slice(1)).classList.toggle("active",x==t);
+ db.collection("sales").add({
+  staff,item,date,month,
+  time:firebase.firestore.FieldValue.serverTimestamp()
  });
 }
+
+/* 成約削除（最後の1件） */
+function removeRecord(item){
+ const staff=staffSelect.value;
+ const today=new Date().toISOString().slice(0,10);
+ const target=records.filter(r=>r.item==item && r.staff==staff && r.date==today).pop();
+ if(target){
+  db.collection("sales").doc(target.id).delete();
+ }
+}
+
+/* カウント更新 */
+function updateCounts(){
+ const today=new Date().toISOString().slice(0,10);
+ let todayTotal=0;
+ const rank={};
+
+ itemList.forEach(it=>{
+  const staff=staffSelect.value;
+  const c=records.filter(r=>r.item==it.name && r.staff==staff && r.date==today).length;
+  const el=document.getElementById("count_"+it.name);
+  if(el) el.textContent=c+"件";
+ });
+
+ records.forEach(r=>{
+  if(r.date==today) todayTotal++;
+  rank[r.staff]=(rank[r.staff]||0)+1;
+ });
+
+ todayCountUI.textContent=todayTotal;
+ const sorted=Object.entries(rank).sort((a,b)=>b[1]-a[1]);
+ rankingUI.innerHTML=sorted.map((r,i)=>`<li>${i+1}位 ${r[0]}：${r[1]}件</li>`).join("");
+}
+
+/* スタッフ切替時も再計算 */
+staffSelect.addEventListener("change",updateCounts);
 </script>
 
 </body>
