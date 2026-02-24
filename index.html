@@ -2,234 +2,219 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>GANBARU SHEET PRO</title>
 
-<!-- Firebase compat -->
+<!-- Firebase compat（古いAndroid & iPad対応） -->
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
 
 <style>
 :root{
- --bg:#0f172a;
- --card:#111827;
- --accent:#22c55e;
- --blue:#3b82f6;
- --border:#1f2933;
- --text:#e5e7eb;
+ --glass-bg: rgba(255,255,255,0.18);
+ --glass-border: rgba(255,255,255,0.3);
+ --blur: 20px;
+ --bg: linear-gradient(135deg,#667eea,#764ba2);
+ --text:#0f172a;
+ --accent:#6366f1;
 }
-body{margin:0;font-family:Inter,Arial;background:var(--bg);color:var(--text);}
-.container{max-width:1300px;margin:auto;padding:15px;}
-h2{margin:5px 0 15px;font-size:22px;}
 
-.tab-menu{display:flex;background:#020617;border-bottom:2px solid var(--border);}
-.tab-menu button{flex:1;padding:12px;background:none;border:none;color:#64748b;font-weight:bold;font-size:15px;}
-.tab-menu button.active{color:white;border-bottom:3px solid var(--blue);}
+*{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;}
+body{
+ margin:0;
+ background:var(--bg);
+ color:white;
+ height:100vh;
+ display:flex;
+ flex-direction:column;
+ overflow:hidden;
+}
 
-.tab-content{display:none;}
-.tab-content.active{display:block;}
+header{
+ padding:14px 20px;
+ font-size:22px;
+ font-weight:600;
+ backdrop-filter: blur(var(--blur));
+ background: var(--glass-bg);
+ border-bottom:1px solid var(--glass-border);
+}
 
-.btn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;}
-.item-card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
-.item-card button{width:100%;border:none;padding:18px;font-size:16px;font-weight:bold;color:black;cursor:pointer;}
-.count-area{display:flex;justify-content:space-between;padding:6px 12px;font-size:13px;}
+.dashboard{
+ display:grid;
+ grid-template-columns: 2fr 1fr;
+ gap:16px;
+ padding:16px;
+ height:100%;
+}
 
-table{border-collapse:collapse;}
-th,td{border:1px solid var(--border);width:48px;height:48px;text-align:center;font-size:12px;}
-.name-cell{background:#2563eb;font-weight:bold;color:white;}
+.card{
+ background:var(--glass-bg);
+ backdrop-filter: blur(var(--blur));
+ border:1px solid var(--glass-border);
+ border-radius:22px;
+ padding:16px;
+ box-shadow:0 20px 40px rgba(0,0,0,.25);
+}
 
-.panel{background:var(--card);border:1px solid var(--border);padding:12px;border-radius:10px;margin-bottom:12px;}
-.list-ui{list-style:none;padding:0;}
-.list-ui li{display:flex;justify-content:space-between;align-items:center;padding:6px;border-bottom:1px solid var(--border);}
-button{cursor:pointer;border:none;border-radius:6px;padding:6px 10px;font-size:12px;}
-.edit{background:#2563eb;color:white;}
-.del{background:#ef4444;color:white;}
-.move{background:#111827;border:1px solid var(--border);color:white;}
-#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
-background:#111827;padding:12px 20px;border-radius:20px;display:none;}
+.big-title{
+ font-size:26px;
+ font-weight:700;
+ margin-bottom:10px;
+}
+
+.items{
+ display:grid;
+ grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+ gap:12px;
+}
+
+.item-btn{
+ border-radius:18px;
+ padding:18px;
+ font-size:20px;
+ font-weight:600;
+ color:white;
+ border:none;
+ cursor:pointer;
+ backdrop-filter: blur(8px);
+ box-shadow:0 10px 20px rgba(0,0,0,.25);
+ transition:0.15s;
+}
+.item-btn:active{transform:scale(.95);}
+
+.rank-list li{
+ font-size:20px;
+ padding:6px 0;
+}
+
+.counter{
+ font-size:50px;
+ font-weight:700;
+}
+
+footer{
+ position:fixed;
+ bottom:0;
+ width:100%;
+ text-align:center;
+ padding:6px;
+ font-size:14px;
+ opacity:.7;
+}
 </style>
 </head>
 
 <body>
 
-<div class="tab-menu">
-<button id="tabInput" class="active" onclick="switchTab('input')">入力</button>
-<button id="tabBoard" onclick="switchTab('board')">ボード</button>
-<button id="tabSettings" onclick="switchTab('settings')">設定</button>
+<header>📊 GANBARU SHEET PRO Dashboard</header>
+
+<div class="dashboard">
+
+<!-- 左：成約入力パネル -->
+<div class="card">
+ <div class="big-title">商材タップで成約登録</div>
+ <select id="staffSelect" style="font-size:20px;padding:8px;border-radius:10px;border:none;"></select>
+ <div class="items" id="btnContainer"></div>
 </div>
 
-<div class="container">
+<!-- 右：リアルタイムダッシュボード -->
+<div class="card">
+ <div class="big-title">本日の成約数</div>
+ <div id="todayCount" class="counter">0</div>
 
-<div id="inputView" class="tab-content active">
-<h2 id="inputTitle"></h2>
-<select id="staffSelect"></select>
-<div id="btnContainer" class="btn-grid"></div>
-</div>
-
-<div id="boardView" class="tab-content">
-<h2 id="boardTitle"></h2>
-<button onclick="exportExcel()">Excel出力</button>
-<div style="overflow-x:auto">
-<table id="resultTable"></table>
-</div>
-</div>
-
-<div id="settingsView" class="tab-content">
-<div class="panel">
-<h3>スタッフ</h3>
-<input id="newStaff"><button onclick="addStaff()">追加</button>
-<ul id="staffUI" class="list-ui"></ul>
-</div>
-
-<div class="panel">
-<h3>商材</h3>
-<input id="newItem"><input type="color" id="newColor" value="#3b82f6">
-<button onclick="addItem()">追加</button>
-<ul id="itemUI" class="list-ui"></ul>
-</div>
-
-<button onclick="clearToday()">本日データ削除</button>
+ <div class="big-title" style="margin-top:20px;">月間ランキング</div>
+ <ul id="rankingUI" class="rank-list"></ul>
 </div>
 
 </div>
 
-<div id="toast"></div>
+<footer>店舗壁掛け iPad / Firebase Realtime Sync</footer>
 
 <script>
-// ===== DOM取得（★致命的修正） =====
-const inputTitle = document.getElementById("inputTitle");
-const boardTitle = document.getElementById("boardTitle");
-const staffSelect = document.getElementById("staffSelect");
-const btnContainer = document.getElementById("btnContainer");
-const resultTable = document.getElementById("resultTable");
-const toast = document.getElementById("toast");
-const staffUI = document.getElementById("staffUI");
-const itemUI = document.getElementById("itemUI");
-const newStaff = document.getElementById("newStaff");
-const newItem = document.getElementById("newItem");
-const newColor = document.getElementById("newColor");
-
-// ===== Firebase設定（必ず自分のを入れる） =====
+/* ================= Firebase 設定 ================= */
 const firebaseConfig = {
-  apiKey: "XXXX",
-  authDomain: "XXXX.firebaseapp.com",
-  projectId: "XXXX",
+ apiKey: "YOUR_API_KEY",
+ authDomain: "YOUR_PROJECT.firebaseapp.com",
+ projectId: "YOUR_PROJECT_ID"
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// ===== 日付 =====
-const today = new Date();
-const dateStr = `${today.getMonth()+1}/${today.getDate()}`;
-const dateKey = today.toLocaleDateString("ja-JP");
-inputTitle.textContent = `実績入力 ${dateStr}`;
-boardTitle.textContent = `${dateStr} がんばるシート`;
+/* ================= DOM ================= */
+const staffSelect = document.getElementById("staffSelect");
+const btnContainer = document.getElementById("btnContainer");
+const todayCountUI = document.getElementById("todayCount");
+const rankingUI = document.getElementById("rankingUI");
 
-// ===== データ =====
-let staff=[], items=[], records=[];
+/* ================= 初期データ ================= */
+const pastelColors=["#60a5fa","#a78bfa","#34d399","#fbbf24","#f472b6","#38bdf8"];
 
-// ===== Firestore監視 =====
-db.collection("settings").orderBy("order").onSnapshot(snap=>{
- staff = snap.docs.filter(d=>d.data().type==="staff").map(d=>({id:d.id,...d.data()}));
- items = snap.docs.filter(d=>d.data().type==="item").map(d=>({id:d.id,...d.data()}));
- renderStaff(); renderItems(); buildButtons();
-});
+/* Seed */
+async function seedDefault(){
+ const s=await db.collection("settings").get();
+ if(!s.empty) return;
 
-db.collection("sales_records").where("date","==",dateKey).onSnapshot(snap=>{
- records = snap.docs.map(d=>({id:d.id,...d.data()}));
- updateBoard();
-});
-
-// ===== UI =====
-function renderStaff(){
- staffSelect.innerHTML = staff.map(s=>`<option>${s.name}</option>`).join("");
- staffUI.innerHTML = staff.map(s=>`
- <li>${s.name}
- <div>
- <button class="edit" onclick="editStaff('${s.id}','${s.name}')">編集</button>
- <button class="del" onclick="delSetting('${s.id}')">削除</button>
- </div></li>`).join("");
-}
-
-function renderItems(){
- itemUI.innerHTML = items.map((it,i)=>`
- <li style="border-left:5px solid ${it.color}">
- ${it.name}
- <div>
- <button class="edit" onclick="editItem('${it.id}','${it.name}','${it.color}')">編集</button>
- <button class="move" onclick="moveItem(${i},-1)">↑</button>
- <button class="move" onclick="moveItem(${i},1)">↓</button>
- <button class="del" onclick="delSetting('${it.id}')">削除</button>
- </div></li>`).join("");
-}
-
-function buildButtons(){
- btnContainer.innerHTML = items.map(it=>`
- <div class="item-card">
- <button style="background:${it.color}" onclick="addRecord('${it.id}','${it.name}')">${it.name}</button>
- <div class="count-area"><span id="c_${it.id}">0</span><button onclick="removeRecord('${it.id}')">−</button></div>
- </div>`).join("");
-}
-
-// ===== 記録 =====
-function addRecord(itemId,name){
- const staffName = staffSelect.value;
- db.collection("sales_records").add({staff:staffName,itemId,name,date:dateKey,timestamp:firebase.firestore.FieldValue.serverTimestamp()});
- toastMsg(`${staffName} + ${name}`);
-}
-
-function removeRecord(itemId){
- const staffName = staffSelect.value;
- const t = records.filter(r=>r.itemId===itemId && r.staff===staffName).pop();
- if(t) db.collection("sales_records").doc(t.id).delete();
-}
-
-// ===== ボード =====
-function updateBoard(){
- const board = {};
- items.forEach(it=>board[it.id]=records.filter(r=>r.itemId===it.id).map(r=>r.staff));
- const max = Math.max(10,...items.map(it=>board[it.id].length));
- let html=`<tr><th>商材</th>${[...Array(max)].map((_,i)=>`<th>${i+1}</th>`).join("")}</tr>`;
- items.forEach(it=>{
-  html+=`<tr><td style="background:${it.color}">${it.name}</td>`;
-  for(let i=0;i<max;i++){
-   html+=`<td class="${board[it.id][i]?'name-cell':''}">${board[it.id][i]||""}</td>`;
-  }
-  html+="</tr>";
-  const c=document.getElementById("c_"+it.id);
-  if(c) c.textContent=records.filter(r=>r.itemId===it.id && r.staff===staffSelect.value).length;
+ ["榎本","田中","佐藤"].forEach((n,i)=>{
+  db.collection("settings").doc("staff_"+i).set({type:"staff",name:n,order:i});
  });
- resultTable.innerHTML=html;
-}
-
-// ===== 設定 =====
-function addStaff(){ db.collection("settings").doc("staff_"+Date.now()).set({type:"staff",name:newStaff.value,order:Date.now()}); }
-function addItem(){ db.collection("settings").doc("item_"+Date.now()).set({type:"item",name:newItem.value,color:newColor.value,order:Date.now()}); }
-function editStaff(id,old){ const n=prompt("新名",old); if(n) db.collection("settings").doc(id).update({name:n}); }
-function editItem(id,old,color){ const n=prompt("名",old); const c=prompt("色",color); db.collection("settings").doc(id).update({name:n,color:c}); }
-function delSetting(id){ if(confirm("削除?")) db.collection("settings").doc(id).delete(); }
-function moveItem(i,d){ const a=items[i],b=items[i+d]; if(!b)return;
- db.collection("settings").doc(a.id).update({order:b.order});
- db.collection("settings").doc(b.id).update({order:a.order});
-}
-
-// ===== util =====
-function toastMsg(m){ toast.textContent=m; toast.style.display="block"; setTimeout(()=>toast.style.display="none",1500); }
-function switchTab(id){
- ["input","board","settings"].forEach(t=>{
-  document.getElementById(t+"View").classList.toggle("active",t===id);
-  document.getElementById("tab"+t.charAt(0).toUpperCase()+t.slice(1)).classList.toggle("active",t===id);
+ ["ひかり","カード","でんき","スマホ"].forEach((n,i)=>{
+  db.collection("settings").doc("item_"+i).set({type:"item",name:n,color:pastelColors[i],order:i});
  });
 }
-function exportExcel(){
- const a=document.createElement("a");
- a.href=URL.createObjectURL(new Blob([resultTable.outerHTML],{type:"application/vnd.ms-excel"}));
- a.download="ganbaru.xls"; a.click();
+seedDefault();
+
+/* ================= 設定読み込み ================= */
+let staffList=[], itemList=[];
+db.collection("settings").onSnapshot(snap=>{
+ staffList=[]; itemList=[];
+ snap.forEach(d=>{
+  const v=d.data();
+  if(v.type=="staff") staffList.push(v);
+  if(v.type=="item") itemList.push(v);
+ });
+ renderUI();
+});
+
+function renderUI(){
+ staffSelect.innerHTML = staffList.sort((a,b)=>a.order-b.order)
+  .map(s=>`<option>${s.name}</option>`).join("");
+
+ btnContainer.innerHTML = itemList.sort((a,b)=>a.order-b.order)
+  .map(it=>`<button class="item-btn" style="background:${it.color}" onclick="addRecord('${it.name}')">${it.name}</button>`).join("");
 }
-async function clearToday(){
- const q=await db.collection("sales_records").where("date","==",dateKey).get();
- q.forEach(d=>d.ref.delete());
+
+/* ================= 成約登録 ================= */
+function addRecord(itemName){
+ const staff=staffSelect.value;
+ const now=new Date();
+ const dateKey=now.toISOString().slice(0,10);
+ const monthKey=now.getFullYear()+"-"+(now.getMonth()+1);
+
+ db.collection("sales").add({
+  staff, item:itemName,
+  date:dateKey,
+  month:monthKey,
+  time:firebase.firestore.FieldValue.serverTimestamp()
+ });
 }
+
+/* ================= リアルタイム集計 ================= */
+db.collection("sales").onSnapshot(snap=>{
+ const today=new Date().toISOString().slice(0,10);
+ let todayCount=0;
+ const rank={};
+
+ snap.forEach(d=>{
+  const v=d.data();
+  if(v.date==today) todayCount++;
+  rank[v.staff]=(rank[v.staff]||0)+1;
+ });
+
+ todayCountUI.textContent=todayCount;
+
+ const sorted=Object.entries(rank).sort((a,b)=>b[1]-a[1]);
+ rankingUI.innerHTML=sorted.map((r,i)=>`<li>${i+1}位 ${r[0]}：${r[1]}件</li>`).join("");
+});
 </script>
 
 </body>
