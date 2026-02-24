@@ -1,348 +1,341 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>GANBARU SHEET PRO</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>がんばるシート</title>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+    <style>
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f0fdf4; color: #334155; margin: 0; padding: 0; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        
+        .tab-menu { display: flex; background: #ffffff; border-bottom: 2px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.02); margin-bottom: 20px; }
+        .tab-menu button { flex: 1; padding: 15px; background: none; border: none; color: #94a3b8; font-size: 16px; cursor: pointer; transition: 0.3s; font-weight: bold; }
+        #tabBtnInput.active { color: #3b82f6; border-bottom: 3px solid #3b82f6; background: #eff6ff; }
+        #tabBtnBoard.active { color: #10b981; border-bottom: 3px solid #10b981; background: #ecfdf5; }
+        #tabBtnSettings.active { color: #64748b; border-bottom: 3px solid #64748b; background: #f8fafc; }
+        
+        .tab-content { display: none; background: #ffffff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.03); border: 1px solid #e2e8f0; }
+        .tab-content.active { display: block; }
 
-<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+        .header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        #inputDateTitle { border-bottom: 2px solid #3b82f6; padding-bottom: 5px; margin: 0; font-size: 22px; }
+        #boardTitle { border-bottom: 2px solid #10b981; padding-bottom: 5px; margin: 0; font-size: 22px; }
+        #settingsTitle { border-bottom: 2px solid #64748b; padding-bottom: 5px; margin: 0; font-size: 22px; }
 
-<style>
-/* ===== UI ===== */
-body{
- margin:0;
- font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
- background:#f3f4f6;
-}
+        /* 追加：スタッフ選択エリアのデザイン変更（固定ボタン追加） */
+        .staff-selector { margin-bottom: 25px; font-weight: bold; color: #475569; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .staff-selector select { font-size: 16px; padding: 10px; flex: 1; min-width: 150px; max-width: 300px; border-radius: 8px; border: 1px solid #cbd5e0; background: #f8fafc; margin-top: 0;}
+        .lock-btn { padding: 10px 15px; border: 1px solid #cbd5e0; background: #f1f5f9; color: #64748b; border-radius: 8px; cursor: pointer; font-weight: bold; white-space: nowrap; transition: 0.3s;}
+        .lock-btn.locked { background: #3b82f6; color: white; border-color: #2563eb; }
+        
+        .btn-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; }
+        .item-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; display: flex; flex-direction: column; box-shadow: 0 2px 4px rgba(0,0,0,0.03); overflow: hidden; }
+        .item-card-btn { color: #1e293b; border: none; font-size: 16px; font-weight: bold; cursor: pointer; padding: 15px 10px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+        .item-card-btn:active { opacity: 0.7; }
+        .remain-text { font-size: 13px; font-weight: bold; color: #e11d48; background: #ffe4e6; padding: 3px 10px; border-radius: 12px; display: inline-block; transition: 0.3s; box-shadow: 0 1px 2px rgba(0,0,0,0.1);}
+        .remain-text.achieved { color: #059669; background: #d1fae5; }
+        .remain-text.hidden { display: none; }
+        .count-area { display: flex; align-items: center; justify-content: space-between; padding: 10px 15px; background: #ffffff; border-top: 1px solid #f1f5f9; }
+        .my-count { font-size: 16px; font-weight: bold; color: #475569; }
+        .minus-btn { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; border-radius: 4px; padding: 5px 10px; font-size: 13px; font-weight: bold; cursor: pointer; }
 
-/* Tabs */
-header{
- display:flex;
- gap:10px;
- padding:8px;
- background:white;
- border-bottom:1px solid #ddd;
-}
-.tab{
- padding:6px 14px;
- border-radius:8px;
- cursor:pointer;
- background:#e5e7eb;
-}
-.tab.active{background:#2563eb;color:white;font-weight:bold;}
-
-.page{display:none;padding:12px;}
-.page.active{display:block;}
-
-/* Cards */
-.card{
- background:white;
- border-radius:12px;
- padding:12px;
- box-shadow:0 2px 8px rgba(0,0,0,.08);
- margin-bottom:12px;
-}
-
-/* Input buttons */
-.items{
- display:grid;
- grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
- gap:10px;
-}
-.item-box{
- border:1px solid #ddd;
- border-radius:10px;
- padding:8px;
- background:white;
-}
-.item-btn{
- width:100%;
- padding:12px;
- border:none;
- border-radius:8px;
- font-size:16px;
- font-weight:bold;
- color:white;
- cursor:pointer;
-}
-.item-footer{
- display:flex;
- justify-content:space-between;
- margin-top:6px;
- font-size:14px;
-}
-.minus{
- background:#ef4444;color:white;border:none;padding:4px 10px;border-radius:6px;
-}
-.rank-mini{
- font-size:12px;color:#374151;margin-top:4px;
-}
-
-/* Board Table */
-.board-wrap{
- background:white;
- padding:10px;
- border-radius:12px;
-}
-table{
- border-collapse:collapse;
- width:100%;
- background:white;
-}
-th,td{
- border:1px solid #999;
- padding:4px;
- text-align:center;
- font-size:12px;
-}
-.square{
- width:100px;
- height:100px;
- overflow:auto;
- font-size:11px;
- background:#fff;
-}
-th{
- background:#f9fafb;
-}
-
-/* Settings */
-.setting-row{
- display:flex;
- gap:6px;
- margin-bottom:6px;
-}
-</style>
+        .board-table-wrapper { overflow-x: auto; margin-top: 10px; padding-bottom: 10px; }
+        table { border-collapse: collapse; width: max-content; }
+        th, td { border: 1px solid #cbd5e0; text-align: center; vertical-align: middle; }
+        .row-header { padding: 8px 12px; font-weight: bold; position: sticky; left: 0; z-index: 1; border-right: 2px solid #cbd5e0; white-space: nowrap; font-size: 14px; }
+        .square-cell { width: 50px; height: 50px; min-width: 50px; box-sizing: border-box; font-size: 12px; line-height: 1.2; word-break: break-all; }
+        .name-cell { background: #e0f2fe; color: #0369a1; font-weight: bold; }
+        .target-bg { background-color: #fef9c3; }
+        .target-border { border-right: 3px solid #f59e0b; }
+        .export-btn, .clear-btn { color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 14px; cursor: pointer; font-weight: bold; }
+        .export-btn { background: #10b981; }
+        .clear-btn { background: #ef4444; }
+        
+        .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        @media (max-width: 768px) { .settings-grid { grid-template-columns: 1fr; } }
+        .settings-card { background: #f8fafc; border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; }
+        .full-width-card { grid-column: 1 / -1; }
+        .settings-card h3 { margin-top: 0; border-bottom: 1px solid #cbd5e0; padding-bottom: 5px; display: flex; justify-content: space-between; align-items: center;}
+        .reset-btn { background: #fbbf24; border: none; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer; }
+        .add-form { display: flex; gap: 8px; margin-top: 15px; align-items: center; flex-wrap: wrap;}
+        .add-form input[type="text"] { flex: 1; min-width: 100px; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; }
+        .add-form select { padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; cursor: pointer; }
+        .add-form button { padding: 10px 15px; background: #64748b; color: white; border: none; border-radius: 6px; cursor: pointer; }
+        .list-ui { list-style: none; padding: 0; margin-top: 10px; max-height: 500px; overflow-y: auto; }
+        .list-ui li { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #edf2f7; background: white; margin-bottom: 5px; border-radius: 4px; }
+        .item-info { display: flex; align-items: center; gap: 10px; flex: 1; }
+        .item-name { font-weight: bold; min-width: 120px; }
+        .target-input { width: 50px; padding: 4px; border: 1px solid #cbd5e0; border-radius: 4px; text-align: center; }
+        .action-btns { display: flex; gap: 4px; }
+        .edit-btn { background: #3b82f6; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; }
+        .delete-btn { background: #fca5a5; color: #7f1d1d; border: none; padding: 5px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; }
+        .move-btn { background: #f1f5f9; border: 1px solid #cbd5e0; border-radius: 4px; padding: 5px 8px; cursor: pointer; }
+        #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(30, 41, 59, 0.9); color: white; padding: 12px 24px; border-radius: 30px; display: none; z-index: 1000; }
+    </style>
 </head>
-
 <body>
 
-<header>
- <div class="tab active" onclick="showTab('input')">入力</div>
- <div class="tab" onclick="showTab('board')">ボード</div>
- <div class="tab" onclick="showTab('settings')">設定</div>
-</header>
-
-<!-- ================= 入力 ================= -->
-<div id="input" class="page active">
-
-<div class="card">
- スタッフ:
- <select id="staffSelect"></select>
- <button onclick="toggleLock()" id="lockBtn">🔓 固定OFF</button>
+<div class="tab-menu">
+    <button id="tabBtnInput" class="active" onclick="window.switchTab('input')">実績入力</button>
+    <button id="tabBtnBoard" onclick="window.switchTab('board')">がんばるシート</button>
+    <button id="tabBtnSettings" onclick="window.switchTab('settings')">🔒 各種設定</button>
 </div>
 
-<div class="card">
- <div class="items" id="btnContainer"></div>
-</div>
+<div class="container">
+    <div id="inputView" class="tab-content active">
+        <div class="header-flex"><h2 id="inputDateTitle">実績入力</h2></div>
+        
+        <div class="staff-selector">
+            <label>スタッフ選択: </label>
+            <select id="staffSelect" onchange="window.updateView()"></select>
+            <button id="lockBtn" class="lock-btn" onclick="window.toggleLock()">🔓 固定OFF</button>
+        </div>
 
-</div>
+        <div class="btn-grid" id="btnContainer"></div>
+    </div>
 
-<!-- ================= ボード ================= -->
-<div id="board" class="page">
- <div class="board-wrap">
-  <h3>本日の成約ボード（紙帳票風）</h3>
-  <table id="boardTable"></table>
- </div>
-</div>
+    <div id="boardView" class="tab-content">
+        <div class="header-flex">
+            <h2 id="boardTitle">〇/〇のがんばるシート</h2>
+            <button class="export-btn" onclick="window.exportToExcel()">📊 Excel出力</button>
+        </div>
+        <div class="board-table-wrapper"><table id="resultTable"></table></div>
+    </div>
 
-<!-- ================= 設定 ================= -->
-<div id="settings" class="page">
-
-<div class="card">
- <h3>スタッフ管理</h3>
- <input id="newStaff"><button onclick="addStaff()">追加</button>
- <div id="staffListUI"></div>
+    <div id="settingsView" class="tab-content">
+        <div class="header-flex"><h2 id="settingsTitle">🔒 各種設定</h2></div>
+        <div class="settings-grid">
+            <div class="settings-card full-width-card">
+                <h3>データ管理</h3>
+                <button class="clear-btn" onclick="window.clearTodayData()">🗑️ 本日の実績データを全クリア</button>
+            </div>
+            <div class="settings-card">
+                <h3>スタッフ管理</h3>
+                <div class="add-form">
+                    <input type="text" id="newStaffInput" placeholder="例: 榎本">
+                    <button onclick="window.addListItem('staff')">追加</button>
+                </div>
+                <ul id="staffListUI" class="list-ui"></ul>
+            </div>
+            <div class="settings-card">
+                <h3>商材管理 <button class="reset-btn" onclick="window.resetItems()">25項目リセット</button></h3>
+                <div class="add-form">
+                    <input type="text" id="newItemInput" placeholder="例: 新商材">
+                    <select id="newItemColor" onchange="this.style.backgroundColor=this.value" style="background-color: #bae6fd;">
+                        <option value="#bae6fd" style="background:#bae6fd;">水色</option>
+                        <option value="#fef08a" style="background:#fef08a;">黄色</option>
+                        <option value="#bbf7d0" style="background:#bbf7d0;">緑色</option>
+                        <option value="#e9d5ff" style="background:#e9d5ff;">紫色</option>
+                        <option value="#d9ead3" style="background:#d9ead3;">黄緑</option>
+                        <option value="#fed7aa" style="background:#fed7aa;">オレンジ</option>
+                        <option value="#fecdd3" style="background:#fecdd3;">ピンク</option>
+                        <option value="#fecaca" style="background:#fecaca;">赤色</option>
+                        <option value="#f1f5f9" style="background:#f1f5f9;">グレー</option>
+                    </select>
+                    <button onclick="window.addListItem('item')">追加</button>
+                </div>
+                <ul id="itemListUI" class="list-ui"></ul>
+            </div>
+        </div>
+    </div>
 </div>
-
-<div class="card">
- <h3>商材管理</h3>
- <input id="newItem">
- <input type="color" id="newColor" value="#60a5fa">
- <button onclick="addItem()">追加</button>
- <div id="itemListUI"></div>
-</div>
-
-</div>
+<div id="toast"></div>
 
 <script>
-/* ================= Firebase ================= */
-const firebaseConfig={
- apiKey:"YOUR_API_KEY",
- authDomain:"YOUR_PROJECT.firebaseapp.com",
- projectId:"YOUR_PROJECT_ID"
-};
-firebase.initializeApp(firebaseConfig);
-const db=firebase.firestore();
+    const firebaseConfig = {
+        apiKey: "AIzaSyCmerraKVr1iJsRoiW53lxUtgDUcOGVXtY",
+        authDomain: "ganbaru-sheet-a32f3.firebaseapp.com",
+        projectId: "ganbaru-sheet-a32f3",
+        storageBucket: "ganbaru-sheet-a32f3.firebasestorage.app",
+        messagingSenderId: "75251515079",
+        appId: "1:75251515079:web:19acf818476d90588808e2"
+    };
 
-/* ================= Tabs ================= */
-function showTab(id){
- document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
- document.getElementById(id).classList.add("active");
- document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
- event.target.classList.add("active");
-}
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    
+    const ADMIN_PASSWORD = "0000"; 
+    const successSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3');
+    successSound.volume = 0.5;
 
-/* ================= Seed (初回のみ) ================= */
-const pastel=["#60a5fa","#a78bfa","#34d399","#fbbf24","#f472b6"];
-async function seed(){
- const s=await db.collection("settings").get();
- if(!s.empty) return; // ★ここ重要
- ["榎本","田中","佐藤"].forEach((n,i)=>db.collection("settings").add({type:"staff",name:n,order:i}));
- ["ひかり","カード","でんき","スマホ"].forEach((n,i)=>db.collection("settings").add({type:"item",name:n,color:pastel[i],order:i}));
-}
-seed();
+    let testData = []; 
+    let staffList = []; 
+    let items = []; 
+    
+    // 追加：ロック機能用の変数（スマホのローカルに記憶させます）
+    let lockedStaffName = localStorage.getItem('lockedStaffName') || "";
 
-/* ================= Data ================= */
-let staffList=[],itemList=[],records=[];
+    const COLORS = {
+        blue: "#bae6fd", yellow: "#fef08a", green: "#bbf7d0",
+        purple: "#e9d5ff", lightGreen: "#d9ead3", orange: "#fed7aa",
+        pink: "#fecdd3", red: "#fecaca", gray: "#f1f5f9"
+    };
 
-/* Settings realtime */
-db.collection("settings").onSnapshot(snap=>{
- staffList=[];itemList=[];
- snap.forEach(d=>{
-  const v=d.data();v.id=d.id;
-  if(v.type=="staff") staffList.push(v);
-  if(v.type=="item") itemList.push(v);
- });
- renderAll();
-});
+    const defaultItemsObj = [
+        { name: "光10GB", color: COLORS.blue, target: 15 }, { name: "光1GB", color: COLORS.blue, target: 18 },
+        { name: "HOME5G", color: COLORS.blue, target: 43 }, { name: "GOLD", color: COLORS.yellow, target: 95 },
+        { name: "GOLDU", color: COLORS.yellow, target: 12 }, { name: "PLATINUM", color: COLORS.yellow, target: 34 },
+        { name: "ドコモMAX", color: COLORS.yellow, target: 164 }, { name: "ポイ活MAX", color: COLORS.yellow, target: 113 },
+        { name: "d払い初回利用", color: COLORS.red, target: 50 }, { name: "ドコモでんき", color: COLORS.green, target: 41 },
+        { name: "ドコモガス", color: COLORS.green, target: 25 }, { name: "守くん", color: COLORS.purple, target: 118 },
+        { name: "内) プレミアム", color: COLORS.purple, target: 88 }, { name: "ニフティ", color: COLORS.purple, target: 62 },
+        { name: "内) NiftyB・C", color: COLORS.purple, target: 49 }, { name: "Nkeep", color: COLORS.purple, target: 43 },
+        { name: "アドクリ", color: COLORS.purple, target: 92 }, { name: "ダレカナ", color: COLORS.purple, target: 60 },
+        { name: "保存君", color: COLORS.purple, target: 60 }, { name: "コドマモ", color: COLORS.purple, target: 1 },
+        { name: "あんセキ", color: COLORS.purple, target: 14 }, { name: "Amazon", color: COLORS.lightGreen, target: 52 },
+        { name: "Disney", color: COLORS.lightGreen, target: 23 }, { name: "Lemino", color: COLORS.orange, target: 11 },
+        { name: "マイショップ", color: COLORS.gray, target: 83 }
+    ];
 
-/* Sales realtime */
-db.collection("sales").onSnapshot(snap=>{
- records=snap.docs.map(d=>({id:d.id,...d.data()}));
- renderAll();
-});
+    const today = new Date();
+    const dateStr = (today.getMonth() + 1) + '/' + today.getDate();
+    const searchDateStr = today.toLocaleDateString('ja-JP');
 
-/* ================= UI Render ================= */
-const staffSelect=document.getElementById("staffSelect");
-const btnContainer=document.getElementById("btnContainer");
-const boardTable=document.getElementById("boardTable");
-const staffListUI=document.getElementById("staffListUI");
-const itemListUI=document.getElementById("itemListUI");
+    document.getElementById('boardTitle').textContent = dateStr + 'のがんばるシート';
+    document.getElementById('inputDateTitle').textContent = '実績入力 (' + dateStr + ')';
 
-/* Staff Lock */
-let lockedStaff=localStorage.getItem("lockedStaff")||"";
-function toggleLock(){
- if(lockedStaff){
-  lockedStaff="";
-  localStorage.removeItem("lockedStaff");
-  lockBtn.textContent="🔓 固定OFF";
- }else{
-  lockedStaff=staffSelect.value;
-  localStorage.setItem("lockedStaff",lockedStaff);
-  lockBtn.textContent="🔒 固定ON";
- }
-}
+    window.switchTab = function(tabId) {
+        if(tabId === 'settings') {
+            const pass = prompt("パスワード:");
+            if(pass !== ADMIN_PASSWORD) {
+                if(pass !== null) alert("パスワードが違います。");
+                return;
+            }
+        }
+        document.getElementById('inputView').classList.remove('active');
+        document.getElementById('boardView').classList.remove('active');
+        document.getElementById('settingsView').classList.remove('active');
+        document.getElementById('tabBtnInput').classList.remove('active');
+        document.getElementById('tabBtnBoard').classList.remove('active');
+        document.getElementById('tabBtnSettings').classList.remove('active');
+        document.getElementById(tabId + 'View').classList.add('active');
+        document.getElementById('tabBtn' + tabId.charAt(0).toUpperCase() + tabId.slice(1)).classList.add('active');
+    };
 
-function renderAll(){
- staffSelect.innerHTML=staffList.map(s=>`<option>${s.name}</option>`).join("");
- if(lockedStaff){
-  staffSelect.value=lockedStaff;
-  staffSelect.disabled=true;
-  lockBtn.textContent="🔒 固定ON";
- }else{
-  staffSelect.disabled=false;
-  lockBtn.textContent="🔓 固定OFF";
- }
+    window.showToast = function(msg) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.style.display = 'block';
+        setTimeout(function() { t.style.display = 'none'; }, 2000);
+    };
 
- btnContainer.innerHTML=itemList.map(it=>`
- <div class="item-box">
-  <button class="item-btn" style="background:${it.color}" onclick="addRecord('${it.name}')">${it.name}</button>
-  <div class="item-footer">
-   <span id="count_${it.name}">0件</span>
-   <button class="minus" onclick="removeRecord('${it.name}')">−</button>
-  </div>
-  <div class="rank-mini" id="rank_${it.name}"></div>
- </div>`).join("");
+    // 追加：ロック機能のオンオフ処理
+    window.toggleLock = function() {
+        const sel = document.getElementById('staffSelect');
+        const btn = document.getElementById('lockBtn');
+        if (lockedStaffName) {
+            // ロック解除
+            lockedStaffName = "";
+            localStorage.removeItem('lockedStaffName');
+            sel.disabled = false;
+            btn.textContent = "🔓 固定OFF";
+            btn.classList.remove('locked');
+        } else {
+            // ロック実行
+            if(!sel.value) return; 
+            lockedStaffName = sel.value;
+            localStorage.setItem('lockedStaffName', lockedStaffName);
+            sel.disabled = true;
+            btn.textContent = "🔒 固定ON";
+            btn.classList.add('locked');
+        }
+        window.updateView(); 
+    };
 
- staffListUI.innerHTML=staffList.map(s=>`
- <div class="setting-row">
-  <input value="${s.name}" onchange="editSetting('${s.id}',this.value,null)">
-  <button onclick="deleteSetting('${s.id}')">削除</button>
- </div>`).join("");
+    // 初期データのロード
+    staffList = JSON.parse(localStorage.getItem('fb_staff')) || [{id:'s1', name:'榎本', order:0}];
+    items = JSON.parse(localStorage.getItem('fb_items')) || defaultItemsObj.map(function(it, i) { return {id: 'item_'+i, name: it.name, color: it.color, target: it.target, order: i}; });
 
- itemListUI.innerHTML=itemList.map(it=>`
- <div class="setting-row">
-  <input value="${it.name}" onchange="editSetting('${it.id}',this.value,'${it.color}')">
-  <input type="color" value="${it.color}" onchange="editSetting('${it.id}','${it.name}',this.value)">
-  <button onclick="deleteSetting('${it.id}')">削除</button>
- </div>`).join("");
+    db.collection("sales_records").where("date", "==", searchDateStr)
+      .onSnapshot(function(snap) {
+          testData = snap.docs.map(function(d) {
+              const data = d.data();
+              return { id: d.id, staff: data.staff, item: data.item, timestamp: data.timestamp };
+          }).sort(function(a,b) {
+              const timeA = a.timestamp ? a.timestamp.toMillis() : 0;
+              const timeB = b.timestamp ? b.timestamp.toMillis() : 0;
+              return timeA - timeB;
+          });
+          window.updateView();
+      }, function(error) {
+          console.error("Fetch Error:", error);
+      });
 
- updateCounts();
- renderBoard();
-}
+    db.collection("settings").orderBy("order", "asc")
+      .onSnapshot(function(snap) {
+          if (snap.docs.length > 0) {
+              let newStaff = [];
+              let newItems = [];
+              snap.docs.forEach(function(d) {
+                  const data = d.data();
+                  if(data.type === 'staff') newStaff.push({ id: d.id, name: data.name, order: data.order });
+                  else if(data.type === 'item') newItems.push({ id: d.id, name: data.name, color: data.color || '#f1f5f9', target: data.target || 0, order: data.order });
+              });
+              staffList = newStaff;
+              items = newItems;
+              localStorage.setItem('fb_staff', JSON.stringify(staffList));
+              localStorage.setItem('fb_items', JSON.stringify(items));
+          } else {
+              if(!window.isResetting) {
+                  window.isResetting = true;
+                  resetToDefaultItems().then(function() {
+                      db.collection("settings").doc("staff_" + Date.now()).set({ type: 'staff', name: '榎本', order: 0 });
+                      window.isResetting = false;
+                  });
+              }
+          }
+          renderStaffSelect();
+          buildInputUI();
+          renderSettingsUI();
+          window.updateView();
+      }, function(error) {
+          console.error("Settings Error:", error);
+      });
 
-/* ================= Sales ================= */
-function addRecord(item){
- const staff=lockedStaff||staffSelect.value;
- const date=new Date().toISOString().slice(0,10);
- db.collection("sales").add({staff,item,date});
-}
-function removeRecord(item){
- const staff=lockedStaff||staffSelect.value;
- const today=new Date().toISOString().slice(0,10);
- const r=records.filter(r=>r.item==item&&r.staff==staff&&r.date==today).pop();
- if(r) db.collection("sales").doc(r.id).delete();
-}
+    window.addRec = async function(itemName) {
+        // 変更：ロックされていればその人を、されていなければプルダウンの人を使用
+        const staff = lockedStaffName || document.getElementById('staffSelect').value;
+        if(!staff) { alert("スタッフを選択してください"); return; }
+        try {
+            successSound.currentTime = 0; successSound.play();
+            await db.collection("sales_records").add({ staff: staff, item: itemName, date: searchDateStr, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+            window.showToast(staff + ": " + itemName + " +1");
+        } catch (e) { alert("書き込みエラーが発生しました。"); }
+    };
 
-/* ================= Counts + Ranking ================= */
-function updateCounts(){
- const today=new Date().toISOString().slice(0,10);
- const staff=lockedStaff||staffSelect.value;
+    window.remRec = async function(itemName) {
+        const staff = lockedStaffName || document.getElementById('staffSelect').value;
+        let targetRecord = null;
+        for (let i = testData.length - 1; i >= 0; i--) {
+            if (testData[i].staff === staff && testData[i].item === itemName) {
+                targetRecord = testData[i]; break;
+            }
+        }
+        if (targetRecord) await db.collection("sales_records").doc(targetRecord.id).delete();
+    };
 
- itemList.forEach(it=>{
-  const c=records.filter(r=>r.item==it.name&&r.staff==staff&&r.date==today).length;
-  document.getElementById("count_"+it.name).textContent=c+"件";
+    async function resetToDefaultItems() {
+        const batch = db.batch();
+        defaultItemsObj.forEach(function(obj, i) {
+            const docRef = db.collection("settings").doc("item_" + i);
+            batch.set(docRef, { type: 'item', name: obj.name, color: obj.color, target: obj.target, order: i });
+        });
+        await batch.commit();
+    }
 
-  const rank={};
-  records.filter(r=>r.item==it.name&&r.date==today).forEach(r=>{
-   rank[r.staff]=(rank[r.staff]||0)+1;
-  });
-  const sorted=Object.entries(rank).sort((a,b)=>b[1]-a[1]).slice(0,3);
-  document.getElementById("rank_"+it.name).innerHTML=sorted.map((r,i)=>`${i+1}位 ${r[0]}:${r[1]}件`).join("<br>");
- });
-}
-
-/* ================= Board Table ================= */
-function renderBoard(){
- const today=new Date().toISOString().slice(0,10);
- let html="<tr><th>商材\\スタッフ</th>";
- staffList.forEach(s=>html+=`<th>${s.name}</th>`);
- html+="</tr>";
-
- itemList.forEach(it=>{
-  html+=`<tr><th>${it.name}</th>`;
-  staffList.forEach(s=>{
-   const names=records.filter(r=>r.item==it.name&&r.staff==s.name&&r.date==today)
-     .map(()=>s.name).join("<br>");
-   html+=`<td class="square">${names}</td>`;
-  });
-  html+="</tr>";
- });
-
- boardTable.innerHTML=html;
-}
-
-/* ================= Settings CRUD ================= */
-function addStaff(){
- const n=newStaff.value;
- if(n) db.collection("settings").add({type:"staff",name:n,order:Date.now()});
-}
-function addItem(){
- const n=newItem.value;
- const c=newColor.value;
- if(n) db.collection("settings").add({type:"item",name:n,color:c,order:Date.now()});
-}
-function editSetting(id,name,color){
- const data={name};
- if(color) data.color=color;
- db.collection("settings").doc(id).update(data);
-}
-function deleteSetting(id){
- db.collection("settings").doc(id).delete();
-}
-</script>
-
-</body>
-</html>
+    window.addListItem = async function(type) {
+        const inputId = type === 'staff' ? 'newStaffInput' : 'newItemInput';
+        const val = document.getElementById(inputId).value.trim();
+        if(!val) return;
+        const newId = type + "_" + Date.now();
+        if (type === 'staff') {
+            await db.collection("settings").doc(newId).set({ type: type, name: val, order: staffList.length });
+            document.getElementById('newStaffInput').value = '';
+        } else {
+            const color = document.getElementById('newItemColor').value;
+            const target = parseInt(document.getElementById('newItemTarget').value) || 0;
+            await db.collection("settings").doc(newId).set({ type: type, name: val, color: color, target: target, order: items.length });
+            document.getElementById('newItemInput').value = '';
+            document.getElementByI
