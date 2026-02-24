@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GANBARU SHEET PRO</title>
 
+<!-- Firebase compat -->
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+
 <style>
 :root{
  --bg:#0f172a;
@@ -32,19 +36,15 @@ h2{margin:5px 0 15px;font-size:22px;}
 
 table{border-collapse:collapse;}
 th,td{border:1px solid var(--border);width:48px;height:48px;text-align:center;font-size:12px;}
-.row-header{background:#020617;font-weight:bold;position:sticky;left:0;}
 .name-cell{background:#2563eb;font-weight:bold;color:white;}
 
 .panel{background:var(--card);border:1px solid var(--border);padding:12px;border-radius:10px;margin-bottom:12px;}
-
 .list-ui{list-style:none;padding:0;}
 .list-ui li{display:flex;justify-content:space-between;align-items:center;padding:6px;border-bottom:1px solid var(--border);}
-
 button{cursor:pointer;border:none;border-radius:6px;padding:6px 10px;font-size:12px;}
 .edit{background:#2563eb;color:white;}
 .del{background:#ef4444;color:white;}
 .move{background:#111827;border:1px solid var(--border);color:white;}
-
 #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
 background:#111827;padding:12px 20px;border-radius:20px;display:none;}
 </style>
@@ -75,7 +75,6 @@ background:#111827;padding:12px 20px;border-radius:20px;display:none;}
 </div>
 
 <div id="settingsView" class="tab-content">
-
 <div class="panel">
 <h3>スタッフ</h3>
 <input id="newStaff"><button onclick="addStaff()">追加</button>
@@ -96,40 +95,55 @@ background:#111827;padding:12px 20px;border-radius:20px;display:none;}
 
 <div id="toast"></div>
 
-<script type="module">
-import {initializeApp} from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import {getFirestore,collection,addDoc,query,where,onSnapshot,serverTimestamp,deleteDoc,doc,getDocs,setDoc,orderBy} from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+<script>
+// ===== DOM取得（★致命的修正） =====
+const inputTitle = document.getElementById("inputTitle");
+const boardTitle = document.getElementById("boardTitle");
+const staffSelect = document.getElementById("staffSelect");
+const btnContainer = document.getElementById("btnContainer");
+const resultTable = document.getElementById("resultTable");
+const toast = document.getElementById("toast");
+const staffUI = document.getElementById("staffUI");
+const itemUI = document.getElementById("itemUI");
+const newStaff = document.getElementById("newStaff");
+const newItem = document.getElementById("newItem");
+const newColor = document.getElementById("newColor");
 
-const firebaseConfig={ /* ←あなたの設定 */ };
-const app=initializeApp(firebaseConfig);
-const db=getFirestore(app);
+// ===== Firebase設定（必ず自分のを入れる） =====
+const firebaseConfig = {
+  apiKey: "XXXX",
+  authDomain: "XXXX.firebaseapp.com",
+  projectId: "XXXX",
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
-const today=new Date();
-const dateStr=`${today.getMonth()+1}/${today.getDate()}`;
-const dateKey=today.toLocaleDateString("ja-JP");
-inputTitle.textContent=`実績入力 ${dateStr}`;
-boardTitle.textContent=`${dateStr} がんばるシート`;
+// ===== 日付 =====
+const today = new Date();
+const dateStr = `${today.getMonth()+1}/${today.getDate()}`;
+const dateKey = today.toLocaleDateString("ja-JP");
+inputTitle.textContent = `実績入力 ${dateStr}`;
+boardTitle.textContent = `${dateStr} がんばるシート`;
 
-let staff=[],items=[],records=[];
+// ===== データ =====
+let staff=[], items=[], records=[];
 
-// ===== Firestore =====
-onSnapshot(query(collection(db,"settings"),orderBy("order")),snap=>{
- staff=snap.docs.filter(d=>d.data().type==="staff").map(d=>({id:d.id,...d.data()}));
- items=snap.docs.filter(d=>d.data().type==="item").map(d=>({id:d.id,...d.data()}));
- renderStaff();
- renderItems();
- buildButtons();
+// ===== Firestore監視 =====
+db.collection("settings").orderBy("order").onSnapshot(snap=>{
+ staff = snap.docs.filter(d=>d.data().type==="staff").map(d=>({id:d.id,...d.data()}));
+ items = snap.docs.filter(d=>d.data().type==="item").map(d=>({id:d.id,...d.data()}));
+ renderStaff(); renderItems(); buildButtons();
 });
 
-onSnapshot(query(collection(db,"sales_records"),where("date","==",dateKey)),snap=>{
- records=snap.docs.map(d=>({id:d.id,...d.data()}));
+db.collection("sales_records").where("date","==",dateKey).onSnapshot(snap=>{
+ records = snap.docs.map(d=>({id:d.id,...d.data()}));
  updateBoard();
 });
 
 // ===== UI =====
 function renderStaff(){
- staffSelect.innerHTML=staff.map(s=>`<option value="${s.name}">${s.name}</option>`).join("");
- staffUI.innerHTML=staff.map((s,i)=>`
+ staffSelect.innerHTML = staff.map(s=>`<option>${s.name}</option>`).join("");
+ staffUI.innerHTML = staff.map(s=>`
  <li>${s.name}
  <div>
  <button class="edit" onclick="editStaff('${s.id}','${s.name}')">編集</button>
@@ -138,7 +152,7 @@ function renderStaff(){
 }
 
 function renderItems(){
- itemUI.innerHTML=items.map((it,i)=>`
+ itemUI.innerHTML = items.map((it,i)=>`
  <li style="border-left:5px solid ${it.color}">
  ${it.name}
  <div>
@@ -150,7 +164,7 @@ function renderItems(){
 }
 
 function buildButtons(){
- btnContainer.innerHTML=items.map(it=>`
+ btnContainer.innerHTML = items.map(it=>`
  <div class="item-card">
  <button style="background:${it.color}" onclick="addRecord('${it.id}','${it.name}')">${it.name}</button>
  <div class="count-area"><span id="c_${it.id}">0</span><button onclick="removeRecord('${it.id}')">−</button></div>
@@ -158,27 +172,28 @@ function buildButtons(){
 }
 
 // ===== 記録 =====
-async function addRecord(itemId,name){
- const staffName=staffSelect.value;
- await addDoc(collection(db,"sales_records"),{staff:staffName,itemId,name,date:dateKey,timestamp:serverTimestamp()});
- toast(`${staffName} + ${name}`);
-}
-async function removeRecord(itemId){
- const staffName=staffSelect.value;
- const t=records.filter(r=>r.itemId===itemId && r.staff===staffName).pop();
- if(t) await deleteDoc(doc(db,"sales_records",t.id));
+function addRecord(itemId,name){
+ const staffName = staffSelect.value;
+ db.collection("sales_records").add({staff:staffName,itemId,name,date:dateKey,timestamp:firebase.firestore.FieldValue.serverTimestamp()});
+ toastMsg(`${staffName} + ${name}`);
 }
 
+function removeRecord(itemId){
+ const staffName = staffSelect.value;
+ const t = records.filter(r=>r.itemId===itemId && r.staff===staffName).pop();
+ if(t) db.collection("sales_records").doc(t.id).delete();
+}
+
+// ===== ボード =====
 function updateBoard(){
- const board={};
+ const board = {};
  items.forEach(it=>board[it.id]=records.filter(r=>r.itemId===it.id).map(r=>r.staff));
- const max=Math.max(10,...items.map(it=>board[it.id].length));
+ const max = Math.max(10,...items.map(it=>board[it.id].length));
  let html=`<tr><th>商材</th>${[...Array(max)].map((_,i)=>`<th>${i+1}</th>`).join("")}</tr>`;
  items.forEach(it=>{
   html+=`<tr><td style="background:${it.color}">${it.name}</td>`;
   for(let i=0;i<max;i++){
-   const n=board[it.id][i]||"";
-   html+=`<td class="${n?'name-cell':''}">${n}</td>`;
+   html+=`<td class="${board[it.id][i]?'name-cell':''}">${board[it.id][i]||""}</td>`;
   }
   html+="</tr>";
   const c=document.getElementById("c_"+it.id);
@@ -187,67 +202,34 @@ function updateBoard(){
  resultTable.innerHTML=html;
 }
 
-// ===== 設定操作 =====
-async function addStaff(){ await setDoc(doc(db,"settings","staff_"+Date.now()),{type:"staff",name:newStaff.value,order:Date.now()}); }
-async function addItem(){ await setDoc(doc(db,"settings","item_"+Date.now()),{type:"item",name:newItem.value,color:newColor.value,order:Date.now()}); }
-
-async function editStaff(id,old){
- const n=prompt("新スタッフ名",old);
- if(n) await setDoc(doc(db,"settings",id),{name:n},{merge:true});
-}
-
-async function editItem(id,old,color){
- const n=prompt("新商材名",old);
- const c=prompt("色HEX",color);
- await setDoc(doc(db,"settings",id),{name:n,color:c},{merge:true});
-}
-
-async function delSetting(id){
- if(confirm("削除?")) await deleteDoc(doc(db,"settings",id));
-}
-
-async function moveItem(idx,dir){
- const a=items[idx],b=items[idx+dir];
- if(!b) return;
- await setDoc(doc(db,"settings",a.id),{order:b.order},{merge:true});
- await setDoc(doc(db,"settings",b.id),{order:a.order},{merge:true});
+// ===== 設定 =====
+function addStaff(){ db.collection("settings").doc("staff_"+Date.now()).set({type:"staff",name:newStaff.value,order:Date.now()}); }
+function addItem(){ db.collection("settings").doc("item_"+Date.now()).set({type:"item",name:newItem.value,color:newColor.value,order:Date.now()}); }
+function editStaff(id,old){ const n=prompt("新名",old); if(n) db.collection("settings").doc(id).update({name:n}); }
+function editItem(id,old,color){ const n=prompt("名",old); const c=prompt("色",color); db.collection("settings").doc(id).update({name:n,color:c}); }
+function delSetting(id){ if(confirm("削除?")) db.collection("settings").doc(id).delete(); }
+function moveItem(i,d){ const a=items[i],b=items[i+d]; if(!b)return;
+ db.collection("settings").doc(a.id).update({order:b.order});
+ db.collection("settings").doc(b.id).update({order:a.order});
 }
 
 // ===== util =====
-window.switchTab=(id)=>{
+function toastMsg(m){ toast.textContent=m; toast.style.display="block"; setTimeout(()=>toast.style.display="none",1500); }
+function switchTab(id){
  ["input","board","settings"].forEach(t=>{
   document.getElementById(t+"View").classList.toggle("active",t===id);
   document.getElementById("tab"+t.charAt(0).toUpperCase()+t.slice(1)).classList.toggle("active",t===id);
  });
-};
-
-function toast(m){
- toast.textContent=m;
- toast.style.display="block";
- setTimeout(()=>toast.style.display="none",2000);
 }
-
-window.exportExcel=()=>{
+function exportExcel(){
  const a=document.createElement("a");
  a.href=URL.createObjectURL(new Blob([resultTable.outerHTML],{type:"application/vnd.ms-excel"}));
- a.download=`ganbaru_${dateStr}.xls`;
- a.click();
-};
-
-window.clearToday=async()=>{
- const snap=await getDocs(query(collection(db,"sales_records"),where("date","==",dateKey)));
- snap.forEach(d=>deleteDoc(doc(db,"sales_records",d.id)));
-};
-
-// expose
-window.addRecord=addRecord;
-window.removeRecord=removeRecord;
-window.addStaff=addStaff;
-window.addItem=addItem;
-window.editStaff=editStaff;
-window.editItem=editItem;
-window.delSetting=delSetting;
-window.moveItem=moveItem;
+ a.download="ganbaru.xls"; a.click();
+}
+async function clearToday(){
+ const q=await db.collection("sales_records").where("date","==",dateKey).get();
+ q.forEach(d=>d.ref.delete());
+}
 </script>
 
 </body>
