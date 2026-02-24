@@ -109,7 +109,15 @@ th, td { border:1px solid #cbd5e0; text-align:center; vertical-align:middle; }
  <h3>商材管理</h3>
  <div class="add-form">
   <input type="text" id="newItem" placeholder="新商材">
-  <input type="color" id="newColor" value="#bae6fd">
+  <select id="newColor" onchange="this.style.backgroundColor=this.value" style="background-color: #e0f2fe; padding:10px; border:1px solid #cbd5e0; border-radius:6px; cursor:pointer;">
+      <option value="#e0f2fe" style="background:#e0f2fe;">ペールブルー</option>
+      <option value="#fce7f3" style="background:#fce7f3;">ペールピンク</option>
+      <option value="#dcfce7" style="background:#dcfce7;">ペールグリーン</option>
+      <option value="#fef9c3" style="background:#fef9c3;">ペールイエロー</option>
+      <option value="#f3e8ff" style="background:#f3e8ff;">ペールパープル</option>
+      <option value="#ffedd5" style="background:#ffedd5;">ペールオレンジ</option>
+      <option value="#f1f5f9" style="background:#f1f5f9;">ライトグレー</option>
+  </select>
   <button onclick="addItem()">追加</button>
  </div>
  <div id="itemListUI"></div>
@@ -119,7 +127,6 @@ th, td { border:1px solid #cbd5e0; text-align:center; vertical-align:middle; }
 
 <script>
 /* ================= Firebase ================= */
-// ※店長の正しい環境設定に直しました
 const firebaseConfig={
  apiKey: "AIzaSyCmerraKVr1iJsRoiW53lxUtgDUcOGVXtY",
  authDomain: "ganbaru-sheet-a32f3.firebaseapp.com",
@@ -131,8 +138,19 @@ const firebaseConfig={
 firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore();
 
-/* ================= Tabs ================= */
+/* ================= Tabs (★変更点：パスワード保護) ================= */
+const ADMIN_PASSWORD = "0000"; // ★管理用パスワード（好きな数字に変更可能です）
+
 function showTab(id){
+ // 設定タブを開く時だけパスワードを求める
+ if(id === 'settings') {
+  const pass = prompt("管理用パスワードを入力してください:");
+  if(pass !== ADMIN_PASSWORD) {
+   if(pass !== null) alert("パスワードが違います。");
+   return; // パスワードが違う場合はタブ切り替えをキャンセル
+  }
+ }
+ 
  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
  document.getElementById(id).classList.add("active");
  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
@@ -140,12 +158,12 @@ function showTab(id){
 }
 
 /* ================= Seed (初回のみ) ================= */
-const pastel=["#bae6fd","#fef08a","#bbf7d0","#e9d5ff","#d9ead3"];
+const pastel=["#e0f2fe","#fef9c3","#dcfce7","#f3e8ff","#fce7f3"]; // ★初期カラーもペールトーンに
 async function seed(){
  const s=await db.collection("settings").get();
- if(!s.empty) return; // ★ここ重要
+ if(!s.empty) return;
  ["榎本","田中","佐藤"].forEach((n,i)=>db.collection("settings").add({type:"staff",name:n,order:i}));
- ["光10GB","GOLD","ドコモでんき","守くん","Amazon"].forEach((n,i)=>db.collection("settings").add({type:"item",name:n,color:pastel[i],order:i}));
+ ["光10GB","GOLD","ドコモでんき","守くん","Amazon"].forEach((n,i)=>db.collection("settings").add({type:"item",name:n,color:pastel[i] || "#f1f5f9",order:i}));
 }
 seed();
 
@@ -190,7 +208,7 @@ function toggleLock(){
   lockBtn.textContent="🔒 固定ON";
   lockBtn.classList.add("locked");
  }
- renderAll(); // 変更後UIを更新
+ renderAll(); 
 }
 
 function renderAll(){
@@ -206,7 +224,6 @@ function renderAll(){
   lockBtn.classList.remove("locked");
  }
 
- // 入力ボタン（見栄えを綺麗なカード型に変更）
  btnContainer.innerHTML=itemList.map(it=>`
  <div class="item-card">
   <button class="item-btn" style="background:${it.color}" onclick="addRecord('${it.name}')">${it.name}</button>
@@ -219,7 +236,6 @@ function renderAll(){
   </div>
  </div>`).join("");
 
- // 設定画面（見栄えを綺麗なリスト型に変更）
  staffListUI.innerHTML=`<ul class="list-ui">` + staffList.map(s=>`
  <li>
   <div style="display:flex; align-items:center; gap:10px; width:100%;">
@@ -279,13 +295,11 @@ function renderBoard(){
  const today=new Date().toISOString().slice(0,10);
  let maxCols = 20;
 
- // 今日の最大獲得数に合わせて列を増やす
  itemList.forEach(it=>{
   const count = records.filter(r=>r.item==it.name&&r.date==today).length;
   if(count > maxCols) maxCols = count;
  });
 
- // さっきまでの横長デザインで出力
  let html="<thead><tr><th class='row-header'>商材名</th>";
  for(let i=1; i<=maxCols; i++){
   html+=`<th class='square-cell'>${i}</th>`;
