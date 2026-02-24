@@ -28,83 +28,71 @@ body{
 }
 
 header{
- padding:12px 16px;
+ padding:10px;
  display:flex;
- gap:12px;
+ gap:10px;
  backdrop-filter: blur(var(--blur));
  background: var(--glass-bg);
  border-bottom:1px solid var(--glass-border);
 }
 
 .tab{
- padding:8px 16px;
- border-radius:12px;
+ padding:6px 14px;
+ border-radius:10px;
  background:rgba(255,255,255,0.2);
  cursor:pointer;
 }
 .tab.active{background:white;color:black;font-weight:600;}
 
-.page{display:none;padding:16px;height:100%;overflow:auto;}
+.page{display:none;padding:12px;height:100%;overflow:auto;}
 .page.active{display:block;}
 
 .card{
  background:var(--glass-bg);
  backdrop-filter: blur(var(--blur));
  border:1px solid var(--glass-border);
- border-radius:22px;
- padding:16px;
- box-shadow:0 20px 40px rgba(0,0,0,.25);
- margin-bottom:16px;
+ border-radius:18px;
+ padding:12px;
+ box-shadow:0 10px 30px rgba(0,0,0,.25);
+ margin-bottom:12px;
 }
-
-.big-title{font-size:22px;font-weight:700;margin-bottom:10px;}
 
 .items{
  display:grid;
- grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
- gap:12px;
+ grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+ gap:10px;
 }
 
-.item-box{
- background:rgba(0,0,0,.25);
- border-radius:18px;
- padding:8px;
-}
-
+.item-box{background:rgba(0,0,0,.2);padding:8px;border-radius:14px;}
 .item-btn{
  width:100%;
- border-radius:14px;
- padding:16px;
- font-size:20px;
+ padding:14px;
+ font-size:18px;
+ border:none;
+ border-radius:12px;
+ color:white;
  font-weight:600;
- color:white;
- border:none;
- cursor:pointer;
- backdrop-filter: blur(8px);
- box-shadow:0 10px 20px rgba(0,0,0,.25);
-}
-.item-btn:active{transform:scale(.95);}
-
-.item-footer{
- display:flex;
- justify-content:space-between;
- align-items:center;
- font-size:16px;
- padding:6px 6px 0;
-}
-
-.minus{
- background:#ef4444;
- border:none;
- color:white;
- padding:4px 10px;
- border-radius:10px;
- font-size:16px;
  cursor:pointer;
 }
+.item-footer{display:flex;justify-content:space-between;margin-top:6px;}
+.minus{background:#ef4444;color:white;border:none;padding:4px 10px;border-radius:8px;}
 
-.counter{font-size:28px;font-weight:700;}
-.rank-list li{font-size:18px;padding:4px 0;}
+.rank-mini{font-size:13px;margin-top:4px;opacity:.9;}
+
+table{
+ border-collapse:collapse;
+ width:100%;
+}
+td,th{
+ border:1px solid rgba(255,255,255,.3);
+ padding:6px;
+ text-align:center;
+}
+.square{
+ width:120px;height:120px;
+ overflow:auto;
+ font-size:12px;
+}
 </style>
 </head>
 
@@ -119,12 +107,11 @@ header{
 <!-- ================= 入力 ================= -->
 <div id="input" class="page active">
  <div class="card">
-  <div class="big-title">スタッフ選択</div>
-  <select id="staffSelect" style="font-size:20px;padding:8px;border-radius:10px;border:none;"></select>
+  スタッフ:
+  <select id="staffSelect"></select>
  </div>
 
  <div class="card">
-  <div class="big-title">商材タップで成約登録</div>
   <div class="items" id="btnContainer"></div>
  </div>
 </div>
@@ -132,36 +119,29 @@ header{
 <!-- ================= ボード ================= -->
 <div id="board" class="page">
  <div class="card">
-  <div class="big-title">本日の商材別成約数</div>
-  <div id="todayItems"></div>
- </div>
-
- <div class="card">
-  <div class="big-title">月間スタッフランキング（商材別）</div>
-  <select id="rankItemSelect"></select>
-  <ul id="rankingUI" class="rank-list"></ul>
+  <h3>本日 成約ボード（商材×スタッフ）</h3>
+  <table id="boardTable"></table>
  </div>
 </div>
 
 <!-- ================= 設定 ================= -->
 <div id="settings" class="page">
  <div class="card">
-  <div class="big-title">スタッフ追加</div>
-  <input id="newStaff" placeholder="名前">
-  <button onclick="addStaff()">追加</button>
+  <h3>スタッフ管理</h3>
+  <input id="newStaff"><button onclick="addStaff()">追加</button>
+  <div id="staffListUI"></div>
  </div>
 
  <div class="card">
-  <div class="big-title">商材追加</div>
-  <input id="newItem" placeholder="商材名">
-  <input type="color" id="newColor">
-  <button onclick="addItem()">追加</button>
+  <h3>商材管理</h3>
+  <input id="newItem"><input type="color" id="newColor"><button onclick="addItem()">追加</button>
+  <div id="itemListUI"></div>
  </div>
 </div>
 
 <script>
 /* ================= Firebase ================= */
-const firebaseConfig = {
+const firebaseConfig={
  apiKey:"YOUR_API_KEY",
  authDomain:"YOUR_PROJECT.firebaseapp.com",
  projectId:"YOUR_PROJECT_ID"
@@ -179,122 +159,153 @@ function showTab(id){
 
 /* ================= Seed ================= */
 const pastel=["#60a5fa","#a78bfa","#34d399","#fbbf24","#f472b6","#38bdf8"];
-
 async function seed(){
  const s=await db.collection("settings").get();
  if(!s.empty) return;
- ["榎本","田中","佐藤"].forEach((n,i)=>{
-  db.collection("settings").doc("staff_"+i).set({type:"staff",name:n,order:i});
- });
- ["ひかり","カード","でんき","スマホ"].forEach((n,i)=>{
-  db.collection("settings").doc("item_"+i).set({type:"item",name:n,color:pastel[i],order:i});
- });
+ ["榎本","田中","佐藤"].forEach((n,i)=>db.collection("settings").add({type:"staff",name:n,order:i}));
+ ["ひかり","カード","でんき","スマホ"].forEach((n,i)=>db.collection("settings").add({type:"item",name:n,color:pastel[i],order:i}));
 }
 seed();
 
-/* ================= Settings Load ================= */
-let staffList=[], itemList=[];
+/* ================= Data ================= */
+let staffList=[],itemList=[],records=[];
+
+/* Settings realtime */
 db.collection("settings").onSnapshot(snap=>{
- staffList=[]; itemList=[];
+ staffList=[];itemList=[];
  snap.forEach(d=>{
-  const v=d.data();
+  const v=d.data(); v.id=d.id;
   if(v.type=="staff") staffList.push(v);
   if(v.type=="item") itemList.push(v);
  });
- renderUI();
+ renderAll();
 });
 
-/* ================= Records ================= */
-let records=[];
+/* Sales realtime */
 db.collection("sales").onSnapshot(snap=>{
  records=snap.docs.map(d=>({id:d.id,...d.data()}));
- updateCounts();
+ renderAll();
 });
 
-/* ================= UI Render ================= */
+/* ================= Render ================= */
 const staffSelect=document.getElementById("staffSelect");
 const btnContainer=document.getElementById("btnContainer");
-const todayItems=document.getElementById("todayItems");
-const rankItemSelect=document.getElementById("rankItemSelect");
-const rankingUI=document.getElementById("rankingUI");
+const boardTable=document.getElementById("boardTable");
+const staffListUI=document.getElementById("staffListUI");
+const itemListUI=document.getElementById("itemListUI");
 
-function renderUI(){
+function renderAll(){
+ // staff select
  staffSelect.innerHTML=staffList.map(s=>`<option>${s.name}</option>`).join("");
 
- btnContainer.innerHTML=itemList.map(it=>`
- <div class="item-box">
-  <button class="item-btn" style="background:${it.color}" onclick="addRecord('${it.name}')">${it.name}</button>
-  <div class="item-footer">
-   <span id="count_${it.name}">0件</span>
-   <button class="minus" onclick="removeRecord('${it.name}')">−</button>
-  </div>
- </div>`).join("");
+ // input buttons
+ btnContainer.innerHTML=itemList.map(it=>{
+  return `
+  <div class="item-box">
+   <button class="item-btn" style="background:${it.color}" onclick="addRecord('${it.name}')">${it.name}</button>
+   <div class="item-footer">
+    <span id="count_${it.name}">0件</span>
+    <button class="minus" onclick="removeRecord('${it.name}')">−</button>
+   </div>
+   <div class="rank-mini" id="rank_${it.name}"></div>
+  </div>`;
+ }).join("");
 
- rankItemSelect.innerHTML=itemList.map(it=>`<option>${it.name}</option>`).join("");
+ // settings staff
+ staffListUI.innerHTML=staffList.map(s=>`
+  <div>
+   <input value="${s.name}" onchange="editSetting('${s.id}',this.value,null)">
+   <button onclick="deleteSetting('${s.id}')">削除</button>
+  </div>`).join("");
+
+ // settings items
+ itemListUI.innerHTML=itemList.map(it=>`
+  <div>
+   <input value="${it.name}" onchange="editSetting('${it.id}',this.value,'${it.color}')">
+   <input type="color" value="${it.color}" onchange="editSetting('${it.id}','${it.name}',this.value)">
+   <button onclick="deleteSetting('${it.id}')">削除</button>
+  </div>`).join("");
+
+ updateCounts();
+ renderBoard();
 }
 
 /* ================= Add / Remove ================= */
 function addRecord(item){
  const staff=staffSelect.value;
- const now=new Date();
- const date=now.toISOString().slice(0,10);
- const month=now.getFullYear()+"-"+(now.getMonth()+1);
- db.collection("sales").add({staff,item,date,month,time:firebase.firestore.FieldValue.serverTimestamp()});
+ const d=new Date();
+ const date=d.toISOString().slice(0,10);
+ db.collection("sales").add({staff,item,date});
 }
 
 function removeRecord(item){
  const staff=staffSelect.value;
  const today=new Date().toISOString().slice(0,10);
- const target=records.filter(r=>r.item==item&&r.staff==staff&&r.date==today).pop();
- if(target) db.collection("sales").doc(target.id).delete();
+ const r=records.filter(r=>r.item==item&&r.staff==staff&&r.date==today).pop();
+ if(r) db.collection("sales").doc(r.id).delete();
 }
 
-/* ================= Counts ================= */
+/* ================= Counts + Mini Ranking ================= */
 function updateCounts(){
  const today=new Date().toISOString().slice(0,10);
- const month=new Date().getFullYear()+"-"+(new Date().getMonth()+1);
  const staff=staffSelect.value;
 
- // 個人商材カウント
  itemList.forEach(it=>{
+  // personal count
   const c=records.filter(r=>r.item==it.name&&r.staff==staff&&r.date==today).length;
   const el=document.getElementById("count_"+it.name);
   if(el) el.textContent=c+"件";
- });
 
- // 本日商材別合計
- let html="";
- itemList.forEach(it=>{
-  const c=records.filter(r=>r.item==it.name&&r.date==today).length;
-  html+=`<div class="counter">${it.name}: ${c}件</div>`;
+  // ranking top3
+  const rank={};
+  records.filter(r=>r.item==it.name&&r.date==today).forEach(r=>{
+   rank[r.staff]=(rank[r.staff]||0)+1;
+  });
+  const sorted=Object.entries(rank).sort((a,b)=>b[1]-a[1]).slice(0,3);
+  const rankEl=document.getElementById("rank_"+it.name);
+  if(rankEl) rankEl.innerHTML=sorted.map((r,i)=>`${i+1}位 ${r[0]}:${r[1]}件`).join("<br>");
  });
- todayItems.innerHTML=html;
-
- // ランキング（商材別）
- const item=rankItemSelect.value;
- const rank={};
- records.filter(r=>r.item==item&&r.month==month).forEach(r=>{
-  rank[r.staff]=(rank[r.staff]||0)+1;
- });
- const sorted=Object.entries(rank).sort((a,b)=>b[1]-a[1]);
- rankingUI.innerHTML=sorted.map((r,i)=>`<li>${i+1}位 ${r[0]}：${r[1]}件</li>`).join("");
 }
 
-staffSelect.addEventListener("change",updateCounts);
-rankItemSelect.addEventListener("change",updateCounts);
+/* ================= Board Table ================= */
+function renderBoard(){
+ const today=new Date().toISOString().slice(0,10);
+ let html="<tr><th>商材\\スタッフ</th>";
+ staffList.forEach(s=>html+=`<th>${s.name}</th>`);
+ html+="</tr>";
 
-/* ================= Settings Add ================= */
+ itemList.forEach(it=>{
+  html+=`<tr><th>${it.name}</th>`;
+  staffList.forEach(s=>{
+   const names=records.filter(r=>r.item==it.name&&r.staff==s.name&&r.date==today).map(r=>s.name).join("<br>");
+   html+=`<td class="square">${names}</td>`;
+  });
+  html+="</tr>";
+ });
+
+ boardTable.innerHTML=html;
+}
+
+/* ================= Settings CRUD ================= */
 function addStaff(){
  const n=document.getElementById("newStaff").value;
- if(!n) return;
- db.collection("settings").add({type:"staff",name:n,order:Date.now()});
+ if(n) db.collection("settings").add({type:"staff",name:n,order:Date.now()});
 }
 
 function addItem(){
  const n=document.getElementById("newItem").value;
  const c=document.getElementById("newColor").value;
- if(!n) return;
- db.collection("settings").add({type:"item",name:n,color:c,order:Date.now()});
+ if(n) db.collection("settings").add({type:"item",name:n,color:c,order:Date.now()});
+}
+
+function editSetting(id,name,color){
+ const data={name};
+ if(color) data.color=color;
+ db.collection("settings").doc(id).update(data);
+}
+
+function deleteSetting(id){
+ db.collection("settings").doc(id).delete();
 }
 </script>
 
