@@ -1,358 +1,265 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>がんばるシート</title>
-    <style>
-        body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f0fdf4; color: #334155; margin: 0; padding: 0; }
-        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-        
-        .tab-menu { display: flex; background: #ffffff; border-bottom: 2px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.02); margin-bottom: 20px; }
-        .tab-menu button { flex: 1; padding: 15px; background: none; border: none; color: #94a3b8; font-size: 16px; cursor: pointer; transition: 0.3s; font-weight: bold; }
-        #tabBtnInput.active { color: #3b82f6; border-bottom: 3px solid #3b82f6; background: #eff6ff; }
-        #tabBtnBoard.active { color: #10b981; border-bottom: 3px solid #10b981; background: #ecfdf5; }
-        #tabBtnSettings.active { color: #64748b; border-bottom: 3px solid #64748b; background: #f8fafc; }
-        
-        .tab-content { display: none; background: #ffffff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.03); border: 1px solid #e2e8f0; }
-        .tab-content.active { display: block; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>がんばるシート</title>
 
-        .header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        #inputDateTitle { border-bottom: 2px solid #3b82f6; padding-bottom: 5px; margin: 0; font-size: 22px; }
-        #boardTitle { border-bottom: 2px solid #10b981; padding-bottom: 5px; margin: 0; font-size: 22px; }
-        #settingsTitle { border-bottom: 2px solid #64748b; padding-bottom: 5px; margin: 0; font-size: 22px; }
+<style>
+body { font-family: Arial, sans-serif; background:#f0fdf4; margin:0; }
+.container { max-width:1200px; margin:auto; padding:15px; }
 
-        .staff-selector { margin-bottom: 25px; font-weight: bold; color: #475569; }
-        .staff-selector select { font-size: 16px; padding: 10px; width: 100%; max-width: 300px; border-radius: 8px; border: 1px solid #cbd5e0; background: #f8fafc; margin-top: 5px;}
-        
-        .btn-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; }
-        .item-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; display: flex; flex-direction: column; box-shadow: 0 2px 4px rgba(0,0,0,0.03); overflow: hidden; }
-        .item-card-btn { color: #1e293b; border: none; font-size: 16px; font-weight: bold; cursor: pointer; padding: 20px 10px; width: 100%; }
-        .item-card-btn:active { opacity: 0.7; }
-        .count-area { display: flex; align-items: center; justify-content: space-between; padding: 10px 15px; background: #ffffff; border-top: 1px solid #f1f5f9; }
-        .my-count { font-size: 16px; font-weight: bold; color: #475569; }
-        .minus-btn { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; border-radius: 4px; padding: 5px 10px; font-size: 13px; font-weight: bold; cursor: pointer; }
+.tab-menu { display:flex; background:white; border-bottom:2px solid #e2e8f0; }
+.tab-menu button { flex:1; padding:12px; border:none; font-weight:bold; cursor:pointer; background:none; }
+.tab-menu button.active { border-bottom:3px solid #3b82f6; background:#eff6ff; }
 
-        .board-table-wrapper { overflow-x: auto; margin-top: 10px; }
-        table { border-collapse: collapse; width: max-content; }
-        th, td { border: 1px solid #cbd5e0; text-align: center; vertical-align: middle; }
-        .row-header { padding: 8px 12px; font-weight: bold; position: sticky; left: 0; z-index: 1; border-right: 2px solid #cbd5e0; white-space: nowrap; font-size: 14px; }
-        .square-cell { width: 50px; height: 50px; min-width: 50px; box-sizing: border-box; font-size: 12px; line-height: 1.2; word-break: break-all; }
-        .name-cell { background: #e0f2fe; color: #0369a1; font-weight: bold; }
-        
-        .export-btn, .clear-btn { color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 14px; cursor: pointer; font-weight: bold; }
-        .export-btn { background: #10b981; }
-        .clear-btn { background: #ef4444; }
+.tab-content { display:none; background:white; padding:15px; border-radius:10px; margin-top:10px; }
+.tab-content.active { display:block; }
 
-        .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
-        @media (max-width: 768px) { .settings-grid { grid-template-columns: 1fr; } }
-        .settings-card { background: #f8fafc; border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; }
-        .full-width-card { grid-column: 1 / -1; }
-        .settings-card h3 { margin-top: 0; border-bottom: 1px solid #cbd5e0; padding-bottom: 5px; display: flex; justify-content: space-between; align-items: center;}
-        .reset-btn { background: #fbbf24; border: none; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer; }
-        
-        /* 変更点：追加フォームとボタンのスタイル微調整 */
-        .add-form { display: flex; gap: 8px; margin-top: 15px; align-items: center; }
-        .add-form input[type="text"] { flex: 1; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; }
-        .add-form select { padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; cursor: pointer; }
-        .add-form button { padding: 10px 15px; background: #64748b; color: white; border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; }
-        
-        .list-ui { list-style: none; padding: 0; margin-top: 10px; max-height: 400px; overflow-y: auto; }
-        .list-ui li { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #edf2f7; background: white; margin-bottom: 5px; border-radius: 4px; }
-        
-        /* 変更点：編集ボタン用のスタイル */
-        .action-btns { display: flex; gap: 4px; }
-        .edit-btn { background: #3b82f6; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; }
-        .delete-btn { background: #fca5a5; color: #7f1d1d; border: none; padding: 5px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; }
-        .move-btn { background: #f1f5f9; border: 1px solid #cbd5e0; border-radius: 4px; padding: 5px 8px; cursor: pointer; }
+.btn-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; }
+.item-card { border:1px solid #e2e8f0; border-radius:10px; overflow:hidden; }
+.item-card button { width:100%; border:none; padding:15px; font-weight:bold; cursor:pointer; }
+.count-area { display:flex; justify-content:space-between; padding:5px 10px; font-size:14px; }
 
-        #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(30, 41, 59, 0.9); color: white; padding: 12px 24px; border-radius: 30px; display: none; z-index: 1000; }
-    </style>
+table { border-collapse:collapse; }
+th,td { border:1px solid #ccc; width:50px; height:50px; text-align:center; font-size:12px; }
+.row-header { background:#f8fafc; font-weight:bold; position:sticky; left:0; }
+.name-cell { background:#e0f2fe; font-weight:bold; }
+
+.list-ui { list-style:none; padding:0; }
+.list-ui li { background:white; padding:6px; margin-bottom:4px; display:flex; justify-content:space-between; border:1px solid #e2e8f0; border-radius:5px; }
+
+.add-form { display:flex; gap:5px; }
+.add-form input,select { padding:6px; }
+
+.edit-btn { background:#3b82f6; color:white; border:none; padding:3px 6px; }
+.delete-btn { background:#fecaca; border:none; padding:3px 6px; }
+.move-btn { background:#f1f5f9; border:1px solid #cbd5e0; padding:3px 6px; }
+
+#toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+ background:#1e293b; color:white; padding:10px 20px; border-radius:20px; display:none; }
+</style>
 </head>
+
 <body>
 
 <div class="tab-menu">
-    <button id="tabBtnInput" class="active" onclick="switchTab('input')">実績入力</button>
-    <button id="tabBtnBoard" onclick="switchTab('board')">がんばるシート</button>
-    <button id="tabBtnSettings" onclick="switchTab('settings')">🔒 各種設定</button>
+<button id="tabBtnInput" class="active" onclick="switchTab('input')">実績入力</button>
+<button id="tabBtnBoard" onclick="switchTab('board')">がんばるシート</button>
+<button id="tabBtnSettings" onclick="switchTab('settings')">🔒 設定</button>
 </div>
 
 <div class="container">
-    <div id="inputView" class="tab-content active">
-        <div class="header-flex"><h2 id="inputDateTitle">実績入力</h2></div>
-        <div class="staff-selector">
-            <label>スタッフ選択: </label>
-            <select id="staffSelect" onchange="updateView()"></select>
-        </div>
-        <div class="btn-grid" id="btnContainer"></div>
-    </div>
 
-    <div id="boardView" class="tab-content">
-        <div class="header-flex">
-            <h2 id="boardTitle">〇/〇のがんばるシート</h2>
-            <button class="export-btn" onclick="exportToExcel()">📊 Excel出力</button>
-        </div>
-        <div class="board-table-wrapper"><table id="resultTable"></table></div>
-    </div>
+<!-- 入力 -->
+<div id="inputView" class="tab-content active">
+<h2 id="inputDateTitle"></h2>
 
-    <div id="settingsView" class="tab-content">
-        <div class="header-flex"><h2 id="settingsTitle">🔒 各種設定</h2></div>
-        <div class="settings-grid">
-            <div class="settings-card full-width-card">
-                <h3>データ管理</h3>
-                <button class="clear-btn" onclick="clearTodayData()">🗑️ 本日の実績データを全クリア</button>
-            </div>
-            <div class="settings-card">
-                <h3>スタッフ管理</h3>
-                <div class="add-form">
-                    <input type="text" id="newStaffInput" placeholder="例: 榎本">
-                    <button onclick="addListItem('staff')">追加</button>
-                </div>
-                <ul id="staffListUI" class="list-ui"></ul>
-            </div>
-            <div class="settings-card">
-                <h3>商材管理 <button class="reset-btn" onclick="resetItems()">25項目リセット</button></h3>
-                <div class="add-form">
-                    <input type="text" id="newItemInput" placeholder="例: 新商材">
-                    <select id="newItemColor" onchange="this.style.backgroundColor=this.value" style="background-color: #bae6fd;">
-                        <option value="#bae6fd" style="background:#bae6fd;">水色</option>
-                        <option value="#fef08a" style="background:#fef08a;">黄色</option>
-                        <option value="#bbf7d0" style="background:#bbf7d0;">緑色</option>
-                        <option value="#e9d5ff" style="background:#e9d5ff;">紫色</option>
-                        <option value="#d9ead3" style="background:#d9ead3;">黄緑</option>
-                        <option value="#fed7aa" style="background:#fed7aa;">オレンジ</option>
-                        <option value="#fecdd3" style="background:#fecdd3;">ピンク</option>
-                        <option value="#fecaca" style="background:#fecaca;">赤色</option>
-                        <option value="#f1f5f9" style="background:#f1f5f9;">グレー</option>
-                    </select>
-                    <button onclick="addListItem('item')">追加</button>
-                </div>
-                <ul id="itemListUI" class="list-ui"></ul>
-            </div>
-        </div>
-    </div>
+<select id="staffSelect"></select>
+<div id="btnContainer" class="btn-grid"></div>
 </div>
+
+<!-- ボード -->
+<div id="boardView" class="tab-content">
+<h2 id="boardTitle"></h2>
+<button onclick="exportToExcel()">Excel出力</button>
+<div style="overflow-x:auto">
+<table id="resultTable"></table>
+</div>
+</div>
+
+<!-- 設定 -->
+<div id="settingsView" class="tab-content">
+<h3>スタッフ追加</h3>
+<div class="add-form">
+<input id="newStaffInput">
+<button onclick="addListItem('staff')">追加</button>
+</div>
+<ul id="staffListUI" class="list-ui"></ul>
+
+<h3>商材追加</h3>
+<div class="add-form">
+<input id="newItemInput">
+<select id="newItemColor">
+<option value="#bae6fd">水色</option>
+<option value="#fef08a">黄色</option>
+<option value="#bbf7d0">緑</option>
+<option value="#e9d5ff">紫</option>
+<option value="#fecdd3">ピンク</option>
+<option value="#fed7aa">オレンジ</option>
+<option value="#f1f5f9">グレー</option>
+</select>
+<button onclick="addListItem('item')">追加</button>
+</div>
+<ul id="itemListUI" class="list-ui"></ul>
+
+<button onclick="clearTodayData()">本日データ全消去</button>
+</div>
+
+</div>
+
 <div id="toast"></div>
 
 <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, query, where, onSnapshot, serverTimestamp, deleteDoc, doc, getDocs, setDoc, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+import { getFirestore, collection, addDoc, query, where, onSnapshot, serverTimestamp, deleteDoc, doc, getDocs, setDoc, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyCmerraKVr1iJsRoiW53lxUtgDUcOGVXtY",
-        authDomain: "ganbaru-sheet-a32f3.firebaseapp.com",
-        projectId: "ganbaru-sheet-a32f3",
-        storageBucket: "ganbaru-sheet-a32f3.firebasestorage.app",
-        messagingSenderId: "75251515079",
-        appId: "1:75251515079:web:19acf818476d90588808e2"
-    };
+const firebaseConfig = {
+ apiKey: "AIzaSyCmerraKVr1iJsRoiW53lxUtgDUcOGVXtY",
+ authDomain: "ganbaru-sheet-a32f3.firebaseapp.com",
+ projectId: "ganbaru-sheet-a32f3",
+ storageBucket: "ganbaru-sheet-a32f3.appspot.com",
+ messagingSenderId: "75251515079",
+ appId: "1:75251515079:web:19acf818476d90588808e2"
+};
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const ADMIN_PASSWORD = "0000"; 
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const ADMIN_PASSWORD="0000";
 
-    let testData = []; 
-    let staffNames = [];
-    let items = []; // 変更：テキストではなく、色と名前を持ったオブジェクトの配列に変更
+let testData=[], staffNames=[], items=[];
 
-    // 変更：色パターンを定数化
-    const COLORS = {
-        blue: "#bae6fd", yellow: "#fef08a", green: "#bbf7d0",
-        purple: "#e9d5ff", lightGreen: "#d9ead3", orange: "#fed7aa",
-        pink: "#fecdd3", red: "#fecaca", gray: "#f1f5f9"
-    };
+const COLORS={
+ blue:"#bae6fd", yellow:"#fef08a", green:"#bbf7d0", purple:"#e9d5ff",
+ pink:"#fecdd3", orange:"#fed7aa", gray:"#f1f5f9"
+};
 
-    // 変更：初期から色データを持たせる
-    const defaultItems = [
-        { name: "光10GB", color: COLORS.blue },
-        { name: "光1GB", color: COLORS.blue },
-        { name: "HOME5G", color: COLORS.blue },
-        { name: "GOLD", color: COLORS.yellow },
-        { name: "GOLDU", color: COLORS.yellow },
-        { name: "PLATINUM", color: COLORS.yellow },
-        { name: "ドコモMAX", color: COLORS.yellow },
-        { name: "ポイ活MAX", color: COLORS.yellow },
-        { name: "d払い初回利用", color: COLORS.red },
-        { name: "ドコモでんき", color: COLORS.green },
-        { name: "ドコモガス", color: COLORS.green },
-        { name: "守くん", color: COLORS.purple },
-        { name: "内) プレミアム", color: COLORS.purple },
-        { name: "ニフティ", color: COLORS.purple },
-        { name: "内) NiftyB・C", color: COLORS.purple },
-        { name: "Nkeep", color: COLORS.purple },
-        { name: "アドクリ", color: COLORS.purple },
-        { name: "ダレカナ", color: COLORS.purple },
-        { name: "保存君", color: COLORS.purple },
-        { name: "コドマモ", color: COLORS.purple },
-        { name: "あんセキ", color: COLORS.purple },
-        { name: "Amazon", color: COLORS.lightGreen },
-        { name: "Disney", color: COLORS.lightGreen },
-        { name: "Lemino", color: COLORS.orange },
-        { name: "マイショップ", color: COLORS.gray }
-    ];
+const defaultItems=[
+ {name:"光10GB",color:COLORS.blue},
+ {name:"HOME5G",color:COLORS.blue},
+ {name:"GOLD",color:COLORS.yellow},
+ {name:"ドコモでんき",color:COLORS.green},
+ {name:"守くん",color:COLORS.purple}
+];
 
-    const today = new Date();
-    const dateStr = `${today.getMonth() + 1}/${today.getDate()}`;
-    const searchDateStr = today.toLocaleDateString('ja-JP');
+const today=new Date();
+const dateStr=`${today.getMonth()+1}/${today.getDate()}`;
+const searchDateStr=today.toLocaleDateString("ja-JP");
 
-    document.getElementById('boardTitle').textContent = `${dateStr}のがんばるシート`;
-    document.getElementById('inputDateTitle').textContent = `実績入力 (${dateStr})`;
+document.getElementById("boardTitle").textContent=`${dateStr} のがんばるシート`;
+document.getElementById("inputDateTitle").textContent=`実績入力 (${dateStr})`;
 
-    onSnapshot(query(collection(db, "sales_records"), where("date", "==", searchDateStr)), (snap) => {
-        testData = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => (a.timestamp?.toMillis() || 0) - (b.timestamp?.toMillis() || 0));
-        window.updateView();
-    });
+// ===== Firestore監視 =====
+onSnapshot(query(collection(db,"sales_records"),where("date","==",searchDateStr)),snap=>{
+ testData=snap.docs.map(d=>({id:d.id,...d.data()}));
+ updateView();
+});
 
-    onSnapshot(query(collection(db, "settings"), orderBy("order", "asc")), (snap) => {
-        staffNames = snap.docs.filter(d => d.data().type === 'staff').map(d => d.data().name);
-        // 変更：各商材の「名前」と「色」をセットで読み込む
-        items = snap.docs.filter(d => d.data().type === 'item').map(d => ({
-            name: d.data().name,
-            color: d.data().color || COLORS.gray
-        }));
-        if(items.length === 0) { resetToDefaultItems(); }
-        renderStaffSelect();
-        buildInputUI();
-        renderSettingsUI();
-        window.updateView();
-    });
+onSnapshot(query(collection(db,"settings"),orderBy("order")),snap=>{
+ staffNames=snap.docs.filter(d=>d.data().type==="staff").map(d=>d.data().name);
+ items=snap.docs.filter(d=>d.data().type==="item").map(d=>d.data());
+ if(items.length===0) resetToDefaultItems();
+ renderStaffSelect();
+ buildInputUI();
+ renderSettingsUI();
+ updateView();
+});
 
-    async function addRecord(item) {
-        const staff = document.getElementById('staffSelect').value;
-        if(!staff) return alert("スタッフを選択してください");
-        await addDoc(collection(db, "sales_records"), { staff, item, date: searchDateStr, timestamp: serverTimestamp() });
-        showToast(`${staff}: ${item} +1`);
-    }
+// ===== 初期商材登録 =====
+async function resetToDefaultItems(){
+ for(let i=0;i<defaultItems.length;i++){
+  await setDoc(doc(db,"settings","item_"+i),{type:"item",order:i,...defaultItems[i]});
+ }
+}
 
-    async function removeRecord(item) {
-        const staff = document.getElementById('staffSelect').value;
-        const target = testData.filter(d => d.staff === staff && d.item === item).pop();
-        if (target) await deleteDoc(doc(db, "sales_records", target.id));
-    }
+// ===== UI =====
+function renderStaffSelect(){
+ const sel=document.getElementById("staffSelect");
+ sel.innerHTML=staffNames.map(n=>`<option>${n}</option>`).join("");
+}
 
-    async function resetToDefaultItems() {
-        for(let i=0; i<defaultItems.length; i++) {
-            // 変更：初期化時に名前と一緒に色も保存する
-            await setDoc(doc(db, "settings", `item_${i}`), { type: 'item', name: defaultItems[i].name, color: defaultItems[i].color, order: i });
-        }
-    }
+function buildInputUI(){
+ document.getElementById("btnContainer").innerHTML=items.map(it=>`
+ <div class="item-card">
+  <button style="background:${it.color}" onclick="addRecord('${it.name}')">${it.name}</button>
+  <div class="count-area">
+   <span id="count-${it.name}">0件</span>
+   <button onclick="removeRecord('${it.name}')">取消</button>
+  </div>
+ </div>`).join("");
+}
 
-    window.addListItem = async (type) => {
-        const val = document.getElementById(type === 'staff' ? 'newStaffInput' : 'newItemInput').value.trim();
-        if(!val) return;
-        const id = `${type}_${Date.now()}`;
-        const order = (type === 'staff' ? staffNames.length : items.length);
-        const dataToSave = { type, name: val, order };
-        
-        if (type === 'item') {
-            dataToSave.color = document.getElementById('newItemColor').value;
-        }
-        
-        await setDoc(doc(db, "settings", id), dataToSave);
-        document.getElementById(type === 'staff' ? 'newStaffInput' : 'newItemInput').value = '';
-    };
+// ===== データ操作 =====
+async function addRecord(item){
+ const staff=document.getElementById("staffSelect").value;
+ if(!staff) return alert("スタッフ選択");
+ await addDoc(collection(db,"sales_records"),{staff,item,date:searchDateStr,timestamp:serverTimestamp()});
+ showToast(`${staff}: ${item}+1`);
+}
 
-    window.deleteListItem = async (type, name) => {
-        if(!confirm(`${name}を削除しますか？`)) return;
-        const snap = await getDocs(query(collection(db, "settings"), where("type", "==", type), where("name", "==", name)));
-        snap.forEach(async (d) => await deleteDoc(doc(db, "settings", d.id)));
-    };
+async function removeRecord(item){
+ const staff=document.getElementById("staffSelect").value;
+ const target=testData.filter(d=>d.staff===staff && d.item===item).pop();
+ if(target) await deleteDoc(doc(db,"sales_records",target.id));
+}
 
-    window.editListItem = async (type, oldName) => {
-        const newName = prompt(`新しい名前を入力してください:`, oldName);
-        if (newName && newName.trim() !== "" && newName !== oldName) {
-            const trimmedName = newName.trim();
-            const snap = await getDocs(query(collection(db, "settings"), where("type", "==", type), where("name", "==", oldName)));
-            snap.forEach(async (d) => await setDoc(doc(db, "settings", d.id), { name: trimmedName }, { merge: true }));
-            
-            const field = type === 'staff' ? 'staff' : 'item';
-            const salesSnap = await getDocs(query(collection(db, "sales_records"), where("date", "==", searchDateStr), where(field, "==", oldName)));
-            salesSnap.forEach(async (d) => await setDoc(doc(db, "sales_records", d.id), { [field]: trimmedName }, { merge: true }));
-        }
-    };
+// ===== 設定追加 =====
+window.addListItem=async(type)=>{
+ const val=document.getElementById(type==="staff"?"newStaffInput":"newItemInput").value.trim();
+ if(!val) return;
+ const order=Date.now();
+ const data={type,name:val,order};
+ if(type==="item") data.color=document.getElementById("newItemColor").value;
+ await setDoc(doc(db,"settings",`${type}_${order}`),data);
+};
 
-    window.moveItem = async (type, name, dir) => {
-        // 変更：itemsの配列構造変更に対応
-        const list = type === 'staff' ? staffNames : items.map(it => it.name);
-        const idx = list.indexOf(name);
-        if(idx + dir < 0 || idx + dir >= list.length) return;
-        
-        const targetName = list[idx + dir];
-        const snap1 = await getDocs(query(collection(db, "settings"), where("type", "==", type), where("name", "==", name)));
-        const snap2 = await getDocs(query(collection(db, "settings"), where("type", "==", type), where("name", "==", targetName)));
+// ===== 表示更新 =====
+function updateView(){
+ const staff=document.getElementById("staffSelect").value;
+ const board={};
+ items.forEach(it=>board[it.name]=testData.filter(d=>d.item===it.name).map(d=>d.staff));
+ const maxCols=Math.max(10,...items.map(it=>board[it.name].length));
+ let html=`<thead><tr><th class="row-header">商材</th>${Array.from({length:maxCols},(_,i)=>`<th>${i+1}</th>`).join("")}</tr></thead><tbody>`;
+ items.forEach(it=>{
+  html+=`<tr><td class="row-header" style="background:${it.color}">${it.name}</td>`;
+  for(let i=0;i<maxCols;i++){
+   const name=board[it.name][i]||"";
+   html+=`<td class="${name?"name-cell":""}">${name}</td>`;
+  }
+  html+="</tr>";
+  const c=document.getElementById("count-"+it.name);
+  if(c) c.textContent=testData.filter(d=>d.staff===staff&&d.item===it.name).length+"件";
+ });
+ document.getElementById("resultTable").innerHTML=html+"</tbody>";
+}
 
-        if(!snap1.empty && !snap2.empty) {
-            const order1 = snap1.docs[0].data().order;
-            const order2 = snap2.docs[0].data().order;
-            await setDoc(doc(db, "settings", snap1.docs[0].id), { order: order2 }, { merge: true });
-            await setDoc(doc(db, "settings", snap2.docs[0].id), { order: order1 }, { merge: true });
-        }
-    };
+// ===== Excel出力 =====
+window.exportToExcel=()=>{
+ const html=`<html><meta charset="utf-8"><table>${document.getElementById("resultTable").innerHTML}</table></html>`;
+ const a=document.createElement("a");
+ a.href=URL.createObjectURL(new Blob([html],{type:"application/vnd.ms-excel"}));
+ a.download=`${dateStr.replace("/","-")}.xls`;
+ a.click();
+};
 
-    window.clearTodayData = async () => {
-        if (!confirm("本日の実績データを全消去しますか？")) return;
-        const snap = await getDocs(query(collection(db, "sales_records"), where("date", "==", searchDateStr)));
-        snap.forEach(async (d) => await deleteDoc(doc(db, "sales_records", d.id)));
-    };
+// ===== 設定UI =====
+function renderSettingsUI(){
+ document.getElementById("staffListUI").innerHTML=staffNames.map(n=>`<li>${n}</li>`).join("");
+ document.getElementById("itemListUI").innerHTML=items.map(it=>`<li style="border-left:5px solid ${it.color}">${it.name}</li>`).join("");
+}
 
-    function renderStaffSelect() {
-        const sel = document.getElementById('staffSelect');
-        const prev = sel.value;
-        sel.innerHTML = staffNames.map(n => `<option value="${n}">${n}</option>`).join('');
-        if(staffNames.includes(prev)) sel.value = prev;
-    }
+// ===== 便利機能 =====
+window.clearTodayData=async()=>{
+ if(!confirm("全消去?")) return;
+ const snap=await getDocs(query(collection(db,"sales_records"),where("date","==",searchDateStr)));
+ snap.forEach(d=>deleteDoc(doc(db,"sales_records",d.id)));
+};
 
-    function buildInputUI() {
-        // 変更：テキスト依存を廃止し、商材データが持つ色情報を直接利用
-        document.getElementById('btnContainer').innerHTML = items.map(it => `
-            <div class="item-card">
-                <button class="item-card-btn" style="background:${it.color}" onclick="window.addRec('${it.name}')">${it.name}</button>
-                <div class="count-area"><span class="my-count" id="count-${it.name}">0件</span><button class="minus-btn" onclick="window.remRec('${it.name}')">− 取消</button></div>
-            </div>`).join('');
-    }
+window.switchTab=(id)=>{
+ if(id==="settings" && prompt("パスワード")!==ADMIN_PASSWORD) return;
+ ["input","board","settings"].forEach(t=>{
+  document.getElementById(t+"View").classList.toggle("active",t===id);
+  document.getElementById("tabBtn"+t.charAt(0).toUpperCase()+t.slice(1)).classList.toggle("active",t===id);
+ });
+};
 
-    window.updateView = () => {
-        const currentStaff = document.getElementById('staffSelect').value;
-        const boardData = {}; 
-        items.forEach(it => boardData[it.name] = testData.filter(d => d.item === it.name).map(d => d.staff));
-        
-        let maxCols = Math.max(20, ...items.map(it => boardData[it.name].length));
-        let html = `<thead><tr><th class="row-header" style="background:#f8fafc">商材名</th>${Array.from({length:maxCols}, (_,i)=>`<th class="square-cell">${i+1}</th>`).join('')}</tr></thead><tbody>`;
-        
-        items.forEach(it => {
-            html += `<tr><td class="row-header" style="background:${it.color}">${it.name}</td>`;
-            for(let i=0; i<maxCols; i++){
-                const name = boardData[it.name][i] || '';
-                html += `<td class="square-cell ${name?'name-cell':''}">${name}</td>`;
-            }
-            html += `</tr>`;
-            const cEl = document.getElementById(`count-${it.name}`);
-            if(cEl) cEl.textContent = `${testData.filter(d => d.item === it.name && d.staff === currentStaff).length}件`;
-        });
-        document.getElementById('resultTable').innerHTML = html + `</tbody>`;
-    };
+function showToast(m){
+ const t=document.getElementById("toast");
+ t.textContent=m;
+ t.style.display="block";
+ setTimeout(()=>t.style.display="none",2000);
+}
+</script>
 
-    function renderSettingsUI() {
-        document.getElementById('staffListUI').innerHTML = staffNames.map(n => `
-            <li>
-                <span style="font-weight:bold;">${n}</span>
-                <div class="action-btns">
-                    <button class="edit-btn" onclick="window.editListItem('staff','${n}')">編集</button>
-                    <button class="delete-btn" onclick="window.deleteListItem('staff','${n}')">削除</button>
-                </div>
-            </li>`).join('');
-
-        // 変更：テキスト依存を廃止し、商材データが持つ色情報を直接利用
-        document.getElementById('itemListUI').innerHTML = items.map(it => `
-            <li style="border-left: 5px solid ${it.color};">
-                <span style="font-weight:bold;">${it.name}</span>
-                <div class="action-btns">
-                    <button class="edit-btn" onclick="window.editListItem('item','${it.name}')">編集</button>
-                    <button class="move-btn" onclick="window.moveItem('item','${it.name}',-1)">↑</button>
-                    <button class="move-btn" onclick="window.moveItem('item','${it.name}',1)">↓</button>
-                    <button class="delete-btn" onclick="window.deleteListItem('item','${it.name}')">削除</button>
-                </div>
-            </li>`).join('');
-    }
-
-    window.addRec = addR
+</body>
+</html>
