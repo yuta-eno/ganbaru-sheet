@@ -362,13 +362,17 @@ function renderAll(){
 /* ================= Sales ================= */
 function addRecord(item){
  const staff=lockedStaff||staffSelect.value;
+ const handoffToggle=document.getElementById("handoffToggle");
+ const handoff=(handoffToggle&&handoffToggle.checked)?document.getElementById("handoffSelect").value:staff;
  const date=new Date().toISOString().slice(0,10);
- db.collection("sales").add({staff,item,date});
+ db.collection("sales").add({staff,item,date,handoff});
 }
 function removeRecord(item){
  const staff=lockedStaff||staffSelect.value;
+ const handoffToggle=document.getElementById("handoffToggle");
+ const handoff=(handoffToggle&&handoffToggle.checked)?document.getElementById("handoffSelect").value:staff;
  const today=new Date().toISOString().slice(0,10);
- const r=records.filter(r=>r.item==item&&r.staff==staff&&r.date==today).pop();
+ const r=records.filter(r=>r.item==item&&r.staff==staff&&(r.handoff||r.staff)==handoff&&r.date==today).pop();
  if(r) db.collection("sales").doc(r.id).delete();
 }
 
@@ -376,15 +380,18 @@ function removeRecord(item){
 function updateCounts(){
  const today=new Date().toISOString().slice(0,10);
  const staff=lockedStaff||staffSelect.value;
+ const handoffToggle=document.getElementById("handoffToggle");
+ const currentSeiyakusha=(handoffToggle&&handoffToggle.checked)?document.getElementById("handoffSelect").value:staff;
 
  itemList.forEach(it=>{
-  const c=records.filter(r=>r.item==it.name&&r.staff==staff&&r.date==today).length;
+  const c=records.filter(r=>r.item==it.name&&(r.handoff||r.staff)==currentSeiyakusha&&r.date==today).length;
   const countEl = document.getElementById("count_"+it.name);
   if(countEl) countEl.textContent=c+"件";
 
   const rank={};
   records.filter(r=>r.item==it.name&&r.date==today).forEach(r=>{
-   rank[r.staff]=(rank[r.staff]||0)+1;
+   const seiyakusha = r.handoff || r.staff;
+   rank[seiyakusha]=(rank[seiyakusha]||0)+1;
   });
   const sorted=Object.entries(rank).sort((a,b)=>b[1]-a[1]).slice(0,3);
   const rankEl = document.getElementById("rank_"+it.name);
@@ -417,9 +424,14 @@ function renderBoard(){
    <td class='square name-cell' style="font-weight:bold;">${total}件</td>`;
 
   for(let i=0; i<maxCols; i++){
-   const staffName = itemRecords[i] ? itemRecords[i].staff : '';
-   const cellClass = staffName ? 'name-cell' : '';
-   html+=`<td class='square ${cellClass}'>${staffName}</td>`;
+   const r = itemRecords[i];
+   if(r){
+    const seiyaku = r.handoff || r.staff;
+    const touroku = r.staff;
+    html+=`<td class='square name-cell'><div style="line-height:1.2;">${seiyaku}<br><span style="font-size:9px;color:#64748b;">${touroku}</span></div></td>`;
+   }else{
+    html+=`<td class='square'></td>`;
+   }
   }
   html+="</tr>";
  });
@@ -543,18 +555,4 @@ function renderGoalsOnInput(){
   const target=goals[it.name]?.target||0;
   if(!target) return "";
   const current=records.filter(r=>r.item==it.name&&r.date==today).length;
-  const pct=Math.min(100, Math.round(current/target*100));
-
-  return `
-  <div class="goal-box">
-   🔥 ${it.name} 目標 ${target}件 / 現在 ${current}件 (${pct}%)
-   <div class="goal-progress">
-    <div class="goal-bar" style="width:${pct}%"></div>
-   </div>
-  </div>`;
- }).join("");
-}
-</script>
-
-</body>
-</html>
+  const pct=Math.min(100, Math.r
