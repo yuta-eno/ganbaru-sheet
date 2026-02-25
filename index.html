@@ -2,345 +2,186 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GANBARU SHEET PRO</title>
 
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
 
 <style>
-body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f3f4f6}
-
-/* header */
-header{display:flex;gap:8px;padding:8px;background:#fff;border-bottom:1px solid #ddd;align-items:center;flex-wrap:wrap}
-.tab{padding:6px 14px;border-radius:8px;background:#e5e7eb;font-weight:bold;cursor:pointer}
-.tab.active{background:#2563eb;color:#fff}
-.date-wrap{margin-left:auto}
-
-/* page */
-.page{display:none;padding:12px}
-.page.active{display:block}
-
-/* card */
-.card{background:#fff;border-radius:12px;padding:15px;margin-bottom:10px;box-shadow:0 2px 6px rgba(0,0,0,.1)}
-.items{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
-
-/* buttons */
-.item-btn{width:100%;padding:12px;border:none;border-radius:8px;font-weight:bold;font-size:16px}
-
-/* board */
-table{border-collapse:collapse;background:#fff}
-td,th{border:1px solid #cbd5e0;padding:4px;text-align:center;font-size:12px}
-.square{width:60px;height:60px}
-.row-header{position:sticky;left:0;background:#f8fafc;font-weight:bold}
-
-/* handoff */
-.normal-name{font-weight:bold;color:#000}
-.handoff-main{font-weight:bold;color:#dc2626}
-.handoff-sub{font-size:10px;color:#64748b}
+body { font-family: sans-serif; background:#f7fafc; margin:0; padding:10px; }
+h2 { margin-top:20px; }
+button { padding:8px 12px; margin:3px; border:none; background:#2563eb; color:white; border-radius:6px; }
+table { border-collapse: collapse; width:100%; background:white; }
+th,td { border:1px solid #ddd; padding:6px; text-align:center; }
+th { background:#2563eb; color:white; }
+.board { display:grid; grid-template-columns: repeat(auto-fill, minmax(120px,1fr)); gap:6px; }
+.cell { background:white; border:1px solid #ddd; padding:10px; font-size:14px; }
 </style>
 </head>
-
 <body>
 
-<header>
- <div class="tab active" onclick="showTab('input',this)">入力</div>
- <div class="tab" onclick="showTab('board',this)">がんばるシート</div>
- <div class="tab" onclick="showTab('settings',this)">設定</div>
- <div class="tab" onclick="showTab('monthly',this)">📊 月次集計</div>
- <div class="date-wrap"><input type="date" id="globalDate"></div>
-</header>
+<h1>🔥 GANBARU SHEET PRO</h1>
 
 <!-- 入力 -->
-<div id="input" class="page active">
- <div class="card">
-  スタッフ:
-  <select id="staffSelect"></select>
-  <button id="lockBtn" onclick="toggleLock()">🔓 固定OFF</button>
+<h2>📥 成約登録</h2>
+スタッフ：
+<select id="staff">
+<option>山田</option>
+<option>佐藤</option>
+<option>鈴木</option>
+<option>田中</option>
+</select>
 
-  <label><input type="checkbox" id="handoffToggle" onchange="toggleHandoff()"> 引き継ぎ</label>
-  <select id="handoffSelect" disabled></select>
- </div>
+商材（複数可）：<br>
+<label><input type="checkbox" class="product" value="光回線"> 光回線</label>
+<label><input type="checkbox" class="product" value="モバイル"> モバイル</label>
+<label><input type="checkbox" class="product" value="オプション"> オプション</label>
+<label><input type="checkbox" class="product" value="でんき"> でんき</label>
 
- <div class="card">
-  <div class="items" id="btnContainer"></div>
- </div>
+<br><br>
+<button onclick="saveData()">登録</button>
+
+<hr>
+
+<!-- ページ切替 -->
+<button onclick="showPage('staffMonthly')">📊 月間スタッフ集計</button>
+<button onclick="showPage('productMonthly')">🏆 商材TOP3</button>
+<button onclick="showPage('productBoard')">📋 商材月間ボード</button>
+
+<hr>
+
+<!-- 月間スタッフ集計 -->
+<div id="staffMonthly" style="display:none;">
+<h2>📊 月間スタッフ別件数</h2>
+<table id="staffTable">
+<tr><th>スタッフ</th><th>件数</th></tr>
+</table>
 </div>
 
-<!-- がんばるシート -->
-<div id="board" class="page">
- <div class="card">
-  <h3 id="boardTitle"></h3>
-  <table id="boardTable"></table>
- </div>
+<!-- 商材月合計 TOP3 -->
+<div id="productMonthly" style="display:none;">
+<h2>🏆 商材別 月合計（TOP3）</h2>
+<div id="productSummary"></div>
 </div>
 
-<!-- 設定 -->
-<div id="settings" class="page">
- <div class="card">
-  <h3>スタッフ追加</h3>
-  <input id="newStaff">
-  <button onclick="addStaff()">追加</button>
-  <div id="staffListUI"></div>
- </div>
-
- <div class="card">
-  <h3>商材追加</h3>
-  <input id="newItem">
-  <input type="color" id="newColor" value="#e0f2fe">
-  <button onclick="addItem()">追加</button>
-  <div id="itemListUI"></div>
- </div>
-</div>
-
-<!-- 月次集計 -->
-<div id="monthly" class="page">
- <div class="card">
-  <h3>📅 月次集計 商材選択</h3>
-  <div id="monthlyItemSelect"></div>
-  <button onclick="calculateMonthly()">集計</button>
- </div>
-
- <div class="card">
-  <h3>合計件数</h3>
-  <div id="monthlyTotal" style="font-size:24px;font-weight:bold"></div>
- </div>
-
- <div class="card">
-  <h3>🏆 TOP3</h3>
-  <div id="monthlyTop3"></div>
- </div>
-
- <div class="card">
-  <h3>スタッフ別件数一覧</h3>
-  <table id="monthlyTable"></table>
- </div>
+<!-- 商材月間累計ボード -->
+<div id="productBoard" style="display:none;">
+<h2>📋 商材 月間累計ボード</h2>
+<table id="productBoardTable">
+<tr><th>商材</th><th>月累計件数</th></tr>
+</table>
 </div>
 
 <script>
-/* ================= Firebase ================= */
-firebase.initializeApp({
- apiKey:"AIzaSyCmerraKVr1iJsRoiW53lxUtgDUcOGVXtY",
- authDomain:"ganbaru-sheet-a32f3.firebaseapp.com",
- projectId:"ganbaru-sheet-a32f3"
-});
-const db=firebase.firestore();
-
-/* ================= Global ================= */
-let staffList=[], itemList=[], records=[], monthlyRecords=[];
-let lockedStaff=localStorage.getItem("lockedStaff")||"";
-let currentDate=new Date().toISOString().slice(0,10);
-document.getElementById("globalDate").value=currentDate;
-
-/* ================= TAB ================= */
-function showTab(id,tab){
- document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
- document.getElementById(id).classList.add("active");
- document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
- tab.classList.add("active");
- updateAllViews();
- if(id==="monthly") loadMonthlyData();
-}
-
-/* ================= Date ================= */
-document.getElementById("globalDate").onchange=e=>{
- currentDate=e.target.value;
- loadSales();
+// ===== Firebase =====
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_DOMAIN",
+  projectId: "YOUR_PROJECT_ID"
 };
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
-/* ================= Load Sales ================= */
-let unsub=null;
-function loadSales(){
- if(unsub)unsub();
- unsub=db.collection("sales").where("date","==",currentDate)
- .onSnapshot(snap=>{
-  records=snap.docs.map(d=>({...d.data(),id:d.id}));
-  updateAllViews();
- });
+// ===== 保存 =====
+function saveData(){
+  const staff = document.getElementById("staff").value;
+  const products = [...document.querySelectorAll(".product:checked")].map(e=>e.value);
+  if(products.length==0){ alert("商材選択"); return; }
+
+  db.collection("records").add({
+    staff,
+    products,
+    date: new Date()
+  }).then(()=>alert("登録完了"));
 }
 
-/* ================= Render ================= */
-function updateAllViews(){
- renderButtons();
- renderBoard();
+// ===== ページ切替 =====
+function showPage(id){
+  ["staffMonthly","productMonthly","productBoard"].forEach(p=>{
+    document.getElementById(p).style.display="none";
+  });
+  document.getElementById(id).style.display="block";
+
+  if(id=="staffMonthly") loadStaffMonthly();
+  if(id=="productMonthly") loadProductMonthly();
+  if(id=="productBoard") loadProductBoard();
 }
 
-/* ================= Buttons ================= */
-function renderButtons(){
- const sSel=document.getElementById("staffSelect");
- const hSel=document.getElementById("handoffSelect");
- const btn=document.getElementById("btnContainer");
-
- sSel.innerHTML=staffList.map(s=>`<option>${s.name}</option>`).join("");
- hSel.innerHTML=sSel.innerHTML;
-
- if(lockedStaff){
-  sSel.value=lockedStaff;
-  sSel.disabled=true;
-  lockBtn.textContent="🔒 固定ON";
- }else{
-  sSel.disabled=false;
-  lockBtn.textContent="🔓 固定OFF";
- }
-
- btn.innerHTML=itemList.map(it=>`
-  <button class="item-btn" style="background:${it.color}" onclick="addRecord('${it.name}')">${it.name}</button>
- `).join("");
+// ===== 今月データ取得 =====
+function getMonthRange(){
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(),1);
+  const end = new Date(now.getFullYear(), now.getMonth()+1,1);
+  return {start,end};
 }
 
-/* ================= Lock ================= */
-function toggleLock(){
- const s=document.getElementById("staffSelect");
- if(lockedStaff){
-  lockedStaff="";
-  localStorage.removeItem("lockedStaff");
- }else{
-  lockedStaff=s.value;
-  localStorage.setItem("lockedStaff",lockedStaff);
- }
- renderButtons();
+// ===== スタッフ月間集計 =====
+function loadStaffMonthly(){
+  const {start,end}=getMonthRange();
+  db.collection("records").where("date",">=",start).where("date","<",end)
+  .get().then(snap=>{
+    const count={};
+    snap.forEach(doc=>{
+      const d=doc.data();
+      count[d.staff]=(count[d.staff]||0)+1;
+    });
+
+    const table=document.getElementById("staffTable");
+    table.innerHTML="<tr><th>スタッフ</th><th>件数</th></tr>";
+    Object.keys(count).forEach(name=>{
+      table.innerHTML+=`<tr><td>${name}</td><td>${count[name]}</td></tr>`;
+    });
+  });
 }
 
-/* ================= Handoff ================= */
-function toggleHandoff(){
- handoffSelect.disabled=!handoffToggle.checked;
+// ===== 商材月合計 + TOP3 =====
+function loadProductMonthly(){
+  const {start,end}=getMonthRange();
+  db.collection("records").where("date",">=",start).where("date","<",end)
+  .get().then(snap=>{
+    const count={};
+    snap.forEach(doc=>{
+      const d=doc.data();
+      d.products.forEach(p=>{
+        count[p]=(count[p]||0)+1;
+      });
+    });
+
+    const sorted = Object.entries(count).sort((a,b)=>b[1]-a[1]);
+    const div=document.getElementById("productSummary");
+    div.innerHTML="<h3>合計</h3>";
+    sorted.forEach(([p,c])=>{
+      div.innerHTML+=`${p}: ${c}件<br>`;
+    });
+
+    div.innerHTML+="<h3>TOP3</h3>";
+    sorted.slice(0,3).forEach(([p,c],i)=>{
+      div.innerHTML+=`${i+1}位 ${p}: ${c}件<br>`;
+    });
+  });
 }
 
-/* ================= Add Record ================= */
-function addRecord(item){
- const base=lockedStaff||staffSelect.value;
- if(!base)return alert("スタッフ未選択");
+// ===== 商材 月累計ボード =====
+function loadProductBoard(){
+  const {start,end}=getMonthRange();
+  db.collection("records").where("date",">=",start).where("date","<",end)
+  .get().then(snap=>{
+    const count={};
+    snap.forEach(doc=>{
+      const d=doc.data();
+      d.products.forEach(p=>{
+        count[p]=(count[p]||0)+1;
+      });
+    });
 
- const isH=handoffToggle.checked;
- const staff=isH?handoffSelect.value:base;
- const registrar=isH?base:"";
- const groupId=Date.now().toString();
-
- db.collection("sales").add({staff,registrar,item,date:currentDate,groupId});
+    const table=document.getElementById("productBoardTable");
+    table.innerHTML="<tr><th>商材</th><th>月累計件数</th></tr>";
+    Object.keys(count).forEach(p=>{
+      table.innerHTML+=`<tr><td>${p}</td><td>${count[p]}</td></tr>`;
+    });
+  });
 }
-
-/* ================= Board ================= */
-function groupBy(arr){
- const m={};
- arr.forEach(r=>{
-  if(!m[r.groupId])m[r.groupId]=[];
-  m[r.groupId].push(r);
- });
- return Object.values(m);
-}
-
-function renderBoard(){
- const table=document.getElementById("boardTable");
- const title=document.getElementById("boardTitle");
- title.textContent=currentDate.replace(/-/g,"/")+" のがんばるシート";
-
- let max=20;
- itemList.forEach(it=>{
-  const g=groupBy(records.filter(r=>r.item==it.name));
-  if(g.length>max)max=g.length;
- });
-
- let html="<tr><th>商材</th><th>合計</th>";
- for(let i=1;i<=max;i++)html+=`<th>${i}</th>`;
- html+="</tr>";
-
- itemList.forEach(it=>{
-  const g=groupBy(records.filter(r=>r.item==it.name));
-  html+=`<tr><th style="background:${it.color}">${it.name}</th><td>${g.length}</td>`;
-  for(let i=0;i<max;i++){
-   if(!g[i]){html+="<td class='square'></td>";continue;}
-   const r=g[i][0];
-   if(!r.registrar){
-    html+=`<td class='square normal-name'>${r.staff}</td>`;
-   }else{
-    html+=`<td class='square'><div class='handoff-main'>成：${r.staff}</div><div class='handoff-sub'>${r.registrar}</div></td>`;
-   }
-  }
-  html+="</tr>";
- });
- table.innerHTML=html;
-}
-
-/* ================= Settings ================= */
-function addStaff(){
- const n=newStaff.value;
- if(n)db.collection("settings").add({type:"staff",name:n,order:Date.now()});
- newStaff.value="";
-}
-function addItem(){
- const n=newItem.value,c=newColor.value;
- if(n)db.collection("settings").add({type:"item",name:n,color:c,order:Date.now()});
- newItem.value="";
-}
-
-/* realtime settings */
-db.collection("settings").orderBy("order").onSnapshot(snap=>{
- staffList=[];itemList=[];
- snap.forEach(d=>{
-  const v=d.data();v.id=d.id;
-  if(v.type=="staff")staffList.push(v);
-  if(v.type=="item")itemList.push(v);
- });
- renderButtons();
-});
-
-/* ================= Monthly ================= */
-function getMonthRange(dateStr){
- const d=new Date(dateStr);
- const y=d.getFullYear(),m=d.getMonth();
- return {
-  start:new Date(y,m,1).toISOString().slice(0,10),
-  end:new Date(y,m+1,0).toISOString().slice(0,10)
- };
-}
-
-async function loadMonthlyData(){
- const {start,end}=getMonthRange(currentDate);
- const snap=await db.collection("sales")
- .where("date",">=",start).where("date","<=",end).get();
- monthlyRecords=snap.docs.map(d=>d.data());
- renderMonthlyItemSelector();
-}
-
-function renderMonthlyItemSelector(){
- const div=document.getElementById("monthlyItemSelect");
- div.innerHTML=itemList.map(it=>`
-  <label style="margin-right:10px">
-   <input type="checkbox" value="${it.name}" checked> ${it.name}
-  </label>
- `).join("");
-}
-
-function calculateMonthly(){
- const checked=[...document.querySelectorAll("#monthlyItemSelect input:checked")].map(c=>c.value);
- if(checked.length==0)return alert("商材選択してください");
-
- const filtered=monthlyRecords.filter(r=>checked.includes(r.item));
-
- const groups={};
- filtered.forEach(r=>{ if(!groups[r.groupId])groups[r.groupId]=r; });
- const total=Object.keys(groups).length;
- document.getElementById("monthlyTotal").textContent=total+" 件";
-
- const staffCount={};
- Object.values(groups).forEach(r=>{
-  staffCount[r.staff]=(staffCount[r.staff]||0)+1;
- });
-
- const top3=Object.entries(staffCount).sort((a,b)=>b[1]-a[1]).slice(0,3);
- document.getElementById("monthlyTop3").innerHTML=top3.map((r,i)=>
-  `<div>${i+1}位 ${r[0]}：${r[1]}件</div>`
- ).join("");
-
- let html="<tr><th>スタッフ</th><th>件数</th></tr>";
- Object.entries(staffCount).sort((a,b)=>b[1]-a[1]).forEach(r=>{
-  html+=`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`;
- });
- document.getElementById("monthlyTable").innerHTML=html;
-}
-
-/* ================= Start ================= */
-loadSales();
 </script>
 
 </body>
