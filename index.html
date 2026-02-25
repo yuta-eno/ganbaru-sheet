@@ -9,7 +9,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
 
 <style>
-/* ===== UI 見栄え ===== */
 body{ margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background:#f3f4f6; }
 
 /* Tabs */
@@ -24,47 +23,40 @@ header{ display:flex; gap:10px; padding:8px; background:white; border-bottom:1px
 .card{ background:white; border-radius:12px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,.08); margin-bottom:15px; }
 .card h3 { margin-top:0; border-bottom:2px solid #e2e8f0; padding-bottom:8px; color:#334155; margin-bottom:15px; }
 
-/* Staff selector & Lock */
+/* Staff selector */
 .staff-selector { display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-weight:bold; color:#475569; }
 .staff-selector select { font-size:16px; padding:10px; flex:1; min-width:150px; max-width:300px; border-radius:8px; border:1px solid #cbd5e0; background:#f8fafc; }
-#lockBtn { padding:10px 15px; border:1px solid #cbd5e0; background:#f1f5f9; color:#64748b; border-radius:8px; cursor:pointer; font-weight:bold; white-space:nowrap; transition:0.3s; }
-#lockBtn.locked { background:#3b82f6; color:white; border-color:#2563eb; }
+#lockBtn { padding:10px 15px; border:1px solid #cbd5e0; background:#f1f5f9; color:#64748b; border-radius:8px; cursor:pointer; font-weight:bold; }
+#lockBtn.locked { background:#3b82f6; color:white; }
 
-/* Input buttons */
+/* Items */
 .items{ display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:10px; }
 .item-box{ border:1px solid #ddd; border-radius:10px; padding:8px; background:white; }
-.item-btn{ width:100%; padding:12px; border:none; border-radius:8px; font-size:16px; font-weight:bold; color:white; cursor:pointer; 
- text-shadow: 1px 1px 0 rgba(0,0,0,0.6), -1px -1px 0 rgba(0,0,0,0.6), 1px -1px 0 rgba(0,0,0,0.6), -1px 1px 0 rgba(0,0,0,0.6), 0px 2px 4px rgba(0,0,0,0.5);}
-.item-btn:active{opacity:0.7;}
+.item-btn{ width:100%; padding:12px; border:none; border-radius:8px; font-size:16px; font-weight:bold; cursor:pointer;}
 .item-footer{ display:flex; justify-content:space-between; margin-top:6px; font-size:14px; align-items:center;}
-.my-count { font-size:16px; font-weight:bold; color:#475569; }
-.minus{ background:#f1f5f9; color:#64748b; border:1px solid #e2e8f0; padding:4px 10px; border-radius:6px; font-weight:bold; cursor:pointer; }
-.rank-mini{ font-size:12px; color:#64748b; margin-top:4px; }
+.minus{ background:#f1f5f9; border:1px solid #e2e8f0; padding:4px 10px; border-radius:6px; font-weight:bold; cursor:pointer; }
 
-/* Board Table */
-.board-wrap{ overflow-x:auto; padding-bottom:10px; }
+/* Board */
+.board-wrap{ overflow-x:auto; }
 table{ border-collapse:collapse; width:max-content; background:white; }
 th,td{ border:1px solid #cbd5e0; padding:4px; text-align:center; font-size:12px; }
-.row-header { position:sticky; left:0; z-index:1; border-right:2px solid #cbd5e0; font-weight:bold; white-space:nowrap; padding:8px 12px; background:#f8fafc;}
-.square{ width:55px; height:55px; overflow:hidden; font-size:11px; background:#fff; vertical-align:middle; }
-.square-cell { min-width: 55px; }
-.name-cell { background:#e0f2fe; color:#0369a1; font-weight:bold; }
+.row-header { position:sticky; left:0; z-index:1; font-weight:bold; background:#f8fafc; }
+.square{ width:60px; height:60px; font-size:12px; background:#fff; vertical-align:middle; }
+.name-cell{ background:#f0f9ff; }
 
-/* 引き継ぎ */
+/* 引き継ぎ表示スタイル */
+.normal-name{ font-weight:bold; color:#000; }
+.handoff-main{ font-weight:bold; color:#dc2626; } /* 赤 */
+.handoff-sub{ font-size:10px; color:#64748b; }
+
+/* 引き継ぎ UI */
 .handoff-wrap {
- display:flex; 
- align-items:center; 
- gap:8px; 
- padding-left:15px; 
- margin-left:5px;
- border-left:2px solid #cbd5e0;
+ display:flex; align-items:center; gap:8px;
+ padding-left:15px; margin-left:5px; border-left:2px solid #cbd5e0;
 }
 .handoff-wrap select {
- font-size:16px; 
- padding:8px 10px; 
- border-radius:8px; 
- border:1px solid #cbd5e0; 
- background:#f8fafc;
+ font-size:16px; padding:8px; border-radius:8px;
+ border:1px solid #cbd5e0; background:#f8fafc;
 }
 </style>
 </head>
@@ -86,7 +78,7 @@ th,td{ border:1px solid #cbd5e0; padding:4px; text-align:center; font-size:12px;
   <button onclick="toggleLock()" id="lockBtn">🔓 固定OFF</button>
 
   <div class="handoff-wrap">
-   <label><input type="checkbox" id="handoffToggle" onchange="toggleHandoff()"> 引き継ぎ</label>
+   <label><input type="checkbox" id="handoffToggle"> 引き継ぎ</label>
    <select id="handoffSelect" disabled></select>
   </div>
  </div>
@@ -96,13 +88,11 @@ th,td{ border:1px solid #cbd5e0; padding:4px; text-align:center; font-size:12px;
  <div class="items" id="btnContainer"></div>
 </div>
 
-<div class="card" id="goalDisplay"></div>
-
 </div>
 
 <div id="board" class="page">
  <div class="card">
-  <h3 id="boardTitle">本日の成約ボード</h3>
+  <h3 id="boardTitle"></h3>
   <div class="board-wrap">
    <table id="boardTable"></table>
   </div>
@@ -110,15 +100,15 @@ th,td{ border:1px solid #cbd5e0; padding:4px; text-align:center; font-size:12px;
 </div>
 
 <div id="settings" class="page">
- <div class="card"><h3>管理画面（省略：現状維持）</h3></div>
+ <div class="card"><h3>設定画面（原本維持）</h3></div>
 </div>
 
 <script>
 /* Firebase */
 const firebaseConfig={
- apiKey: "AIzaSyCmerraKVr1iJsRoiW53lxUtgDUcOGVXtY",
- authDomain: "ganbaru-sheet-a32f3.firebaseapp.com",
- projectId: "ganbaru-sheet-a32f3"
+ apiKey:"AIzaSyCmerraKVr1iJsRoiW53lxUtgDUcOGVXtY",
+ authDomain:"ganbaru-sheet-a32f3.firebaseapp.com",
+ projectId:"ganbaru-sheet-a32f3"
 };
 firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore();
@@ -128,7 +118,7 @@ const ADMIN_PASSWORD="0000";
 function showTab(id){
  if(id==='settings'){
   const p=prompt("管理用パスワード:");
-  if(p!==ADMIN_PASSWORD){alert("NG");return;}
+  if(p!==ADMIN_PASSWORD){ alert("NG"); return; }
  }
  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
  document.getElementById(id).classList.add("active");
@@ -137,10 +127,9 @@ function showTab(id){
 }
 
 /* Data */
-let staffList=[],itemList=[],records=[];
-const today = new Date();
-const dateStr = `${today.getMonth()+1}/${today.getDate()}`;
-document.getElementById("boardTitle").textContent = `${dateStr} のがんばるシート`;
+let staffList=[], itemList=[], records=[];
+const today=new Date();
+document.getElementById("boardTitle").textContent=`${today.getMonth()+1}/${today.getDate()} のがんばるシート`;
 
 /* Load settings */
 db.collection("settings").orderBy("order").onSnapshot(snap=>{
@@ -156,15 +145,18 @@ db.collection("settings").orderBy("order").onSnapshot(snap=>{
 /* Load sales */
 db.collection("sales").onSnapshot(snap=>{
  records=snap.docs.map(d=>({id:d.id,...d.data()}));
- renderAll();
+ renderBoard();
 });
 
 /* UI refs */
 const staffSelect=document.getElementById("staffSelect");
+const handoffSelect=document.getElementById("handoffSelect");
 const btnContainer=document.getElementById("btnContainer");
 const boardTable=document.getElementById("boardTable");
+const lockBtn=document.getElementById("lockBtn");
+const handoffToggle=document.getElementById("handoffToggle");
 
-/* Staff Lock */
+/* Lock */
 let lockedStaff=localStorage.getItem("lockedStaff")||"";
 function toggleLock(){
  if(lockedStaff){
@@ -178,78 +170,49 @@ function toggleLock(){
   lockBtn.textContent="🔒 固定ON";
   lockBtn.classList.add("locked");
  }
- renderAll();
-}
-
-/* Handoff */
-function toggleHandoff(){
- handoffSelect.disabled = !handoffToggle.checked;
 }
 
 /* Render */
 function renderAll(){
- const opts = staffList.map(s=>`<option>${s.name}</option>`).join("");
+ const opts=staffList.map(s=>`<option>${s.name}</option>`).join("");
  staffSelect.innerHTML=opts;
  handoffSelect.innerHTML=opts;
-
- if(lockedStaff){
-  staffSelect.value=lockedStaff;
-  staffSelect.disabled=true;
-  lockBtn.textContent="🔒 固定ON";
-  lockBtn.classList.add("locked");
- }
 
  btnContainer.innerHTML=itemList.map(it=>`
  <div class="item-box">
   <button class="item-btn" style="background:${it.color}" onclick="addRecord('${it.name}')">${it.name}</button>
   <div class="item-footer">
-   <span class="my-count" id="count_${it.name}">0件</span>
    <button class="minus" onclick="removeRecord('${it.name}')">取消</button>
   </div>
  </div>`).join("");
-
- updateCounts();
- renderBoard();
 }
 
-/* ================= 成約登録（核心改造） ================= */
+/* 成約登録 */
 function addRecord(item){
- const staff = lockedStaff || staffSelect.value;   // 引き継ぎ元
- const registrar = handoffToggle.checked ? handoffSelect.value : staff; // 登録者
+ const staff = lockedStaff || staffSelect.value;
+ const registrar = handoffToggle.checked ? handoffSelect.value : "";
  const date=new Date().toISOString().slice(0,10);
- const groupId = Date.now().toString();
-
+ const groupId=Date.now().toString();
  db.collection("sales").add({staff, registrar, item, date, groupId});
 }
 
-/* 取消：同groupId削除 */
+/* 取消 */
 function removeRecord(item){
  const today=new Date().toISOString().slice(0,10);
- const r = records.filter(r=>r.item==item && r.date==today).pop();
+ const r=records.filter(r=>r.item==item && r.date==today).pop();
  if(!r) return;
  records.filter(x=>x.groupId==r.groupId).forEach(x=>{
   db.collection("sales").doc(x.id).delete();
  });
 }
 
-/* ================= カウント（引き継ぎ元のみ） ================= */
-function updateCounts(){
- const today=new Date().toISOString().slice(0,10);
- const staff = lockedStaff || staffSelect.value;
-
- itemList.forEach(it=>{
-  const c = records.filter(r=>r.item==it.name && r.staff==staff && r.date==today).length;
-  document.getElementById("count_"+it.name).textContent=c+"件";
- });
-}
-
-/* ================= ボード表示（上下2段） ================= */
+/* ボード描画 */
 function renderBoard(){
  const today=new Date().toISOString().slice(0,10);
  let maxCols=20;
 
  itemList.forEach(it=>{
-  const groups = groupByGroupId(records.filter(r=>r.item==it.name && r.date==today));
+  const groups=groupBy(records.filter(r=>r.item==it.name && r.date==today));
   if(groups.length>maxCols) maxCols=groups.length;
  });
 
@@ -258,19 +221,28 @@ function renderBoard(){
  html+="</tr>";
 
  itemList.forEach(it=>{
-  const groups = groupByGroupId(records.filter(r=>r.item==it.name && r.date==today));
+  const groups=groupBy(records.filter(r=>r.item==it.name && r.date==today));
   html+=`<tr><th class='row-header' style="background:${it.color}">${it.name}</th>
-  <td class='square'>${groups.length}件</td>`;
+  <td>${groups.length}件</td>`;
 
   for(let i=0;i<maxCols;i++){
-   if(groups[i]){
-    const g=groups[i][0];
-    html+=`<td class='square name-cell'>
-      <div>${g.staff}</div>
-      <div style="font-size:10px;color:#64748b;">${g.registrar}</div>
-    </td>`;
-   }else{
+   if(!groups[i]){
     html+=`<td class='square'></td>`;
+    continue;
+   }
+
+   const g=groups[i][0];
+
+   // 通常成約
+   if(!g.registrar){
+    html+=`<td class='square name-cell'><div class="normal-name">${g.staff}</div></td>`;
+   }
+   // 引き継ぎ成約
+   else{
+    html+=`<td class='square name-cell'>
+      <div class="handoff-main">成：${g.staff}</div>
+      <div class="handoff-sub">${g.registrar}</div>
+    </td>`;
    }
   }
   html+="</tr>";
@@ -280,14 +252,18 @@ function renderBoard(){
 }
 
 /* group helper */
-function groupByGroupId(arr){
- const map={};
+function groupBy(arr){
+ const m={};
  arr.forEach(r=>{
-  if(!map[r.groupId]) map[r.groupId]=[];
-  map[r.groupId].push(r);
+  if(!m[r.groupId]) m[r.groupId]=[];
+  m[r.groupId].push(r);
  });
- return Object.values(map);
+ return Object.values(m);
 }
+
+/* 引き継ぎ select disable */
+handoffToggle.onchange=()=>handoffSelect.disabled=!handoffToggle.checked;
 </script>
+
 </body>
 </html>
