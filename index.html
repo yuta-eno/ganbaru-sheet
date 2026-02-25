@@ -234,13 +234,13 @@ function toggleLock(){
   localStorage.removeItem("lockedStaff");
   lockBtn.textContent="🔓 固定OFF";
   lockBtn.classList.remove("locked");
-  staffSelect.disabled = false; // ★修正：即時でグレーアウト解除
+  staffSelect.disabled = false;
  }else{
   lockedStaff=staffSelect.value;
   localStorage.setItem("lockedStaff",lockedStaff);
   lockBtn.textContent="🔒 固定ON";
   lockBtn.classList.add("locked");
-  staffSelect.disabled = true; // ★修正：即時でグレーアウト反映
+  staffSelect.disabled = true;
  }
  updateCounts();
 }
@@ -251,7 +251,6 @@ function renderAll(){
  staffSelect.innerHTML=opts;
  handoffSelect.innerHTML=opts;
 
- // ★ロック状態による初期設定
  if(lockedStaff){
   staffSelect.value=lockedStaff;
   staffSelect.disabled=true;
@@ -328,11 +327,15 @@ function addRecord(item){
  db.collection("sales").add({staff, registrar, item, date, groupId});
 }
 
-/* 取消 */
+/* ★修正：取消ロジック（現在選択中のスタッフの成約だけを消す） */
 function removeRecord(item){
+ const baseStaff = lockedStaff || staffSelect.value;
+ const targetStaff = handoffToggle.checked ? handoffSelect.value : baseStaff;
  const todayStr=new Date().toISOString().slice(0,10);
- const r=records.filter(r=>r.item==item && r.date==todayStr).pop();
+ 
+ const r=records.filter(r=>r.item==item && r.date==todayStr && r.staff==targetStaff).pop();
  if(!r) return;
+ 
  records.filter(x=>x.groupId==r.groupId).forEach(x=>{
   db.collection("sales").doc(x.id).delete();
  });
@@ -455,7 +458,7 @@ function renderGoalPanel(){
  goalPanel.style.display="grid";
  goalPanel.style.gridTemplateRows="repeat(15, max-content)";
  goalPanel.style.gridAutoFlow="column";
- goalPanel.style.gap="4px 10px"; // ★隙間をキュッと縮めました
+ goalPanel.style.gap="4px 10px"; 
  goalPanel.style.overflowX="auto";
 
  goalPanel.innerHTML=itemList.map(it=>{
@@ -478,7 +481,7 @@ function renderGoalPanel(){
 
 function setGoal(item,val){
  if(val === "" || val == 0) {
-  db.collection("goals").doc(item).delete(); // 0なら削除
+  db.collection("goals").doc(item).delete(); 
  } else {
   db.collection("goals").doc(item).set({item, target:Number(val)});
  }
@@ -517,4 +520,3 @@ function renderGoalsOnInput(){
 
 </body>
 </html>
-
