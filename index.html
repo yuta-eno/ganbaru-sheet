@@ -178,7 +178,9 @@ th,td{ border:1px solid #cbd5e0; padding:4px; text-align:center; font-size:12px;
 </div>
 
 <script>
-/* Firebase */
+/* ========================================================
+   1. 変数宣言・初期設定（クラッシュ防止のためすべて最初に定義）
+   ======================================================== */
 const firebaseConfig={
  apiKey:"AIzaSyCmerraKVr1iJsRoiW53lxUtgDUcOGVXtY",
  authDomain:"ganbaru-sheet-a32f3.firebaseapp.com",
@@ -187,9 +189,13 @@ const firebaseConfig={
 firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore();
 
-/* State & Date Management */
+// 状態管理変数
 let staffList=[], itemList=[], records=[], goals={};
-// 日本時間で現在の日付(YYYY-MM-DD)を取得
+let lockedStaff = localStorage.getItem("lockedStaff") || "";
+let dragType = null;
+const ADMIN_PASSWORD="0000";
+
+// 日付取得関数と初期設定
 function getLocalYMD(dateObj) {
   const y = dateObj.getFullYear();
   const m = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -197,24 +203,20 @@ function getLocalYMD(dateObj) {
   return `${y}-${m}-${d}`;
 }
 let currentDate = getLocalYMD(new Date());
+
+// DOM要素の取得
+const staffSelect = document.getElementById("staffSelect");
+const handoffSelect = document.getElementById("handoffSelect");
+const btnContainer = document.getElementById("btnContainer");
+const boardTable = document.getElementById("boardTable");
+const lockBtn = document.getElementById("lockBtn");
+const handoffToggle = document.getElementById("handoffToggle");
 document.getElementById('globalDate').value = currentDate;
 
-function changeDate(newDate) {
-  if(!newDate) return;
-  currentDate = newDate;
-  updateAllViews();
-}
 
-/* UI refs */
-const staffSelect=document.getElementById("staffSelect");
-const handoffSelect=document.getElementById("handoffSelect");
-const btnContainer=document.getElementById("btnContainer");
-const boardTable=document.getElementById("boardTable");
-const lockBtn=document.getElementById("lockBtn");
-const handoffToggle=document.getElementById("handoffToggle");
-
-/* Tabs (エラー回避のためthis要素を渡す設計に変更) */
-const ADMIN_PASSWORD="0000";
+/* ========================================================
+   2. UI制御・共通関数
+   ======================================================== */
 function showTab(id, tabElement){
  if(id==='settings'){
   const p=prompt("管理用パスワード:");
@@ -223,35 +225,25 @@ function showTab(id, tabElement){
  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
  document.getElementById(id).classList.add("active");
  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
- if(tabElement) tabElement.classList.add("active");
- else document.querySelector(`.tab[onclick*="${id}"]`).classList.add("active");
+ 
+ if(tabElement) {
+   tabElement.classList.add("active");
+ } else {
+   const fallbackTab = document.querySelector(`.tab[onclick*="${id}"]`);
+   if(fallbackTab) fallbackTab.classList.add("active");
+ }
 }
 
-/* Loaders (Firebase) */
-db.collection("settings").orderBy("order").onSnapshot(snap=>{
- staffList=[]; itemList=[];
- snap.forEach(d=>{
-  const v=d.data(); v.id=d.id;
-  if(v.type=="staff") staffList.push(v);
-  if(v.type=="item") itemList.push(v);
- });
- renderAllSettingsAndButtons();
-});
+function changeDate(newDate) {
+  if(!newDate) return;
+  currentDate = newDate;
+  updateAllViews();
+}
 
-db.collection("sales").onSnapshot(snap=>{
- records=snap.docs.map(d=>({id:d.id,...d.data()}));
- updateAllViews();
-});
 
-db.collection("goals").onSnapshot(snap=>{
- goals={};
- snap.forEach(d=>{ goals[d.data().item]=d.data(); });
- renderGoalPanel();
- updateAllViews();
-});
-
-/* Update & Render Core */
-// データの読み込み順序に依存せず、画面を正しく更新するための統合関数
+/* ========================================================
+   3. 描画・更新処理
+   ======================================================== */
 function updateAllViews() {
  document.getElementById("boardTitle").textContent=`${currentDate.replace(/-/g, '/')} のがんばるシート`;
  updateCounts();
@@ -307,11 +299,9 @@ function renderAllSettingsAndButtons(){
  </li>`).join("") + `</ul>`;
 
  renderGoalPanel();
- updateAllViews(); // ボタン群が生成された後に件数を反映
+ updateAllViews();
 }
 
-/* Lock */
-let lockedStaff=localStorage.getItem("lockedStaff")||"";
 function toggleLock(){
  if(lockedStaff){
   lockedStaff="";
@@ -329,7 +319,6 @@ function toggleLock(){
  updateAllViews();
 }
 
-/* ランキングと件数の更新処理 (日付連動) */
 function updateCounts(){
  const currentStaff = lockedStaff || staffSelect.value;
 
@@ -348,17 +337,15 @@ function updateCounts(){
  });
 }
 
-/* 成約登録 (選択中の日付で登録) */
 function addRecord(item){
  const baseStaff = lockedStaff || staffSelect.value;
  const staff = handoffToggle.checked ? handoffSelect.value : baseStaff;
  const registrar = handoffToggle.checked ? baseStaff : "";
- const date = currentDate; // ここを選択中の日付に修正
+ const date = currentDate;
  const groupId = Date.now().toString();
  db.collection("sales").add({staff, registrar, item, date, groupId});
 }
 
-/* 取消 (選択中の日付のデータを削除) */
 function removeRecord(item){
  const baseStaff = lockedStaff || staffSelect.value;
  const targetStaff = handoffToggle.checked ? handoffSelect.value : baseStaff;
@@ -371,7 +358,6 @@ function removeRecord(item){
  });
 }
 
-/* ボード描画 (日付連動) */
 function renderBoard(){
  let maxCols=20;
 
@@ -413,7 +399,6 @@ function renderBoard(){
  boardTable.innerHTML=html;
 }
 
-/* group helper */
 function groupBy(arr){
  const m={};
  arr.forEach(r=>{
@@ -423,10 +408,12 @@ function groupBy(arr){
  return Object.values(m);
 }
 
-/* 引き継ぎ select disable */
 handoffToggle.onchange=()=>handoffSelect.disabled=!handoffToggle.checked;
 
-/* ================= Settings CRUD & Drag/Drop ================= */
+
+/* ========================================================
+   4. 設定関連・ドラッグ＆ドロップ・目標関連
+   ======================================================== */
 function addStaff(){
  const n=document.getElementById("newStaff").value;
  if(n) db.collection("settings").add({type:"staff",name:n,order:Date.now()});
@@ -447,7 +434,6 @@ function deleteSetting(id){
  if(confirm("本当に削除しますか？")) db.collection("settings").doc(id).delete();
 }
 
-let dragType = null;
 function handleDragStart(e, type, id) { dragType = type; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', id); e.target.classList.add('dragging'); }
 function handleDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; const li = e.target.closest('li'); if (li && !li.classList.contains('dragging')) li.classList.add('over'); return false; }
 function handleDragLeave(e) { const li = e.target.closest('li'); if (li) li.classList.remove('over'); }
@@ -471,7 +457,6 @@ async function handleDrop(e, targetId) {
 }
 function handleDragEnd(e) { document.querySelectorAll('.list-ui li').forEach(el => { el.classList.remove('dragging', 'over'); }); }
 
-/* ================= Goals ================= */
 function renderGoalPanel(){
  const goalPanel=document.getElementById("goalPanel");
  if(!goalPanel || itemList.length === 0) return;
@@ -517,7 +502,17 @@ async function resetAllGoals(){
  alert("目標をすべてリセットしました！");
 }
 
-/* 目標表示 (日付連動) */
 function renderGoalsOnInput(){
  const box=document.getElementById("goalDisplay");
- if(!box
+ if(!box) return;
+
+ const htmls = itemList.map(it=>{
+  const target=goals[it.name]?.target||0;
+  if(!target) return "";
+  
+  const current = groupBy(records.filter(r=>r.item==it.name && r.date==currentDate)).length;
+  const pct=Math.min(100, Math.round(current/target*100));
+
+  return `
+  <div class="goal-box">
+   🔥 ${it.name} 目標 ${target}件 / 現在 ${current}件 (${
