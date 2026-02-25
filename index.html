@@ -34,14 +34,12 @@ header{ display:flex; gap:10px; padding:8px; background:white; border-bottom:1px
 .item-box{ border:1px solid #ddd; border-radius:10px; padding:8px; background:white; }
 .item-btn{ 
   width:100%; padding:12px; border:none; border-radius:8px; font-size:16px; font-weight:bold; cursor:pointer;
-  /* ★白縁の黒文字指定を追加 */
   color:#000;
   text-shadow: 1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 0px 2px 4px rgba(0,0,0,0.2);
 }
 .item-footer{ display:flex; justify-content:space-between; margin-top:6px; font-size:14px; align-items:center;}
 .minus{ background:#f1f5f9; border:1px solid #e2e8f0; padding:4px 10px; border-radius:6px; font-weight:bold; cursor:pointer; }
 
-/* ★ランキングと件数表示用のスタイル追加 */
 .my-count { font-size:16px; font-weight:bold; color:#475569; }
 .rank-mini { font-size:12px; color:#64748b; margin-top:4px; }
 
@@ -68,7 +66,7 @@ th,td{ border:1px solid #cbd5e0; padding:4px; text-align:center; font-size:12px;
  border:1px solid #cbd5e0; background:#f8fafc;
 }
 
-/* ★設定画面＆目標表示用のスタイル追加 */
+/* Settings */
 .settings-grid { display: grid; grid-template-columns: 320px 1fr; gap: 20px; }
 @media (max-width: 768px) { .settings-grid { grid-template-columns: 1fr; } }
 .add-form { display:flex; gap:8px; align-items:center; margin-bottom:15px; }
@@ -107,7 +105,7 @@ th,td{ border:1px solid #cbd5e0; padding:4px; text-align:center; font-size:12px;
 <div class="card">
  <div class="staff-selector">
   <label>スタッフ:</label>
-  <select id="staffSelect"></select>
+  <select id="staffSelect" onchange="updateCounts()"></select>
   <button onclick="toggleLock()" id="lockBtn">🔓 固定OFF</button>
 
   <div class="handoff-wrap">
@@ -216,8 +214,8 @@ db.collection("settings").orderBy("order").onSnapshot(snap=>{
 db.collection("sales").onSnapshot(snap=>{
  records=snap.docs.map(d=>({id:d.id,...d.data()}));
  renderBoard();
- updateCounts(); // ★ランキング更新を呼び出し
- renderGoalsOnInput(); // ★目標表示更新を呼び出し
+ updateCounts(); 
+ renderGoalsOnInput(); 
 });
 
 /* UI refs */
@@ -236,13 +234,15 @@ function toggleLock(){
   localStorage.removeItem("lockedStaff");
   lockBtn.textContent="🔓 固定OFF";
   lockBtn.classList.remove("locked");
+  staffSelect.disabled = false; // ★修正：即時でグレーアウト解除
  }else{
   lockedStaff=staffSelect.value;
   localStorage.setItem("lockedStaff",lockedStaff);
   lockBtn.textContent="🔒 固定ON";
   lockBtn.classList.add("locked");
+  staffSelect.disabled = true; // ★修正：即時でグレーアウト反映
  }
- updateCounts(); // ★ロック切り替え時に自分の件数を更新
+ updateCounts();
 }
 
 /* Render */
@@ -251,7 +251,18 @@ function renderAll(){
  staffSelect.innerHTML=opts;
  handoffSelect.innerHTML=opts;
 
- // ★件数とランキングの表示枠を追加（原本の構造は維持）
+ // ★ロック状態による初期設定
+ if(lockedStaff){
+  staffSelect.value=lockedStaff;
+  staffSelect.disabled=true;
+  document.getElementById('lockBtn').textContent="🔒 固定ON";
+  document.getElementById('lockBtn').classList.add("locked");
+ }else{
+  staffSelect.disabled=false;
+  document.getElementById('lockBtn').textContent="🔓 固定OFF";
+  document.getElementById('lockBtn').classList.remove("locked");
+ }
+
  btnContainer.innerHTML=itemList.map(it=>`
  <div class="item-box">
   <button class="item-btn" style="background:${it.color}" onclick="addRecord('${it.name}')">${it.name}</button>
@@ -264,7 +275,6 @@ function renderAll(){
   </div>
  </div>`).join("");
 
- // ★設定画面のリスト描画
  document.getElementById("staffListUI").innerHTML=`<ul class="list-ui">` + staffList.map(s=>`
  <li draggable="true" ondragstart="handleDragStart(event,'staff','${s.id}')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'${s.id}')" ondragend="handleDragEnd(event)">
   <div style="display:flex; align-items:center; gap:8px; width:100%;">
@@ -288,18 +298,16 @@ function renderAll(){
  renderGoalPanel();
 }
 
-/* ★ランキングと件数の更新処理を追加 */
+/* ランキングと件数の更新処理 */
 function updateCounts(){
  const todayDate=new Date().toISOString().slice(0,10);
  const currentStaff = lockedStaff || staffSelect.value;
 
  itemList.forEach(it=>{
-  // 自分の件数（staff=成約者でカウント）
   const c = records.filter(r=>r.item==it.name && r.staff==currentStaff && r.date==todayDate).length;
   const countEl = document.getElementById("count_"+it.name);
   if(countEl) countEl.textContent=c+"件";
 
-  // ランキング（staff=成約者で集計）
   const rank={};
   records.filter(r=>r.item==it.name && r.date==todayDate).forEach(r=>{
    rank[r.staff]=(rank[r.staff]||0)+1;
@@ -310,7 +318,7 @@ function updateCounts(){
  });
 }
 
-/* 成約登録（★原本維持） */
+/* 成約登録 */
 function addRecord(item){
  const baseStaff = lockedStaff || staffSelect.value;
  const staff = handoffToggle.checked ? handoffSelect.value : baseStaff;
@@ -320,7 +328,7 @@ function addRecord(item){
  db.collection("sales").add({staff, registrar, item, date, groupId});
 }
 
-/* 取消（★原本維持） */
+/* 取消 */
 function removeRecord(item){
  const todayStr=new Date().toISOString().slice(0,10);
  const r=records.filter(r=>r.item==item && r.date==todayStr).pop();
@@ -330,7 +338,7 @@ function removeRecord(item){
  });
 }
 
-/* ボード描画（★原本維持） */
+/* ボード描画 */
 function renderBoard(){
  const todayStr=new Date().toISOString().slice(0,10);
  let maxCols=20;
@@ -357,11 +365,9 @@ function renderBoard(){
 
    const g=groups[i][0];
 
-   // 通常成約
    if(!g.registrar){
     html+=`<td class='square name-cell'><div class="normal-name">${g.staff}</div></td>`;
    }
-   // 引き継ぎ成約
    else{
     html+=`<td class='square name-cell'>
       <div class="handoff-main">成：${g.staff}</div>
@@ -375,7 +381,7 @@ function renderBoard(){
  boardTable.innerHTML=html;
 }
 
-/* group helper（★原本維持） */
+/* group helper */
 function groupBy(arr){
  const m={};
  arr.forEach(r=>{
@@ -385,7 +391,7 @@ function groupBy(arr){
  return Object.values(m);
 }
 
-/* 引き継ぎ select disable（★原本維持） */
+/* 引き継ぎ select disable */
 handoffToggle.onchange=()=>handoffSelect.disabled=!handoffToggle.checked;
 
 /* ================= Settings CRUD & Drag/Drop ================= */
@@ -449,7 +455,7 @@ function renderGoalPanel(){
  goalPanel.style.display="grid";
  goalPanel.style.gridTemplateRows="repeat(15, max-content)";
  goalPanel.style.gridAutoFlow="column";
- goalPanel.style.gap="4px 20px";
+ goalPanel.style.gap="4px 10px"; // ★隙間をキュッと縮めました
  goalPanel.style.overflowX="auto";
 
  goalPanel.innerHTML=itemList.map(it=>{
@@ -460,8 +466,8 @@ function renderGoalPanel(){
    opts+=`<option value="${i}" ${g==i?'selected':''}>${num}</option>`;
   }
   return `
-   <div style="display:flex; gap:4px; align-items:center; justify-content:space-between;">
-    <div style="font-weight:bold; font-size:14px; white-space:nowrap;">${it.name}</div>
+   <div style="display:flex; align-items:center;">
+    <div style="font-weight:bold; font-size:14px; width:112px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${it.name}</div>
     <select style="width:55px; padding:4px; border:1px solid #cbd5e0; border-radius:6px; font-size:16px; text-align:center; background:#fff; cursor:pointer;" 
      onchange="setGoal('${it.name}',this.value)">
      ${opts}
@@ -487,7 +493,6 @@ function renderGoalsOnInput(){
   const target=goals[it.name]?.target||0;
   if(!target) return "";
   
-  // 目標に対する現在の件数は、groupId（成約ベース）で数える
   const current = groupBy(records.filter(r=>r.item==it.name && r.date==todayDate)).length;
   const pct=Math.min(100, Math.round(current/target*100));
 
