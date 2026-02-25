@@ -193,7 +193,7 @@ td,th{border:1px solid #cbd5e0;padding:4px;text-align:center;font-size:12px}
 
  <div class="card full-width">
   <h3 style="display:flex; justify-content:space-between; align-items:center;">
-   今日の目標設定
+   🎯 目標設定（表示中の日付）
    <button onclick="resetAllGoals()" style="background:#ef4444; color:white; border:none; padding:4px 10px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:bold;">🗑️ 全リセット</button>
   </h3>
   <div id="goalPanel"></div>
@@ -236,17 +236,28 @@ function showTab(id,tab){
 /* ================= Date Controller ================= */
 document.getElementById("globalDate").onchange=e=>{
  currentDate=e.target.value;
- loadSales();
+ loadDailyData(); // ★カレンダー変更時に実績と目標を再読み込み
 };
 
 /* ================= Realtime Listeners ================= */
 let unsubSales=null;
-function loadSales(){
+let unsubGoals=null;
+
+function loadDailyData(){
+ // 1. カレンダーで選ばれている日付の「実績（sales）」を取得
  if(unsubSales) unsubSales();
- // 日別ボードと入力パネル用に、カレンダーで選ばれている日付のデータだけを取得
  unsubSales=db.collection("sales").where("date","==",currentDate).onSnapshot(snap=>{
   records=snap.docs.map(d=>({...d.data(),id:d.id}));
   updateAllViews();
+ });
+
+ // 2. カレンダーで選ばれている日付の「目標（goals）」を取得
+ if(unsubGoals) unsubGoals();
+ unsubGoals=db.collection("goals").where("date","==",currentDate).onSnapshot(snap=>{
+  goals={};
+  snap.forEach(d=>{ goals[d.data().item]=d.data(); });
+  renderGoalPanel();
+  renderGoalsOnInput();
  });
 }
 
@@ -259,13 +270,6 @@ db.collection("settings").orderBy("order").onSnapshot(snap=>{
  });
  renderStaffItemLists(); 
  updateAllViews();
-});
-
-db.collection("goals").onSnapshot(snap=>{
- goals={};
- snap.forEach(d=>{ goals[d.data().item]=d.data(); });
- renderGoalPanel();
- renderGoalsOnInput();
 });
 
 /* ================= Core Render ================= */
@@ -310,7 +314,6 @@ function renderButtons(){
   </div>
  `).join("");
  
- // updateCountsを呼んで数字を入れる
  updateCounts();
 }
 
@@ -370,11 +373,9 @@ function removeRecord(item){
  const baseStaff = lockedStaff || document.getElementById("staffSelect").value;
  const targetStaff = document.getElementById("handoffToggle").checked ? document.getElementById("handoffSelect").value : baseStaff;
  
- // 現在表示されている日付の中から、指定スタッフ・指定商材の最新1件を探す
  const r=records.filter(r=>r.item==item && r.staff==targetStaff).pop();
  if(!r) return;
  
- // groupIdを使って関連レコード（引き継ぎ時の複数レコード等）をまとめて消す
  db.collection("sales").where("groupId","==",r.groupId).get().then(snap=>{
   const batch=db.batch();
   snap.forEach(d=>batch.delete(d.ref));
@@ -452,7 +453,6 @@ function renderMonthlyItemSelector(){
  `).join("");
 }
 
-/* ★追加：選択を全て解除する関数 */
 function deselectAllMonthlyItems(){
  document.querySelectorAll("#monthlyItemSelect input[type='checkbox']").forEach(cb => cb.checked = false);
 }
@@ -559,7 +559,6 @@ async function deleteOldData() {
  const d = String(oneMonthAgo.getDate()).padStart(2, '0');
  const limitStr = `${y}-${m}-${d}`;
 
- // 効率化のためクエリで取得して削除
  const snap = await db.collection("sales").where("date", "<", limitStr).get();
  if(snap.empty) return alert("削除する対象の古いデータはありませんでした。");
 
@@ -623,17 +622,23 @@ function renderGoalPanel(){
  }).join("");
 }
 
+// ★修正：目標を「日付（currentDate）」ごとに保存するように変更
 function setGoal(item,val){
- if(val === "" || val == 0) db.collection("goals").doc(item).delete(); 
- else db.collection("goals").doc(item).set({item, target:Number(val)});
+ const docId = currentDate + "_" + item; // 日付と商材名を組み合わせた一意のID
+ if(val === "" || val == 0) {
+  db.collection("goals").doc(docId).delete(); 
+ } else {
+  db.collection("goals").doc(docId).set({item: item, target: Number(val), date: currentDate});
+ }
 }
 
+// ★修正：表示中の日付の目標だけをリセットするように変更
 function resetAllGoals(){
- if(!confirm("すべての目標をリセット（0件）にしますか？")) return;
- db.collection("goals").get().then(snap => {
+ if(!confirm(`表示中の日付（${currentDate}）の目標をすべてリセット（0件）にしますか？`)) return;
+ db.collection("goals").where("date", "==", currentDate).get().then(snap => {
    const batch = db.batch();
    snap.forEach(d => batch.delete(d.ref));
-   batch.commit().then(() => alert("目標をすべてリセットしました！"));
+   batch.commit().then(() => alert("表示中の目標をすべてリセットしました！"));
  });
 }
 
@@ -668,7 +673,7 @@ function renderGoalsOnInput(){
 }
 
 /* ================= Start ================= */
-loadSales();
+loadDailyData();
 </script>
 
 </body>
