@@ -33,23 +33,24 @@ header{ display:flex; gap:10px; padding:8px; background:white; border-bottom:1px
 /* Input buttons */
 .items{ display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:10px; }
 .item-box{ border:1px solid #ddd; border-radius:10px; padding:8px; background:white; }
-
-/* ★修正点：文字を「白縁の黒文字」にしてくっきり見やすく！ */
-.item-btn{ 
- width:100%; padding:12px; border:none; border-radius:8px; font-size:16px; font-weight:bold; cursor:pointer; 
- color: #111827; /* 黒文字 */
- text-shadow: 
-  2px 2px 0 #ffffff, 
- -2px -2px 0 #ffffff, 
-  2px -2px 0 #ffffff, 
- -2px 2px 0 #ffffff, 
-  0px 4px 6px rgba(0,0,0,0.15); /* 白の縁取りと少しの影 */
-}
+.item-btn{ width:100%; padding:12px; border:none; border-radius:8px; font-size:16px; font-weight:bold; color:white; cursor:pointer; 
+ text-shadow: 1px 1px 0 rgba(0,0,0,0.6), -1px -1px 0 rgba(0,0,0,0.6), 1px -1px 0 rgba(0,0,0,0.6), -1px 1px 0 rgba(0,0,0,0.6), 0px 2px 4px rgba(0,0,0,0.5);}
 .item-btn:active{opacity:0.7;}
 .item-footer{ display:flex; justify-content:space-between; margin-top:6px; font-size:14px; align-items:center;}
 .my-count { font-size:16px; font-weight:bold; color:#475569; }
 .minus{ background:#f1f5f9; color:#64748b; border:1px solid #e2e8f0; padding:4px 10px; border-radius:6px; font-weight:bold; cursor:pointer; }
 .rank-mini{ font-size:12px; color:#64748b; margin-top:4px; }
+
+/* ★入力商材ボタン文字を白縁黒文字 */
+.item-btn{
+ color:#000 !important;
+ text-shadow:
+ 1px 1px 0 #fff,
+ -1px -1px 0 #fff,
+ 1px -1px 0 #fff,
+ -1px 1px 0 #fff,
+ 0px 2px 4px rgba(0,0,0,0.2);
+}
 
 /* Board Table */
 .board-wrap{ overflow-x:auto; padding-bottom:10px; }
@@ -63,10 +64,9 @@ th,td{ border:1px solid #cbd5e0; padding:4px; text-align:center; font-size:12px;
 /* Settings */
 .settings-grid { display: grid; grid-template-columns: 320px 1fr; gap: 20px; }
 @media (max-width: 768px) { .settings-grid { grid-template-columns: 1fr; } }
-.full-width { grid-column: 1 / -1; } /* 2カラムぶち抜き用 */
 
 .add-form { display:flex; gap:8px; align-items:center; margin-bottom:15px; }
-.add-form input[type="text"], .add-form input[type="number"], .add-form select { flex:1; min-width:0; padding:10px; border:1px solid #cbd5e0; border-radius:6px; font-size:14px; }
+.add-form input[type="text"] { flex:1; min-width:0; padding:10px; border:1px solid #cbd5e0; border-radius:6px; font-size:14px; }
 .add-form input[type="color"] { width:45px; height:40px; padding:2px; border:1px solid #cbd5e0; border-radius:6px; cursor:pointer; flex-shrink:0;}
 .add-form button { padding:10px 15px; background:#64748b; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold; flex-shrink:0;}
 
@@ -82,31 +82,27 @@ th,td{ border:1px solid #cbd5e0; padding:4px; text-align:center; font-size:12px;
 .setting-input { flex:1; min-width:50px; padding:8px; border:1px solid #cbd5e0; border-radius:6px; font-weight:bold; }
 .color-picker { cursor:pointer; width:40px; height:36px; border:1px solid #cbd5e0; border-radius:4px; padding:2px; flex-shrink:0;}
 
-/* ★追加：気合の入る目標ダッシュボードのデザイン */
-.target-dashboard {
-  background: linear-gradient(135deg, #1e293b, #0f172a);
-  color: white;
-  border-radius: 12px;
-  padding: 20px;
-  margin-top: 20px;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
-  border: 2px solid #3b82f6;
-  display: none; /* 目標が無い時は隠す */
+/* ★目標表示 */
+.goal-box{
+ background:linear-gradient(135deg,#fde047,#f97316);
+ padding:15px;
+ border-radius:12px;
+ color:#000;
+ font-weight:bold;
+ box-shadow:0 4px 10px rgba(0,0,0,0.2);
+ margin-bottom:10px;
 }
-.target-dashboard h3 {
-  margin-top: 0; text-align: center; color: #fde047; font-size: 22px;
-  text-shadow: 0 0 10px rgba(253, 224, 71, 0.4);
-  border-bottom: 2px dashed rgba(255,255,255,0.2); padding-bottom: 10px; margin-bottom: 20px;
+.goal-progress{
+ background:white;
+ height:14px;
+ border-radius:8px;
+ overflow:hidden;
+ margin-top:6px;
 }
-.target-item { margin-bottom: 15px; }
-.target-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 6px; font-weight: bold; }
-.target-name { font-size: 16px; display:flex; align-items:center; gap:6px;}
-.target-numbers { font-size: 14px; color: #cbd5e1; }
-.target-numbers.achieved { color: #4ade80; font-size: 16px; font-weight: 900; animation: bounce 1s infinite; }
-.progress-bg { height: 16px; background: rgba(255,255,255,0.1); border-radius: 20px; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5); }
-.progress-fill { height: 100%; background: linear-gradient(90deg, #ef4444, #f59e0b); border-radius: 20px; transition: width 0.5s ease; box-shadow: 0 0 10px rgba(245, 158, 11, 0.4); }
-.progress-fill.achieved { background: linear-gradient(90deg, #10b981, #3b82f6); box-shadow: 0 0 10px rgba(16, 185, 129, 0.5); }
-@keyframes bounce { 0%, 100% {transform: translateY(0);} 50% {transform: translateY(-3px);} }
+.goal-bar{
+ height:100%;
+ background:#22c55e;
+}
 </style>
 </head>
 
@@ -132,10 +128,8 @@ th,td{ border:1px solid #cbd5e0; padding:4px; text-align:center; font-size:12px;
  <div class="items" id="btnContainer"></div>
 </div>
 
-<div id="targetDashboard" class="target-dashboard">
-  <h3>🔥 今日の目標進捗 🔥</h3>
-  <div id="targetListUI"></div>
-</div>
+<!-- ★目標表示 -->
+<div class="card" id="goalDisplay"></div>
 
 </div>
 
@@ -161,16 +155,6 @@ th,td{ border:1px solid #cbd5e0; padding:4px; text-align:center; font-size:12px;
  <option value="#f1f5f9"></option>
 </datalist>
 
-<div class="card full-width" style="background: #fdf8e3; border: 1px solid #fde047;">
-  <h3>🎯 今日の目標設定</h3>
-  <div class="add-form">
-   <select id="targetItemSelect"></select>
-   <input type="number" id="targetNum" placeholder="目標件数 (0で解除)" style="max-width: 150px;">
-   <button onclick="setTarget()" style="background:#ca8a04;">設定</button>
-  </div>
-  <p style="font-size:12px; color:#713f12; margin:0;">※商材を選んで件数を入れると、入力画面に気合の入る進捗バーが表示されます！</p>
-</div>
-
 <div class="settings-grid">
  <div class="card">
   <h3>スタッフ管理</h3>
@@ -190,6 +174,12 @@ th,td{ border:1px solid #cbd5e0; padding:4px; text-align:center; font-size:12px;
   </div>
   <div id="itemListUI"></div>
  </div>
+</div>
+
+<!-- ★今日の目標設定 -->
+<div class="card">
+ <h3>今日の目標設定</h3>
+ <div id="goalPanel"></div>
 </div>
 
 </div>
@@ -227,33 +217,26 @@ async function seed(){
  const s=await db.collection("settings").get();
  if(!s.empty) return; 
  ["榎本","田中","佐藤"].forEach((n,i)=>db.collection("settings").add({type:"staff",name:n,order:i}));
- ["ひかり","カード","でんき","スマホ"].forEach((n,i)=>db.collection("settings").add({type:"item",name:n,color:pastel[i]||"#f1f5f9",order:i,target:0}));
+ ["ひかり","カード","でんき","スマホ"].forEach((n,i)=>db.collection("settings").add({type:"item",name:n,color:pastel[i]||"#f1f5f9",order:i}));
 }
 seed();
 
 /* ================= Data ================= */
 let staffList=[],itemList=[],records=[];
-
 const today = new Date();
 const dateStr = `${today.getMonth() + 1}/${today.getDate()}`;
 document.getElementById('boardTitle').textContent = `${dateStr} のがんばるシート`;
 
-/* Settings realtime */
 db.collection("settings").orderBy("order", "asc").onSnapshot(snap=>{
  staffList=[];itemList=[];
  snap.forEach(d=>{
   const v=d.data();v.id=d.id;
   if(v.type=="staff") staffList.push(v);
-  if(v.type=="item") {
-    // 既存データにtargetが無ければ0にする
-    if(v.target === undefined) v.target = 0; 
-    itemList.push(v);
-  }
+  if(v.type=="item") itemList.push(v);
  });
  renderAll();
 });
 
-/* Sales realtime */
 db.collection("sales").onSnapshot(snap=>{
  records=snap.docs.map(d=>({id:d.id,...d.data()}));
  renderAll();
@@ -265,7 +248,6 @@ const btnContainer=document.getElementById("btnContainer");
 const boardTable=document.getElementById("boardTable");
 const staffListUI=document.getElementById("staffListUI");
 const itemListUI=document.getElementById("itemListUI");
-const targetItemSelect=document.getElementById("targetItemSelect"); // 追加
 
 /* Staff Lock */
 let lockedStaff=localStorage.getItem("lockedStaff")||"";
@@ -296,9 +278,6 @@ function renderAll(){
   document.getElementById('lockBtn').textContent="🔓 固定OFF";
   document.getElementById('lockBtn').classList.remove("locked");
  }
-
- // 目標設定用のプルダウン更新
- targetItemSelect.innerHTML=itemList.map(it=>`<option value="${it.id}">${it.name} ${it.target > 0 ? '(現在設定:'+it.target+'件)' : ''}</option>`).join("");
 
  btnContainer.innerHTML=itemList.map(it=>`
  <div class="item-box">
@@ -333,6 +312,8 @@ function renderAll(){
 
  updateCounts();
  renderBoard();
+ renderGoalPanel();
+ renderGoalsOnInput();
 }
 
 /* ================= Sales ================= */
@@ -348,33 +329,16 @@ function removeRecord(item){
  if(r) db.collection("sales").doc(r.id).delete();
 }
 
-/* ================= 目標設定 ================= */
-window.setTarget = function() {
-  const itemId = document.getElementById("targetItemSelect").value;
-  const num = Number(document.getElementById("targetNum").value) || 0;
-  if(itemId) {
-    db.collection("settings").doc(itemId).update({target: num});
-    document.getElementById("targetNum").value = "";
-    if(num > 0) alert(`目標を ${num} 件に設定しました！気合入れていきましょう！`);
-    else alert(`目標を解除しました。`);
-  }
-}
-
-/* ================= Counts, Ranking & Target Dashboard ================= */
+/* ================= Counts + Ranking ================= */
 function updateCounts(){
  const today=new Date().toISOString().slice(0,10);
  const staff=lockedStaff||staffSelect.value;
 
- let targetHtml = "";
- let hasTargets = false;
-
  itemList.forEach(it=>{
-  // 個人のカウント
   const c=records.filter(r=>r.item==it.name&&r.staff==staff&&r.date==today).length;
   const countEl = document.getElementById("count_"+it.name);
   if(countEl) countEl.textContent=c+"件";
 
-  // ランキング
   const rank={};
   records.filter(r=>r.item==it.name&&r.date==today).forEach(r=>{
    rank[r.staff]=(rank[r.staff]||0)+1;
@@ -382,40 +346,7 @@ function updateCounts(){
   const sorted=Object.entries(rank).sort((a,b)=>b[1]-a[1]).slice(0,3);
   const rankEl = document.getElementById("rank_"+it.name);
   if(rankEl) rankEl.innerHTML=sorted.map((r,i)=>`${i+1}位 ${r[0]}:${r[1]}件`).join("<br>");
-
-  // ★目標ダッシュボードの構築（店全体の件数で計算）
-  if (it.target > 0) {
-    hasTargets = true;
-    const totalC = records.filter(r=>r.item==it.name&&r.date==today).length;
-    let pct = Math.floor((totalC / it.target) * 100);
-    if (pct > 100) pct = 100;
-    let isAchieved = totalC >= it.target;
-
-    targetHtml += `
-    <div class="target-item">
-      <div class="target-header">
-        <span class="target-name">🎯 ${it.name}</span>
-        <span class="target-numbers ${isAchieved ? 'achieved' : ''}">
-            ${isAchieved ? '🎉 達成!!' : `現在: ${totalC} / 目標: ${it.target} (あと ${it.target - totalC} 件!)`}
-        </span>
-      </div>
-      <div class="progress-bg">
-        <div class="progress-fill ${isAchieved ? 'achieved' : ''}" style="width: ${pct}%;"></div>
-      </div>
-    </div>`;
-  }
  });
-
- // ダッシュボードの表示/非表示切り替え
- const dash = document.getElementById("targetDashboard");
- if(dash) {
-   if (hasTargets) {
-     dash.style.display = "block";
-     document.getElementById("targetListUI").innerHTML = targetHtml;
-   } else {
-     dash.style.display = "none";
-   }
- }
 }
 
 /* ================= Board Table ================= */
@@ -428,23 +359,20 @@ function renderBoard(){
   if(count > maxCols) maxCols = count;
  });
 
- let html="<tr><th class='row-header' style='background:#f9fafb;'>商材名</th>";
+ let html="<tr><th class='row-header' style='background:#f9fafb;'>商材名</th><th class='square-cell'>合計</th>";
  for(let i=1; i<=maxCols; i++){
   html+=`<th class='square-cell'>${i}</th>`;
  }
  html+="</tr>";
 
  itemList.forEach(it=>{
-  // ★修正点：商材名の横に、その日のトータル件数をバッジっぽく表示
-  const count = records.filter(r=>r.item==it.name&&r.date==today).length;
-  html+=`<tr><th class='row-header' style='background:${it.color}; color:#333;'>
-    <div style="display:flex; justify-content:space-between; align-items:center; gap:15px;">
-      <span>${it.name}</span>
-      <span style="background:white; border:1px solid #94a3b8; border-radius:12px; padding:2px 8px; font-size:11px; font-weight:bold; color:#1e293b; white-space:nowrap; box-shadow:0 1px 2px rgba(0,0,0,0.1);">計 ${count}件</span>
-    </div>
-  </th>`;
-  
   const itemRecords = records.filter(r=>r.item==it.name&&r.date==today);
+  const total=itemRecords.length;
+
+  html+=`<tr>
+   <th class='row-header' style='background:${it.color}; color:#333;'>${it.name}</th>
+   <td class='square name-cell' style="font-weight:bold;">${total}件</td>`;
+
   for(let i=0; i<maxCols; i++){
    const staffName = itemRecords[i] ? itemRecords[i].staff : '';
    const cellClass = staffName ? 'name-cell' : '';
@@ -465,7 +393,7 @@ function addStaff(){
 function addItem(){
  const n=document.getElementById("newItem").value;
  const c=document.getElementById("newColor").value;
- if(n) db.collection("settings").add({type:"item",name:n,color:c,order:Date.now(),target:0});
+ if(n) db.collection("settings").add({type:"item",name:n,color:c,order:Date.now()});
  document.getElementById("newItem").value = "";
 }
 function editSetting(id,name,color){
@@ -507,4 +435,83 @@ async function handleDrop(e, targetId) {
  if (li) li.classList.remove('over');
  
  const sourceId = e.dataTransfer.getData('text/plain');
- i
+ if (sourceId && sourceId !== targetId && dragType) {
+  const list = (dragType === 'staff') ? [...staffList] : [...itemList];
+  const draggedIdx = list.findIndex(i => i.id === sourceId);
+  const targetIdx = list.findIndex(i => i.id === targetId);
+  
+  if (draggedIdx > -1 && targetIdx > -1) {
+   const item = list.splice(draggedIdx, 1)[0];
+   list.splice(targetIdx, 0, item);
+   
+   const batch = db.batch();
+   list.forEach((it, index) => {
+    batch.update(db.collection("settings").doc(it.id), { order: index });
+   });
+   await batch.commit();
+  }
+ }
+ return false;
+}
+
+function handleDragEnd(e) {
+ document.querySelectorAll('.list-ui li').forEach(el => {
+  el.classList.remove('dragging', 'over');
+ });
+}
+
+/* ================= Goals ================= */
+let goals = {};
+
+db.collection("goals").onSnapshot(snap=>{
+ goals={};
+ snap.forEach(d=>{
+  goals[d.data().item]=d.data();
+ });
+ renderGoalPanel();
+ renderGoalsOnInput();
+});
+
+function renderGoalPanel(){
+ const goalPanel=document.getElementById("goalPanel");
+ if(!goalPanel) return;
+
+ goalPanel.innerHTML=itemList.map(it=>{
+  const g=goals[it.name]?.target||"";
+  return `
+   <div style="display:flex; gap:8px; margin-bottom:8px; align-items:center;">
+    <div style="flex:1; font-weight:bold;">${it.name}</div>
+    <input type="number" value="${g}" placeholder="目標件数" style="width:100px; padding:6px;" 
+     onchange="setGoal('${it.name}',this.value)">
+   </div>`;
+ }).join("");
+}
+
+function setGoal(item,val){
+ db.collection("goals").doc(item).set({item, target:Number(val)});
+}
+
+function renderGoalsOnInput(){
+ const box=document.getElementById("goalDisplay");
+ if(!box) return;
+ const today=new Date().toISOString().slice(0,10);
+
+ box.innerHTML=itemList.map(it=>{
+  const target=goals[it.name]?.target||0;
+  if(!target) return "";
+  const current=records.filter(r=>r.item==it.name&&r.date==today).length;
+  const pct=Math.min(100, Math.round(current/target*100));
+
+  return `
+  <div class="goal-box">
+   🔥 ${it.name} 目標 ${target}件 / 現在 ${current}件 (${pct}%)
+   <div class="goal-progress">
+    <div class="goal-bar" style="width:${pct}%"></div>
+   </div>
+  </div>`;
+ }).join("");
+}
+</script>
+
+</body>
+</html>
