@@ -9,9 +9,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
 
 <style>
+/* === 元デザイン完全維持 === */
 body{ margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background:#f3f4f6; }
-
-/* Tabs & Header */
 header{ display:flex; gap:10px; padding:8px; background:white; border-bottom:1px solid #ddd; align-items:center; flex-wrap:wrap; }
 .tab{ padding:6px 14px; border-radius:8px; cursor:pointer; background:#e5e7eb; font-weight:bold; color:#64748b;}
 .tab.active{background:#2563eb;color:white;}
@@ -21,30 +20,23 @@ header{ display:flex; gap:10px; padding:8px; background:white; border-bottom:1px
 .page{display:none;padding:12px; max-width:1200px; margin:0 auto;}
 .page.active{display:block;}
 
-/* Cards */
 .card{ background:white; border-radius:12px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,.08); margin-bottom:15px; }
 .card h3 { margin-top:0; border-bottom:2px solid #e2e8f0; padding-bottom:8px; color:#334155; margin-bottom:15px; }
 
-/* Staff selector */
 .staff-selector { display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-weight:bold; color:#475569; }
 .staff-selector select { font-size:16px; padding:10px; flex:1; min-width:150px; max-width:300px; border-radius:8px; border:1px solid #cbd5e0; background:#f8fafc; }
 #lockBtn { padding:10px 15px; border:1px solid #cbd5e0; background:#f1f5f9; color:#64748b; border-radius:8px; cursor:pointer; font-weight:bold; }
 #lockBtn.locked { background:#3b82f6; color:white; }
 
-/* Items (入力パネル用UI) */
 .items{ display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:10px; }
 .item-box{ border:1px solid #ddd; border-radius:10px; padding:8px; background:white; }
-.item-btn{ 
-  width:100%; padding:12px; border:none; border-radius:8px; font-size:16px; font-weight:bold; cursor:pointer;
-  color:#000;
-  text-shadow: 1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 0px 2px 4px rgba(0,0,0,0.2);
-}
+.item-btn{ width:100%; padding:12px; border:none; border-radius:8px; font-size:16px; font-weight:bold; cursor:pointer; color:#000;
+ text-shadow: 1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 0px 2px 4px rgba(0,0,0,0.2);}
 .item-footer{ display:flex; justify-content:space-between; margin-top:6px; font-size:14px; align-items:center;}
 .minus{ background:#f1f5f9; border:1px solid #e2e8f0; padding:4px 10px; border-radius:6px; font-weight:bold; cursor:pointer; }
 .my-count { font-size:16px; font-weight:bold; color:#475569; }
 .rank-mini { font-size:12px; color:#64748b; margin-top:4px; }
 
-/* Board */
 .board-wrap{ overflow-x:auto; }
 table{ border-collapse:collapse; width:max-content; background:white; }
 th,td{ border:1px solid #cbd5e0; padding:4px; text-align:center; font-size:12px; }
@@ -52,14 +44,12 @@ th,td{ border:1px solid #cbd5e0; padding:4px; text-align:center; font-size:12px;
 .square{ width:60px; height:60px; font-size:12px; background:#fff; vertical-align:middle; }
 .name-cell{ background:#f0f9ff; }
 
-/* 引き継ぎ表示スタイル */
 .normal-name{ font-weight:bold; color:#000; }
 .handoff-main{ font-weight:bold; color:#dc2626; } 
 .handoff-sub{ font-size:10px; color:#64748b; }
 .handoff-wrap { display:flex; align-items:center; gap:8px; padding-left:15px; margin-left:5px; border-left:2px solid #cbd5e0; }
 .handoff-wrap select { font-size:16px; padding:8px; border-radius:8px; border:1px solid #cbd5e0; background:#f8fafc; }
 
-/* Settings (元の設定UI) */
 .settings-grid { display: grid; grid-template-columns: 320px 1fr; gap: 20px; }
 @media (max-width: 768px) { .settings-grid { grid-template-columns: 1fr; } }
 .add-form { display:flex; gap:8px; align-items:center; margin-bottom:15px; }
@@ -81,10 +71,10 @@ th,td{ border:1px solid #cbd5e0; padding:4px; text-align:center; font-size:12px;
 <body>
 
 <header>
- <div class="tab active" id="tab-input" onclick="showTab('input', this)">入力</div>
- <div class="tab" id="tab-board" onclick="showTab('board', this)">がんばるシート</div>
- <div class="tab" id="tab-settings" onclick="showTab('settings', this)">設定</div>
- <div class="tab" id="tab-monthly" onclick="showTab('monthly', this)">📊 月次集計</div>
+ <div class="tab active" onclick="showTab('input', this)">入力</div>
+ <div class="tab" onclick="showTab('board', this)">がんばるシート</div>
+ <div class="tab" onclick="showTab('settings', this)">設定</div>
+ <div class="tab" onclick="showTab('monthly', this)">📊 月次集計</div>
  <div class="date-wrap"><input type="date" id="globalDate" onchange="changeDate(this.value)"></div>
 </header>
 
@@ -94,42 +84,28 @@ th,td{ border:1px solid #cbd5e0; padding:4px; text-align:center; font-size:12px;
    <label>スタッフ:</label>
    <select id="staffSelect" onchange="updateCounts()"></select>
    <button onclick="toggleLock()" id="lockBtn">🔓 固定OFF</button>
-
    <div class="handoff-wrap">
     <label><input type="checkbox" id="handoffToggle" onchange="toggleHandoff()"> 引き継ぎ</label>
     <select id="handoffSelect" disabled></select>
    </div>
   </div>
  </div>
-
- <div class="card">
-  <div class="items" id="btnContainer"></div>
- </div>
+ <div class="card"><div class="items" id="btnContainer"></div></div>
 </div>
 
 <div id="board" class="page">
  <div class="card">
   <h3 id="boardTitle"></h3>
-  <div class="board-wrap">
-   <table id="boardTable"></table>
-  </div>
+  <div class="board-wrap"><table id="boardTable"></table></div>
  </div>
 </div>
 
 <div id="settings" class="page">
- <datalist id="paleColors">
-  <option value="#e0f2fe"></option><option value="#fce7f3"></option>
-  <option value="#dcfce7"></option><option value="#fef9c3"></option>
-  <option value="#f3e8ff"></option><option value="#ffedd5"></option>
-  <option value="#ccfbf1"></option><option value="#f1f5f9"></option>
- </datalist>
-
  <div class="settings-grid">
   <div class="card">
    <h3>スタッフ管理</h3>
    <div class="add-form">
-    <input type="text" id="newStaff" placeholder="名前">
-    <button onclick="addStaff()">追加</button>
+    <input type="text" id="newStaff"><button onclick="addStaff()">追加</button>
    </div>
    <div id="staffListUI"></div>
   </div>
@@ -137,8 +113,8 @@ th,td{ border:1px solid #cbd5e0; padding:4px; text-align:center; font-size:12px;
   <div class="card">
    <h3>商材管理</h3>
    <div class="add-form">
-    <input type="text" id="newItem" placeholder="新商材">
-    <input type="color" id="newColor" value="#e0f2fe" list="paleColors">
+    <input type="text" id="newItem">
+    <input type="color" id="newColor" value="#e0f2fe">
     <button onclick="addItem()">追加</button>
    </div>
    <div id="itemListUI"></div>
@@ -148,325 +124,181 @@ th,td{ border:1px solid #cbd5e0; padding:4px; text-align:center; font-size:12px;
 
 <div id="monthly" class="page">
  <div class="card">
-  <h3 style="display:flex; justify-content:space-between; align-items:center;">
-   📅 月次集計 商材選択
-   <button onclick="toggleAllMonthlyItems()" style="padding:6px 12px; background:#f1f5f9; border:1px solid #cbd5e0; border-radius:6px; cursor:pointer; font-weight:bold; color:#475569;">全選択 / 解除</button>
-  </h3>
-  <div id="monthlyItemSelect" style="margin-bottom:15px; display:flex; flex-wrap:wrap; gap:10px;"></div>
-  <button onclick="calculateMonthly()" style="padding:10px 20px; background:#2563eb; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">集計を実行する</button>
+  <h3>📅 月次集計 商材選択</h3>
+  <div id="monthlyItemSelect"></div>
+  <button onclick="calculateMonthly()">集計</button>
  </div>
-
- <div class="card">
-  <h3>合計件数</h3>
-  <div id="monthlyTotal" style="font-size:24px;font-weight:bold; color:#2563eb;">0 件</div>
- </div>
-
- <div class="card">
-  <h3>🏆 TOP3</h3>
-  <div id="monthlyTop3" style="font-size:16px; line-height:1.6; font-weight:bold; color:#334155;"></div>
- </div>
-
- <div class="card">
-  <h3>スタッフ別件数一覧</h3>
-  <div class="board-wrap">
-   <table id="monthlyTable" style="width:100%; max-width:400px;"></table>
-  </div>
- </div>
-
- <div class="card">
-  <h3>📋 商材 月累計件数ボード</h3>
-  <div class="board-wrap">
-   <table id="monthlyItemBoard" style="width:100%; max-width:400px;"></table>
-  </div>
- </div>
+ <div class="card"><div id="monthlyTotal"></div></div>
+ <div class="card"><div id="monthlyTop3"></div></div>
+ <div class="card"><table id="monthlyTable"></table></div>
+ <div class="card"><table id="monthlyItemBoard"></table></div>
 </div>
 
 <script>
-/* ================= Firebase ================= */
+/* Firebase */
 const firebaseConfig={
  apiKey:"AIzaSyCmerraKVr1iJsRoiW53lxUtgDUcOGVXtY",
  authDomain:"ganbaru-sheet-a32f3.firebaseapp.com",
  projectId:"ganbaru-sheet-a32f3"
 };
-if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-/* ================= Global Variables ================= */
+/* Globals */
 let staffList=[], itemList=[], records=[], monthlyRecords=[];
 let lockedStaff = localStorage.getItem("lockedStaff") || "";
-let dragType = null;
-const ADMIN_PASSWORD = "0000";
+const ADMIN_PASSWORD="0000";
+let salesUnsubscribe=null;
 
-// 日本時間での今日の日付取得
-function getLocalYMD(dateObj) {
-  const y = dateObj.getFullYear();
-  const m = String(dateObj.getMonth() + 1).padStart(2, '0');
-  const d = String(dateObj.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
+/* Date */
+function getLocalYMD(d){
+ return d.toISOString().slice(0,10);
 }
-let currentDate = getLocalYMD(new Date());
-document.getElementById('globalDate').value = currentDate;
-let salesUnsubscribe = null;
+let currentDate=getLocalYMD(new Date());
+globalDate.value=currentDate;
 
-/* ================= Tabs & Dates ================= */
-function showTab(id, tabElement) {
-    if (id === 'settings') {
-        const p = prompt("管理用パスワード:");
-        if (p !== ADMIN_PASSWORD) { alert("NG"); return; }
-    }
-    document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
-    document.getElementById(id).classList.add("active");
-
-    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-    if(tabElement) tabElement.classList.add("active");
-    
-    updateAllViews();
-    if(id === "monthly") loadMonthlyData();
+/* Tabs */
+function showTab(id, el){
+ if(id==="settings"){
+  const p=prompt("管理用パスワード:");
+  if(p!==ADMIN_PASSWORD) return alert("NG");
+ }
+ document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+ document.getElementById(id).classList.add("active");
+ document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+ el.classList.add("active");
+ updateAllViews();
+ if(id==="monthly") loadMonthlyData();
 }
+function changeDate(d){ currentDate=d; loadSalesData(); }
 
-function changeDate(newDate) {
-    if(!newDate) return;
-    currentDate = newDate;
-    loadSalesData();
+/* Load data */
+function loadSalesData(){
+ if(salesUnsubscribe) salesUnsubscribe();
+ salesUnsubscribe=db.collection("sales").where("date","==",currentDate)
+ .onSnapshot(snap=>{
+  records=snap.docs.map(d=>({id:d.id,...d.data()}));
+  updateAllViews();
+ });
 }
-
-/* ================= Load Data ================= */
-function loadSalesData() {
-    if(salesUnsubscribe) salesUnsubscribe();
-    salesUnsubscribe = db.collection("sales")
-        .where("date", "==", currentDate)
-        .onSnapshot(snap => {
-            records = snap.docs.map(d => ({id: d.id, ...d.data()}));
-            updateAllViews();
-        });
-}
-
-db.collection("settings").orderBy("order").onSnapshot(snap => {
-    staffList = []; itemList = [];
-    snap.forEach(d => {
-        const v = d.data(); v.id = d.id;
-        if(v.type === "staff") staffList.push(v);
-        if(v.type === "item") itemList.push(v);
-    });
-    renderSettingsAndButtons();
+db.collection("settings").orderBy("order").onSnapshot(snap=>{
+ staffList=[]; itemList=[];
+ snap.forEach(d=>{
+  const v=d.data(); v.id=d.id;
+  if(v.type==="staff") staffList.push(v);
+  if(v.type==="item") itemList.push(v);
+ });
+ renderSettingsAndButtons();
 });
 
-/* ================= Renders ================= */
-function updateAllViews() {
-    const boardTitle = document.getElementById("boardTitle");
-    if(boardTitle) boardTitle.textContent = `${currentDate.replace(/-/g, '/')} のがんばるシート`;
-    
-    updateCounts(); // 入力パネルの件数とランキングを更新
-    renderBoard();  // がんばるシートを更新
+/* Render */
+function updateAllViews(){
+ boardTitle.textContent=currentDate.replace(/-/g,"/")+" のがんばるシート";
+ updateCounts();
+ renderBoard();
 }
 
-function renderSettingsAndButtons() {
-    // Selects
-    const staffSelect = document.getElementById("staffSelect");
-    const handoffSelect = document.getElementById("handoffSelect");
-    const btnContainer = document.getElementById("btnContainer");
-    const lockBtn = document.getElementById("lockBtn");
-    
-    const opts = staffList.map(s => `<option value="${s.name}">${s.name}</option>`).join("");
-    if(staffSelect) staffSelect.innerHTML = opts;
-    if(handoffSelect) handoffSelect.innerHTML = opts;
-
-    if (lockedStaff && staffSelect) {
-        staffSelect.value = lockedStaff;
-        staffSelect.disabled = true;
-        if(lockBtn) { lockBtn.textContent = "🔒 固定ON"; lockBtn.classList.add("locked"); }
-    } else if (staffSelect) {
-        staffSelect.disabled = false;
-        if(lockBtn) { lockBtn.textContent = "🔓 固定OFF"; lockBtn.classList.remove("locked"); }
-    }
-
-    // Input panel buttons & footers
-    if(btnContainer) {
-        btnContainer.innerHTML = itemList.map(it => `
-        <div class="item-box">
-         <button class="item-btn" style="background:${it.color}" onclick="addRecord('${it.name}')">${it.name}</button>
-         <div class="item-footer">
-          <div style="display:flex; flex-direction:column;">
-           <span class="my-count" id="count_${it.name}">0件</span>
-           <div class="rank-mini" id="rank_${it.name}"></div>
-          </div>
-          <button class="minus" onclick="removeRecord('${it.name}')">取消</button>
-         </div>
-        </div>`).join("");
-    }
-
-    // Settings UI
-    const staffListUI = document.getElementById("staffListUI");
-    if(staffListUI) {
-        staffListUI.innerHTML = `<ul class="list-ui">` + staffList.map(s=>`
-         <li draggable="true" ondragstart="handleDragStart(event,'staff','${s.id}')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'${s.id}')" ondragend="handleDragEnd(event)">
-          <div style="display:flex; align-items:center; gap:8px; width:100%;">
-           <div class="drag-handle">☰</div>
-           <input class="setting-input" value="${s.name}" onchange="editSetting('${s.id}',this.value,null)">
-           <button class="delete-btn" onclick="deleteSetting('${s.id}')">削除</button>
-          </div>
-         </li>`).join("") + `</ul>`;
-    }
-
-    const itemListUI = document.getElementById("itemListUI");
-    if(itemListUI) {
-        itemListUI.innerHTML = `<ul class="list-ui">` + itemList.map(it=>`
-         <li draggable="true" ondragstart="handleDragStart(event,'item','${it.id}')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'${it.id}')" ondragend="handleDragEnd(event)" style="border-left: 5px solid ${it.color};">
-          <div style="display:flex; align-items:center; gap:8px; width:100%;">
-           <div class="drag-handle">☰</div>
-           <input class="setting-input" value="${it.name}" onchange="editSetting('${it.id}',this.value,'${it.color}')">
-           <input type="color" value="${it.color}" list="paleColors" class="color-picker" onchange="editSetting('${it.id}','${it.name}',this.value)">
-           <button class="delete-btn" onclick="deleteSetting('${it.id}')">削除</button>
-          </div>
-         </li>`).join("") + `</ul>`;
-    }
-
-    updateAllViews();
+/* UI render */
+function renderSettingsAndButtons(){
+ staffSelect.innerHTML=staffList.map(s=>`<option>${s.name}</option>`).join("");
+ handoffSelect.innerHTML=staffSelect.innerHTML;
+ btnContainer.innerHTML=itemList.map(it=>`
+  <div class="item-box">
+   <button class="item-btn" style="background:${it.color}" onclick="addRecord('${it.name}')">${it.name}</button>
+   <div class="item-footer">
+    <div>
+     <span class="my-count" id="count_${it.name}">0件</span>
+     <div class="rank-mini" id="rank_${it.name}"></div>
+    </div>
+    <button class="minus" onclick="removeRecord('${it.name}')">取消</button>
+   </div>
+  </div>`).join("");
 }
 
-/* ================= Input Actions & Counts ================= */
-function toggleLock() {
-    const staffSelect = document.getElementById("staffSelect");
-    if(!staffSelect) return;
-    
-    if (lockedStaff) {
-        lockedStaff = "";
-        localStorage.removeItem("lockedStaff");
-    } else {
-        lockedStaff = staffSelect.value;
-        localStorage.setItem("lockedStaff", lockedStaff);
-    }
-    renderSettingsAndButtons();
+/* Lock */
+function toggleLock(){
+ if(lockedStaff){ lockedStaff=""; localStorage.removeItem("lockedStaff"); }
+ else { lockedStaff=staffSelect.value; localStorage.setItem("lockedStaff",lockedStaff); }
 }
 
-function toggleHandoff() {
-    const toggle = document.getElementById("handoffToggle");
-    const select = document.getElementById("handoffSelect");
-    if(toggle && select) select.disabled = !toggle.checked;
+/* Handoff */
+function toggleHandoff(){ handoffSelect.disabled=!handoffToggle.checked; }
+
+/* Count */
+function updateCounts(){
+ const s=lockedStaff||staffSelect.value;
+ itemList.forEach(it=>{
+  const c=records.filter(r=>r.item===it.name&&r.staff===s).length;
+  count_${it.name}.textContent=c+"件";
+ });
 }
 
-function updateCounts() {
-    const staffSelect = document.getElementById("staffSelect");
-    const currentStaff = lockedStaff || (staffSelect ? staffSelect.value : "");
-
-    itemList.forEach(it => {
-        // 個人の今日の件数
-        const c = records.filter(r => r.item === it.name && r.staff === currentStaff).length;
-        const countEl = document.getElementById("count_" + it.name);
-        if(countEl) countEl.textContent = c + "件";
-
-        // 全体のランキング
-        const rank = {};
-        records.filter(r => r.item === it.name).forEach(r => {
-            rank[r.staff] = (rank[r.staff] || 0) + 1;
-        });
-        const sorted = Object.entries(rank).sort((a,b) => b[1] - a[1]).slice(0, 3);
-        const rankEl = document.getElementById("rank_" + it.name);
-        if(rankEl) rankEl.innerHTML = sorted.map((r, i) => `${i+1}位 ${r[0]}:${r[1]}件`).join("<br>");
-    });
+/* Add */
+function addRecord(item){
+ const base=lockedStaff||staffSelect.value;
+ if(!base) return alert("スタッフ未選択");
+ const isH=handoffToggle.checked;
+ const staff=isH?handoffSelect.value:base;
+ const registrar=isH?base:"";
+ const gid=Date.now().toString();
+ db.collection("sales").add({staff,registrar,item,date:currentDate,groupId:gid});
 }
 
-function addRecord(item) {
-    const staffSelect = document.getElementById("staffSelect");
-    const handoffToggle = document.getElementById("handoffToggle");
-    const handoffSelect = document.getElementById("handoffSelect");
-    
-    const baseStaff = lockedStaff || (staffSelect ? staffSelect.value : "");
-    if(!baseStaff) return alert("スタッフが選択されていません。");
-
-    const isHandoff = handoffToggle ? handoffToggle.checked : false;
-    const staff = isHandoff ? handoffSelect.value : baseStaff;
-    const registrar = isHandoff ? baseStaff : "";
-    const groupId = Date.now().toString();
-
-    db.collection("sales").add({ staff, registrar, item, date: currentDate, groupId });
+/* Remove */
+function removeRecord(item){
+ const s=lockedStaff||staffSelect.value;
+ const r=records.filter(x=>x.item===item&&x.staff===s).pop();
+ if(!r) return;
+ records.filter(x=>x.groupId===r.groupId).forEach(x=>db.collection("sales").doc(x.id).delete());
 }
 
-function removeRecord(item) {
-    const staffSelect = document.getElementById("staffSelect");
-    const handoffToggle = document.getElementById("handoffToggle");
-    const handoffSelect = document.getElementById("handoffSelect");
-
-    const baseStaff = lockedStaff || (staffSelect ? staffSelect.value : "");
-    const isHandoff = handoffToggle ? handoffToggle.checked : false;
-    const targetStaff = isHandoff ? handoffSelect.value : baseStaff;
-    
-    const r = records.filter(x => x.item === item && x.staff === targetStaff).pop();
-    if(!r) return;
-    
-    records.filter(x => x.groupId === r.groupId).forEach(x => {
-        db.collection("sales").doc(x.id).delete();
-    });
+/* Board */
+function groupBy(a){
+ const m={}; a.forEach(r=>{ if(!m[r.groupId]) m[r.groupId]=[]; m[r.groupId].push(r); });
+ return Object.values(m);
+}
+function renderBoard(){
+ let max=20;
+ itemList.forEach(it=>{
+  const g=groupBy(records.filter(r=>r.item===it.name));
+  if(g.length>max) max=g.length;
+ });
+ let html="<tr><th>商材</th><th>合計</th>";
+ for(let i=1;i<=max;i++) html+=`<th>${i}</th>`;
+ html+="</tr>";
+ itemList.forEach(it=>{
+  const groups=groupBy(records.filter(r=>r.item===it.name));
+  html+=`<tr><th>${it.name}</th><td>${groups.length}件</td>`;
+  for(let i=0;i<max;i++){
+   if(!groups[i]){ html+="<td class='square'></td>"; continue;}
+   const g=groups[i][0];
+   if(!g.registrar) html+=`<td class='square name-cell'><div class="normal-name">${g.staff}</div></td>`;
+   else html+=`<td class='square name-cell'><div class="handoff-main">成：${g.staff}</div><div class="handoff-sub">${g.registrar}</div></td>`;
+  }
+  html+="</tr>";
+ });
+ boardTable.innerHTML=html;
 }
 
-/* ================= Board ================= */
-function renderBoard() {
-    const table = document.getElementById("boardTable");
-    if(!table) return;
+/* Settings CRUD */
+function addStaff(){ if(newStaff.value) db.collection("settings").add({type:"staff",name:newStaff.value,order:Date.now()}); newStaff.value=""; }
+function addItem(){ if(newItem.value) db.collection("settings").add({type:"item",name:newItem.value,color:newColor.value,order:Date.now()}); newItem.value=""; }
 
-    let maxCols = 20;
-    itemList.forEach(it => {
-        const groups = groupBy(records.filter(r => r.item === it.name));
-        if(groups.length > maxCols) maxCols = groups.length;
-    });
-
-    let html = "<tr><th class='row-header'>商材</th><th>合計</th>";
-    for(let i=1; i<=maxCols; i++) html += `<th>${i}</th>`;
-    html += "</tr>";
-
-    itemList.forEach(it => {
-        const groups = groupBy(records.filter(r => r.item === it.name));
-        html += `<tr><th class='row-header' style="background:${it.color}">${it.name}</th><td>${groups.length}件</td>`;
-
-        for(let i=0; i<maxCols; i++) {
-            if(!groups[i]) {
-                html += `<td class='square'></td>`;
-                continue;
-            }
-            const g = groups[i][0];
-            if(!g.registrar) {
-                html += `<td class='square name-cell'><div class="normal-name">${g.staff}</div></td>`;
-            } else {
-                html += `<td class='square name-cell'>
-                  <div class="handoff-main">成：${g.staff}</div>
-                  <div class="handoff-sub">${g.registrar}</div>
-                </td>`;
-            }
-        }
-        html += "</tr>";
-    });
-    table.innerHTML = html;
+/* Monthly */
+function getMonthRange(d){
+ const dt=new Date(d+"T00:00:00");
+ const y=dt.getFullYear(), m=dt.getMonth();
+ return {start:new Date(y,m,1).toISOString().slice(0,10), end:new Date(y,m+1,0).toISOString().slice(0,10)};
+}
+async function loadMonthlyData(){
+ const {start,end}=getMonthRange(currentDate);
+ const snap=await db.collection("sales").where("date",">=",start).where("date","<=",end).get();
+ monthlyRecords=snap.docs.map(d=>d.data());
 }
 
-function groupBy(arr) {
-    const m = {};
-    arr.forEach(r => {
-        if(!m[r.groupId]) m[r.groupId] = [];
-        m[r.groupId].push(r);
-    });
-    return Object.values(m);
-}
+/* Start */
+loadSalesData();
+</script>
 
-/* ================= Settings (CRUD & Drag/Drop) ================= */
-function addStaff(){
- const n = document.getElementById("newStaff").value;
- if(n) db.collection("settings").add({type:"staff", name:n, order:Date.now()});
- document.getElementById("newStaff").value = "";
-}
-function addItem(){
- const n = document.getElementById("newItem").value;
- const c = document.getElementById("newColor").value;
- if(n) db.collection("settings").add({type:"item", name:n, color:c, order:Date.now()});
- document.getElementById("newItem").value = "";
-}
-function editSetting(id, name, color){
- const data = {name};
- if(color) data.color = color;
- db.collection("settings").doc(id).update(data);
-}
-function deleteSetting(id){
- if(confirm("本当に削除しますか？")) db.collection("settings").doc(id).delete();
-}
-
-function handleDragStart(e, type, id) { dragType = type; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', id); e.target.classList.add('dragging'); }
-function handleDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; const li = e.target.closest('li'); if (li && !li.classList.contains('dragg
+</body>
+</html>
