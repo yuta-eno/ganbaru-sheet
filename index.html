@@ -445,13 +445,27 @@ db.collection("goals").onSnapshot(snap=>{
 function renderGoalPanel(){
  const goalPanel=document.getElementById("goalPanel");
  if(!goalPanel) return;
+ 
+ goalPanel.style.display="grid";
+ goalPanel.style.gridTemplateRows="repeat(15, max-content)";
+ goalPanel.style.gridAutoFlow="column";
+ goalPanel.style.gap="4px 20px";
+ goalPanel.style.overflowX="auto";
+
  goalPanel.innerHTML=itemList.map(it=>{
-  const g=goals[it.name]?.target||"";
+  const g=goals[it.name]?.target||0;
+  let opts="";
+  for(let i=0; i<=99; i++){
+   const num = i < 10 ? "0" + i : i;
+   opts+=`<option value="${i}" ${g==i?'selected':''}>${num}</option>`;
+  }
   return `
-   <div style="display:flex; gap:8px; margin-bottom:8px; align-items:center;">
-    <div style="flex:1; font-weight:bold;">${it.name}</div>
-    <input type="number" value="${g}" placeholder="目標件数" style="width:100px; padding:6px;" 
+   <div style="display:flex; gap:4px; align-items:center; justify-content:space-between;">
+    <div style="font-weight:bold; font-size:14px; white-space:nowrap;">${it.name}</div>
+    <select style="width:55px; padding:4px; border:1px solid #cbd5e0; border-radius:6px; font-size:16px; text-align:center; background:#fff; cursor:pointer;" 
      onchange="setGoal('${it.name}',this.value)">
+     ${opts}
+    </select>
    </div>`;
  }).join("");
 }
@@ -498,3 +512,4 @@ function renderGoalsOnInput(){
 
 </body>
 </html>
+
