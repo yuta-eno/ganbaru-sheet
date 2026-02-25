@@ -2,267 +2,149 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GANBARU SHEET PRO</title>
 
-<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
-
 <style>
-body{ margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background:#f3f4f6; }
-
-/* Tabs */
-header{ display:flex; gap:10px; padding:8px; background:white; border-bottom:1px solid #ddd; }
-.tab{ padding:6px 14px; border-radius:8px; cursor:pointer; background:#e5e7eb; font-weight:bold; color:#64748b;}
-.tab.active{background:#2563eb;color:white;}
-
-.page{display:none;padding:12px; max-width:1200px; margin:0 auto;}
-.page.active{display:block;}
-
-/* Cards */
-.card{ background:white; border-radius:12px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,.08); margin-bottom:15px; }
-.card h3 { margin-top:0; border-bottom:2px solid #e2e8f0; padding-bottom:8px; color:#334155; margin-bottom:15px; }
-
-/* Staff selector */
-.staff-selector { display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-weight:bold; color:#475569; }
-.staff-selector select { font-size:16px; padding:10px; flex:1; min-width:150px; max-width:300px; border-radius:8px; border:1px solid #cbd5e0; background:#f8fafc; }
-#lockBtn { padding:10px 15px; border:1px solid #cbd5e0; background:#f1f5f9; color:#64748b; border-radius:8px; cursor:pointer; font-weight:bold; }
-#lockBtn.locked { background:#3b82f6; color:white; }
-
-/* Items */
-.items{ display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:10px; }
-.item-box{ border:1px solid #ddd; border-radius:10px; padding:8px; background:white; }
-.item-btn{ width:100%; padding:12px; border:none; border-radius:8px; font-size:16px; font-weight:bold; cursor:pointer;}
-.item-footer{ display:flex; justify-content:space-between; margin-top:6px; font-size:14px; align-items:center;}
-.minus{ background:#f1f5f9; border:1px solid #e2e8f0; padding:4px 10px; border-radius:6px; font-weight:bold; cursor:pointer; }
-
-/* Board */
-.board-wrap{ overflow-x:auto; }
-table{ border-collapse:collapse; width:max-content; background:white; }
-th,td{ border:1px solid #cbd5e0; padding:4px; text-align:center; font-size:12px; }
-.row-header { position:sticky; left:0; z-index:1; font-weight:bold; background:#f8fafc; }
-.square{ width:60px; height:60px; font-size:12px; background:#fff; vertical-align:middle; }
-.name-cell{ background:#f0f9ff; }
-
-/* 引き継ぎ表示スタイル */
-.normal-name{ font-weight:bold; color:#000; }
-.handoff-main{ font-weight:bold; color:#dc2626; } /* 赤 */
-.handoff-sub{ font-size:10px; color:#64748b; }
-
-/* 引き継ぎ UI */
-.handoff-wrap {
- display:flex; align-items:center; gap:8px;
- padding-left:15px; margin-left:5px; border-left:2px solid #cbd5e0;
+body {
+  font-family: Arial, sans-serif;
+  background:#f8fafc;
+  padding:10px;
 }
-.handoff-wrap select {
- font-size:16px; padding:8px; border-radius:8px;
- border:1px solid #cbd5e0; background:#f8fafc;
+
+#board {
+  display:grid;
+  grid-template-columns:repeat(10, 1fr);
+  gap:4px;
+  background:white;
+  padding:10px;
+  border:2px solid #ddd;
+}
+
+.cell {
+  width:100%;
+  aspect-ratio:1/1;
+  border:1px solid #ddd;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:12px;
+  background:white;
+}
+
+#ganbaruSheet {
+  margin-top:20px;
+  display:grid;
+  grid-template-columns:repeat(10, 1fr);
+  gap:4px;
+}
+
+.sheet-box {
+  border:1px solid #ddd;
+  background:white;
+  text-align:center;
+  padding:2px;
+}
+
+.sheet-top {
+  font-weight:bold;
+  color:red;
+}
+
+.sheet-bottom {
+  font-size:0.7em;
+  color:#999;
 }
 </style>
 </head>
 
 <body>
 
-<header>
- <div class="tab active" onclick="showTab('input')">入力</div>
- <div class="tab" onclick="showTab('board')">がんばるシート</div>
- <div class="tab" onclick="showTab('settings')">設定</div>
-</header>
+<h3>成約入力</h3>
 
-<div id="input" class="page active">
+<select id="staffSelect">
+  <option>山田</option>
+  <option>佐藤</option>
+  <option>鈴木</option>
+</select>
 
-<div class="card">
- <div class="staff-selector">
-  <label>スタッフ:</label>
-  <select id="staffSelect"></select>
-  <button onclick="toggleLock()" id="lockBtn">🔓 固定OFF</button>
+<label>
+<input type="checkbox" id="handoverCheck"> 引き継ぎ
+</label>
 
-  <div class="handoff-wrap">
-   <label><input type="checkbox" id="handoffToggle"> 引き継ぎ</label>
-   <select id="handoffSelect" disabled></select>
-  </div>
- </div>
-</div>
+<select id="handoverFromSelect">
+  <option>山田</option>
+  <option>佐藤</option>
+  <option>鈴木</option>
+</select>
 
-<div class="card">
- <div class="items" id="btnContainer"></div>
-</div>
+<button onclick="submitSuccess()">追加</button>
+<button onclick="clearGanbaruSheet()">引き継ぎOFF（頑張るシート消去）</button>
 
-</div>
+<h3>ボード</h3>
+<div id="board"></div>
 
-<div id="board" class="page">
- <div class="card">
-  <h3 id="boardTitle"></h3>
-  <div class="board-wrap">
-   <table id="boardTable"></table>
-  </div>
- </div>
-</div>
-
-<div id="settings" class="page">
- <div class="card"><h3>設定画面（原本維持）</h3></div>
-</div>
+<h3>頑張るシート</h3>
+<div id="ganbaruSheet"></div>
 
 <script>
-/* Firebase */
-const firebaseConfig={
- apiKey:"AIzaSyCmerraKVr1iJsRoiW53lxUtgDUcOGVXtY",
- authDomain:"ganbaru-sheet-a32f3.firebaseapp.com",
- projectId:"ganbaru-sheet-a32f3"
-};
-firebase.initializeApp(firebaseConfig);
-const db=firebase.firestore();
+// ===== 成約追加 =====
+function submitSuccess() {
+  const staffName = document.getElementById("staffSelect").value;
+  const isHandover = document.getElementById("handoverCheck").checked;
+  const handoverFrom = document.getElementById("handoverFromSelect").value;
 
-/* Tabs */
-const ADMIN_PASSWORD="0000";
-function showTab(id){
- if(id==='settings'){
-  const p=prompt("管理用パスワード:");
-  if(p!==ADMIN_PASSWORD){ alert("NG"); return; }
- }
- document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
- document.getElementById(id).classList.add("active");
- document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
- event.target.classList.add("active");
+  addSuccess(staffName, isHandover, handoverFrom);
 }
 
-/* Data */
-let staffList=[], itemList=[], records=[];
-const today=new Date();
-document.getElementById("boardTitle").textContent=`${today.getMonth()+1}/${today.getDate()} のがんばるシート`;
 
-/* Load settings */
-db.collection("settings").orderBy("order").onSnapshot(snap=>{
- staffList=[]; itemList=[];
- snap.forEach(d=>{
-  const v=d.data(); v.id=d.id;
-  if(v.type=="staff") staffList.push(v);
-  if(v.type=="item") itemList.push(v);
- });
- renderAll();
-});
+// ===== 核心処理（修正版） =====
+function addSuccess(staffName, isHandover=false, handoverFrom=null) {
+  const board = document.getElementById("board");
 
-/* Load sales */
-db.collection("sales").onSnapshot(snap=>{
- records=snap.docs.map(d=>({id:d.id,...d.data()}));
- renderBoard();
-});
+  const cell = document.createElement("div");
+  cell.className = "cell";
 
-/* UI refs */
-const staffSelect=document.getElementById("staffSelect");
-const handoffSelect=document.getElementById("handoffSelect");
-const btnContainer=document.getElementById("btnContainer");
-const boardTable=document.getElementById("boardTable");
-const lockBtn=document.getElementById("lockBtn");
-const handoffToggle=document.getElementById("handoffToggle");
-
-/* Lock */
-let lockedStaff=localStorage.getItem("lockedStaff")||"";
-function toggleLock(){
- if(lockedStaff){
-  lockedStaff="";
-  localStorage.removeItem("lockedStaff");
-  lockBtn.textContent="🔓 固定OFF";
-  lockBtn.classList.remove("locked");
- }else{
-  lockedStaff=staffSelect.value;
-  localStorage.setItem("lockedStaff",lockedStaff);
-  lockBtn.textContent="🔒 固定ON";
-  lockBtn.classList.add("locked");
- }
-}
-
-/* Render */
-function renderAll(){
- const opts=staffList.map(s=>`<option>${s.name}</option>`).join("");
- staffSelect.innerHTML=opts;
- handoffSelect.innerHTML=opts;
-
- btnContainer.innerHTML=itemList.map(it=>`
- <div class="item-box">
-  <button class="item-btn" style="background:${it.color}" onclick="addRecord('${it.name}')">${it.name}</button>
-  <div class="item-footer">
-   <button class="minus" onclick="removeRecord('${it.name}')">取消</button>
-  </div>
- </div>`).join("");
-}
-
-/* 成約登録 */
-function addRecord(item){
- const staff = lockedStaff || staffSelect.value;
- const registrar = handoffToggle.checked ? handoffSelect.value : "";
- const date=new Date().toISOString().slice(0,10);
- const groupId=Date.now().toString();
- db.collection("sales").add({staff, registrar, item, date, groupId});
-}
-
-/* 取消 */
-function removeRecord(item){
- const today=new Date().toISOString().slice(0,10);
- const r=records.filter(r=>r.item==item && r.date==today).pop();
- if(!r) return;
- records.filter(x=>x.groupId==r.groupId).forEach(x=>{
-  db.collection("sales").doc(x.id).delete();
- });
-}
-
-/* ボード描画 */
-function renderBoard(){
- const today=new Date().toISOString().slice(0,10);
- let maxCols=20;
-
- itemList.forEach(it=>{
-  const groups=groupBy(records.filter(r=>r.item==it.name && r.date==today));
-  if(groups.length>maxCols) maxCols=groups.length;
- });
-
- let html="<tr><th class='row-header'>商材</th><th>合計</th>";
- for(let i=1;i<=maxCols;i++) html+=`<th>${i}</th>`;
- html+="</tr>";
-
- itemList.forEach(it=>{
-  const groups=groupBy(records.filter(r=>r.item==it.name && r.date==today));
-  html+=`<tr><th class='row-header' style="background:${it.color}">${it.name}</th>
-  <td>${groups.length}件</td>`;
-
-  for(let i=0;i<maxCols;i++){
-   if(!groups[i]){
-    html+=`<td class='square'></td>`;
-    continue;
-   }
-
-   const g=groups[i][0];
-
-   // 通常成約
-   if(!g.registrar){
-    html+=`<td class='square name-cell'><div class="normal-name">${g.staff}</div></td>`;
-   }
-   // 引き継ぎ成約
-   else{
-    html+=`<td class='square name-cell'>
-      <div class="handoff-main">成：${g.staff}</div>
-      <div class="handoff-sub">${g.registrar}</div>
-    </td>`;
-   }
+  // 通常成約（A）
+  if (!isHandover) {
+    cell.textContent = staffName;
+    cell.style.color = "black";
+    board.appendChild(cell);
+    return;
   }
-  html+="</tr>";
- });
 
- boardTable.innerHTML=html;
+  // ===== 引き継ぎ成約 =====
+  // ★ マス内は「引き継ぎ元」＋成：
+  cell.textContent = "成：" + handoverFrom;
+  cell.style.color = "red";
+  board.appendChild(cell);
+
+  // ===== 頑張るシート =====
+  const sheet = document.getElementById("ganbaruSheet");
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "sheet-box";
+
+  // 上段：引き継ぎ元（赤 成：）
+  const top = document.createElement("div");
+  top.className = "sheet-top";
+  top.textContent = "成：" + handoverFrom;
+
+  // 下段：登録者（小文字グレー）
+  const bottom = document.createElement("div");
+  bottom.className = "sheet-bottom";
+  bottom.textContent = staffName;
+
+  wrapper.appendChild(top);
+  wrapper.appendChild(bottom);
+  sheet.appendChild(wrapper);
 }
 
-/* group helper */
-function groupBy(arr){
- const m={};
- arr.forEach(r=>{
-  if(!m[r.groupId]) m[r.groupId]=[];
-  m[r.groupId].push(r);
- });
- return Object.values(m);
-}
 
-/* 引き継ぎ select disable */
-handoffToggle.onchange=()=>handoffSelect.disabled=!handoffToggle.checked;
+// ===== 引き継ぎOFF時：頑張るシート空白 =====
+function clearGanbaruSheet() {
+  document.getElementById("ganbaruSheet").innerHTML = "";
+}
 </script>
 
 </body>
