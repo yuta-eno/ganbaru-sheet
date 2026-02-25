@@ -213,7 +213,6 @@ function showTab(id){
 let currentDate = new Date();
 let currentDateStr = "";
 
-// ローカルタイムで YYYY-MM-DD 形式を取得する関数（タイムゾーンズレ防止）
 function getLocalDateStr(dateObj) {
   const y = dateObj.getFullYear();
   const m = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -226,12 +225,10 @@ function updateDateUI() {
   document.getElementById("datePicker").value = currentDateStr;
   document.getElementById("boardTitle").textContent = `${currentDate.getMonth()+1}/${currentDate.getDate()} のがんばるシート`;
   
-  // 日付が切り替わったら再描画
-  if(records.length > 0) {
-    updateCounts();
-    renderBoard();
-    renderGoalsOnInput();
-  }
+  // 日付変更時に必ず全画面を再描画する
+  updateCounts();
+  renderBoard();
+  renderGoalsOnInput();
 }
 
 function changeDate(days) {
@@ -245,14 +242,15 @@ function setDate(dateStr) {
   updateDateUI();
 }
 
-// 初期化
-updateDateUI();
 /* =========================================== */
 
 /* Data */
 let staffList=[], itemList=[], records=[];
 
-/* Load settings */
+/* 最初に日付をセット */
+updateDateUI();
+
+/* Load settings (スタッフ・商材の変更監視) */
 db.collection("settings").orderBy("order").onSnapshot(snap=>{
  staffList=[]; itemList=[];
  snap.forEach(d=>{
@@ -260,10 +258,10 @@ db.collection("settings").orderBy("order").onSnapshot(snap=>{
   if(v.type=="staff") staffList.push(v);
   if(v.type=="item") itemList.push(v);
  });
- renderAll();
+ renderAll(); // 設定が更新されたらUI全体を作り直す
 });
 
-/* Load sales */
+/* Load sales (売上の変更監視) */
 db.collection("sales").onSnapshot(snap=>{
  records=snap.docs.map(d=>({id:d.id,...d.data()}));
  renderBoard();
@@ -298,9 +296,9 @@ function toggleLock(){
  updateCounts();
 }
 
-/* Render */
+/* ★設定・データが絡む全UIを一括描画する関数（修正ポイント）★ */
 function renderAll(){
- const opts=staffList.map(s=>`<option>${s.name}</option>`).join("");
+ const opts=staffList.map(s=>`<option value="${s.name}">${s.name}</option>`).join("");
  staffSelect.innerHTML=opts;
  handoffSelect.innerHTML=opts;
 
@@ -346,8 +344,11 @@ function renderAll(){
   </div>
  </li>`).join("") + `</ul>`;
 
+ // 設定が変更された際に、ボードや目標や件数もすべて最新状態へ再描画させる
  updateCounts();
  renderGoalPanel();
+ renderBoard();
+ renderGoalsOnInput();
 }
 
 /* ランキングと件数の更新処理 */
@@ -355,7 +356,6 @@ function updateCounts(){
  const currentStaff = lockedStaff || staffSelect.value;
 
  itemList.forEach(it=>{
-  // currentDateStr でフィルタリング
   const c = records.filter(r=>r.item==it.name && r.staff==currentStaff && r.date==currentDateStr).length;
   const countEl = document.getElementById("count_"+it.name);
   if(countEl) countEl.textContent=c+"件";
@@ -385,7 +385,6 @@ function removeRecord(item){
  const baseStaff = lockedStaff || staffSelect.value;
  const targetStaff = handoffToggle.checked ? handoffSelect.value : baseStaff;
  
- // 選択中の日付のレコードを取り消し
  const r=records.filter(r=>r.item==item && r.date==currentDateStr && r.staff==targetStaff).pop();
  if(!r) return;
  
@@ -396,10 +395,13 @@ function removeRecord(item){
 
 /* ボード描画 */
 function renderBoard(){
- let maxCols=20;
+ if(itemList.length === 0) {
+  boardTable.innerHTML = "";
+  return;
+ }
 
+ let maxCols=20;
  itemList.forEach(it=>{
-  // currentDateStr でフィルタリング
   const groups=groupBy(records.filter(r=>r.item==it.name && r.date==currentDateStr));
   if(groups.length>maxCols) maxCols=groups.length;
  });
@@ -524,7 +526,4 @@ function renderGoalPanel(){
   return `
    <div style="display:flex; align-items:center;">
     <div style="font-weight:bold; font-size:14px; width:112px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${it.name}</div>
-    <select style="width:55px; padding:4px; border:1px solid #cbd5e0; border-radius:6px; font-size:16px; text-align:center; background:#fff; cursor:pointer;" 
-     onchange="setGoal('${it.name}',this.value)">
-     ${opts}
-   
+    <select style="width:55px; padding:4px; border:1px solid #cbd5e0; border-radius:6px; font-size:16px; text-align:center; backgrou
