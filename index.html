@@ -97,9 +97,9 @@ th,td{ border:1px solid #cbd5e0; padding:4px; text-align:center; font-size:12px;
 <body>
 
 <header>
- <div class="tab active" id="tab-input" onclick="showTab('input')">入力</div>
- <div class="tab" id="tab-board" onclick="showTab('board')">がんばるシート</div>
- <div class="tab" id="tab-settings" onclick="showTab('settings')">設定</div>
+ <div class="tab active" onclick="showTab('input', this)">入力</div>
+ <div class="tab" onclick="showTab('board', this)">がんばるシート</div>
+ <div class="tab" onclick="showTab('settings', this)">設定</div>
  <div class="date-wrap">
   <input type="date" id="globalDate" onchange="changeDate(this.value)">
  </div>
@@ -179,7 +179,7 @@ th,td{ border:1px solid #cbd5e0; padding:4px; text-align:center; font-size:12px;
 
 <script>
 /* ==========================================
-   1. 変数と初期設定
+   1. 初期設定・Firebase接続
    ========================================== */
 const firebaseConfig={
  apiKey:"AIzaSyCmerraKVr1iJsRoiW53lxUtgDUcOGVXtY",
@@ -192,12 +192,11 @@ if (!firebase.apps.length) {
 const db = firebase.firestore();
 
 let staffList = [], itemList = [], records = [], goals = {};
-let lockedStaff = "";
-try { lockedStaff = localStorage.getItem("lockedStaff") || ""; } catch(e){}
+let lockedStaff = localStorage.getItem("lockedStaff") || "";
 let dragType = null;
 const ADMIN_PASSWORD = "0000";
 
-// 今日の日付を取得 (YYYY-MM-DD形式)
+// 日本時間で今日の日付を取得
 function getLocalYMD(dateObj) {
   const y = dateObj.getFullYear();
   const m = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -205,71 +204,39 @@ function getLocalYMD(dateObj) {
   return `${y}-${m}-${d}`;
 }
 let currentDate = getLocalYMD(new Date());
-let salesUnsubscribe = null; // 日付切り替え時のリスナー解除用
+document.getElementById('globalDate').value = currentDate;
 
 
 /* ==========================================
-   2. 起動処理 (HTML要素が準備完了してから実行)
+   2. タブ切り替え ＆ 日付切り替え
    ========================================== */
-window.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('globalDate').value = currentDate;
-    
-    // 設定データの読み込み
-    db.collection("settings").orderBy("order").onSnapshot(snap => {
-        staffList = []; itemList = [];
-        snap.forEach(d => {
-            const v = d.data(); v.id = d.id;
-            if(v.type === "staff") staffList.push(v);
-            if(v.type === "item") itemList.push(v);
-        });
-        renderAllSettingsAndButtons();
-    });
-
-    // 目標データの読み込み
-    db.collection("goals").onSnapshot(snap => {
-        goals = {};
-        snap.forEach(d => { goals[d.data().item] = d.data(); });
-        renderGoalPanel();
-        updateAllViews();
-    });
-
-    // 売上データ(今日の日付)の読み込みを開始
-    loadSalesData();
-});
-
-
-/* ==========================================
-   3. タブ・日付切り替え機能
-   ========================================== */
-function showTab(id) {
+function showTab(id, tabElement) {
     if (id === 'settings') {
         const p = prompt("管理用パスワード:");
         if (p !== ADMIN_PASSWORD) { alert("NG"); return; }
     }
     
-    // ページ表示切り替え
+    // パネル表示切り替え
     document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
-    const targetPage = document.getElementById(id);
-    if(targetPage) targetPage.classList.add("active");
+    document.getElementById(id).classList.add("active");
 
-    // タブの色切り替え (IDベースで確実に発火)
+    // 色切り替え
     document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-    const targetTab = document.getElementById("tab-" + id);
-    if(targetTab) targetTab.classList.add("active");
+    if(tabElement) tabElement.classList.add("active");
     
     updateAllViews();
 }
 
+let salesUnsubscribe = null;
 function changeDate(newDate) {
     if(!newDate) return;
     currentDate = newDate;
-    loadSalesData(); // 日付が変わったらデータを再取得
+    loadSalesData(); // 日付変更で売上データを再取得
 }
 
-// 選択された日付のデータだけをFirebaseから取得する機能
 function loadSalesData() {
-    if(salesUnsubscribe) salesUnsubscribe(); // 過去の監視を解除
-    
+    if(salesUnsubscribe) salesUnsubscribe();
+    // 選択された日付の売上だけを取得 (軽量化・バグ防止)
     salesUnsubscribe = db.collection("sales")
         .where("date", "==", currentDate)
         .onSnapshot(snap => {
@@ -280,7 +247,7 @@ function loadSalesData() {
 
 
 /* ==========================================
-   4. UI描画・更新統括
+   3. 描画・更新統括
    ========================================== */
 function updateAllViews() {
     const boardTitle = document.getElementById("boardTitle");
@@ -355,7 +322,7 @@ function renderAllSettingsAndButtons() {
 
 
 /* ==========================================
-   5. 入力アクション・件数・ボード描画
+   4. 入力アクション ＆ 集計・ボード表示
    ========================================== */
 function toggleLock() {
     const staffSelect = document.getElementById("staffSelect");
@@ -363,10 +330,10 @@ function toggleLock() {
     
     if (lockedStaff) {
         lockedStaff = "";
-        try{ localStorage.removeItem("lockedStaff"); }catch(e){}
+        localStorage.removeItem("lockedStaff");
     } else {
         lockedStaff = staffSelect.value;
-        try{ localStorage.setItem("lockedStaff", lockedStaff); }catch(e){}
+        localStorage.setItem("lockedStaff", lockedStaff);
     }
     renderAllSettingsAndButtons();
 }
@@ -382,7 +349,6 @@ function updateCounts() {
     const currentStaff = lockedStaff || (staffSelect ? staffSelect.value : "");
 
     itemList.forEach(it => {
-        // ※records は既に選択された日付のものだけになっています
         const c = records.filter(r => r.item === it.name && r.staff === currentStaff).length;
         const countEl = document.getElementById("count_" + it.name);
         if(countEl) countEl.textContent = c + "件";
@@ -480,7 +446,7 @@ function groupBy(arr) {
 
 
 /* ==========================================
-   6. 設定関連・ドラッグ＆ドロップ・目標
+   5. 設定操作 ＆ ドラッグ＆ドロップ ＆ 目標
    ========================================== */
 function addStaff(){
  const n = document.getElementById("newStaff").value;
@@ -502,4 +468,19 @@ function deleteSetting(id){
  if(confirm("本当に削除しますか？")) db.collection("settings").doc(id).delete();
 }
 
-function handleDragStart(e, type, id) { dragType = 
+function handleDragStart(e, type, id) { dragType = type; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', id); e.target.classList.add('dragging'); }
+function handleDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; const li = e.target.closest('li'); if (li && !li.classList.contains('dragging')) li.classList.add('over'); return false; }
+function handleDragLeave(e) { const li = e.target.closest('li'); if (li) li.classList.remove('over'); }
+async function handleDrop(e, targetId) {
+ e.stopPropagation(); e.preventDefault();
+ const li = e.target.closest('li'); if (li) li.classList.remove('over');
+ const sourceId = e.dataTransfer.getData('text/plain');
+ if (sourceId && sourceId !== targetId && dragType) {
+  const list = (dragType === 'staff') ? [...staffList] : [...itemList];
+  const draggedIdx = list.findIndex(i => i.id === sourceId);
+  const targetIdx = list.findIndex(i => i.id === targetId);
+  if (draggedIdx > -1 && targetIdx > -1) {
+   const item = list.splice(draggedIdx, 1)[0];
+   list.splice(targetIdx, 0, item);
+   const batch = db.batch();
+   list.forEach((it, index) => { batch.update(db.collect
