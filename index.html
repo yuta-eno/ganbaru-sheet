@@ -124,6 +124,9 @@ td,th{border:1px solid #cbd5e0;padding:4px;text-align:center;font-size:12px}
 <div id="monthly" class="page">
  <div class="card">
   <h3>📅 月次集計 商材選択</h3>
+  <div style="margin-bottom:10px;">
+   <button onclick="deselectAllMonthlyItems()" style="background:#e2e8f0; color:#475569; border:none; padding:6px 12px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">☑ 選択を全て解除</button>
+  </div>
   <div id="monthlyItemSelect" style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:15px;"></div>
   <button onclick="calculateMonthly()" style="background:#2563eb; color:white; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; cursor:pointer;">集計</button>
  </div>
@@ -447,6 +450,11 @@ function renderMonthlyItemSelector(){
    <input type="checkbox" value="${it.name}" checked> ${it.name}
   </label>
  `).join("");
+}
+
+/* ★追加：選択を全て解除する関数 */
+function deselectAllMonthlyItems(){
+ document.querySelectorAll("#monthlyItemSelect input[type='checkbox']").forEach(cb => cb.checked = false);
 }
 
 function calculateMonthly(){
