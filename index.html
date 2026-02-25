@@ -30,9 +30,6 @@ header{ display:flex; gap:10px; padding:8px; background:white; border-bottom:1px
 #lockBtn { padding:10px 15px; border:1px solid #cbd5e0; background:#f1f5f9; color:#64748b; border-radius:8px; cursor:pointer; font-weight:bold; white-space:nowrap; transition:0.3s; }
 #lockBtn.locked { background:#3b82f6; color:white; border-color:#2563eb; }
 
-/* ★引き継ぎUI */
-#handoverSelect { display:none; }
-
 /* Input buttons */
 .items{ display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:10px; }
 .item-box{ border:1px solid #ddd; border-radius:10px; padding:8px; background:white; }
@@ -68,7 +65,44 @@ th,td{ border:1px solid #cbd5e0; padding:4px; text-align:center; font-size:12px;
 .settings-grid { display: grid; grid-template-columns: 320px 1fr; gap: 20px; }
 @media (max-width: 768px) { .settings-grid { grid-template-columns: 1fr; } }
 
-/* ===== 省略：CSSは一切変更していません ===== */
+.add-form { display:flex; gap:8px; align-items:center; margin-bottom:15px; }
+.add-form input[type="text"] { flex:1; min-width:0; padding:10px; border:1px solid #cbd5e0; border-radius:6px; font-size:14px; }
+.add-form input[type="color"] { width:45px; height:40px; padding:2px; border:1px solid #cbd5e0; border-radius:6px; cursor:pointer; flex-shrink:0;}
+.add-form button { padding:10px 15px; background:#64748b; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold; flex-shrink:0;}
+
+.list-ui { list-style:none; padding:0; margin:0; max-height:500px; overflow-y:auto; }
+.list-ui li { display:flex; justify-content:space-between; align-items:center; padding:6px 8px; border-bottom:1px solid #edf2f7; background:white; margin-bottom:4px; border-radius:6px; transition:0.2s;}
+
+.drag-handle { cursor: grab; font-size: 18px; color: #94a3b8; padding: 0 4px; user-select: none; }
+.drag-handle:active { cursor: grabbing; }
+.list-ui li.dragging { opacity: 0.4; background: #f8fafc; border: 1px dashed #cbd5e0; }
+.list-ui li.over { border-top: 3px solid #3b82f6; }
+
+.delete-btn { background:#fca5a5; color:#7f1d1d; border:none; padding:8px 12px; border-radius:6px; font-size:12px; cursor:pointer; font-weight:bold; flex-shrink:0;}
+.setting-input { flex:1; min-width:50px; padding:8px; border:1px solid #cbd5e0; border-radius:6px; font-weight:bold; }
+.color-picker { cursor:pointer; width:40px; height:36px; border:1px solid #cbd5e0; border-radius:4px; padding:2px; flex-shrink:0;}
+
+/* ★目標表示 */
+.goal-box{
+ background:linear-gradient(135deg,#fde047,#f97316);
+ padding:15px;
+ border-radius:12px;
+ color:#000;
+ font-weight:bold;
+ box-shadow:0 4px 10px rgba(0,0,0,0.2);
+ margin-bottom:10px;
+}
+.goal-progress{
+ background:white;
+ height:14px;
+ border-radius:8px;
+ overflow:hidden;
+ margin-top:6px;
+}
+.goal-bar{
+ height:100%;
+ background:#22c55e;
+}
 </style>
 </head>
 
@@ -87,10 +121,9 @@ th,td{ border:1px solid #cbd5e0; padding:4px; text-align:center; font-size:12px;
   <label>スタッフ:</label>
   <select id="staffSelect"></select>
   <button onclick="toggleLock()" id="lockBtn">🔓 固定OFF</button>
-
-  <!-- ★追加 引き継ぎ -->
-  <label><input type="checkbox" id="handoverToggle"> 引き継ぎ</label>
-  <select id="handoverSelect"></select>
+  
+  <button onclick="toggleHandover()" id="handoverBtn" style="padding:10px 15px; border:1px solid #cbd5e0; background:#f1f5f9; color:#64748b; border-radius:8px; cursor:pointer; font-weight:bold; white-space:nowrap; transition:0.3s; margin-left:10px;">🤝 引き継ぎOFF</button>
+  <select id="handoverSelect" style="display:none; font-size:16px; padding:10px; flex:1; min-width:120px; max-width:200px; border-radius:8px; border:1px solid #cbd5e0; background:#f8fafc;"></select>
  </div>
 </div>
 
@@ -102,7 +135,55 @@ th,td{ border:1px solid #cbd5e0; padding:4px; text-align:center; font-size:12px;
 
 </div>
 
-<!-- ===== 以下 HTML 全く変更なし ===== -->
+<div id="board" class="page">
+ <div class="card">
+  <h3 id="boardTitle">本日の成約ボード</h3>
+  <div class="board-wrap">
+   <table id="boardTable"></table>
+  </div>
+ </div>
+</div>
+
+<div id="settings" class="page">
+
+<datalist id="paleColors">
+ <option value="#e0f2fe"></option>
+ <option value="#fce7f3"></option>
+ <option value="#dcfce7"></option>
+ <option value="#fef9c3"></option>
+ <option value="#f3e8ff"></option>
+ <option value="#ffedd5"></option>
+ <option value="#ccfbf1"></option>
+ <option value="#f1f5f9"></option>
+</datalist>
+
+<div class="settings-grid">
+ <div class="card">
+  <h3>スタッフ管理</h3>
+  <div class="add-form">
+   <input type="text" id="newStaff" placeholder="名前">
+   <button onclick="addStaff()">追加</button>
+  </div>
+  <div id="staffListUI"></div>
+ </div>
+
+ <div class="card">
+  <h3>商材管理</h3>
+  <div class="add-form">
+   <input type="text" id="newItem" placeholder="新商材">
+   <input type="color" id="newColor" value="#e0f2fe" list="paleColors">
+   <button onclick="addItem()">追加</button>
+  </div>
+  <div id="itemListUI"></div>
+ </div>
+</div>
+
+<div class="card">
+ <h3>今日の目標設定</h3>
+ <div id="goalPanel"></div>
+</div>
+
+</div>
 
 <script>
 /* ================= Firebase ================= */
@@ -114,60 +195,193 @@ const firebaseConfig={
 firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore();
 
+/* ================= Tabs ================= */
+const ADMIN_PASSWORD = "0000";
+
+function showTab(id){
+ if(id === 'settings') {
+  const pass = prompt("管理用パスワードを入力してください:");
+  if(pass !== ADMIN_PASSWORD) {
+   if(pass !== null) alert("パスワードが違います。");
+   return;
+  }
+ }
+ document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+ document.getElementById(id).classList.add("active");
+ document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+ event.target.classList.add("active");
+}
+
+/* ================= Seed ================= */
+const pastel=["#e0f2fe","#fce7f3","#dcfce7","#fef9c3","#f3e8ff"];
+async function seed(){
+ const s=await db.collection("settings").get();
+ if(!s.empty) return; 
+ ["榎本","田中","佐藤"].forEach((n,i)=>db.collection("settings").add({type:"staff",name:n,order:i}));
+ ["ひかり","カード","でんき","スマホ"].forEach((n,i)=>db.collection("settings").add({type:"item",name:n,color:pastel[i]||"#f1f5f9",order:i}));
+}
+seed();
+
 /* ================= Data ================= */
 let staffList=[],itemList=[],records=[];
-const staffSelect=document.getElementById("staffSelect");
-const handoverSelect=document.getElementById("handoverSelect"); // ★追加
+const today = new Date();
+const dateStr = `${today.getMonth() + 1}/${today.getDate()}`;
+document.getElementById('boardTitle').textContent = `${dateStr} のがんばるシート`;
 
-/* ================= Staff Lock ================= */
-let lockedStaff=localStorage.getItem("lockedStaff")||"";
-
-/* ===== 引き継ぎ表示制御 ★追加 ===== */
-document.getElementById("handoverToggle").addEventListener("change", e=>{
- handoverSelect.style.display = e.target.checked ? "inline-block" : "none";
+db.collection("settings").orderBy("order", "asc").onSnapshot(snap=>{
+ staffList=[];itemList=[];
+ snap.forEach(d=>{
+  const v=d.data();v.id=d.id;
+  if(v.type=="staff") staffList.push(v);
+  if(v.type=="item") itemList.push(v);
+ });
+ renderAll();
 });
 
-/* ================= Sales ================= */
-function addRecord(item){
- const registrar = lockedStaff||staffSelect.value;
- const isHandover = document.getElementById("handoverToggle").checked;
- const handoverFrom = handoverSelect.value;
- const staff = isHandover ? handoverFrom : registrar;
-
- const date=new Date().toISOString().slice(0,10);
-
- db.collection("sales").add({
-  staff,
-  registrar,
-  handover:isHandover,
-  item,
-  date
- });
-}
-
-function removeRecord(item){
- const staff=lockedStaff||staffSelect.value;
- const today=new Date().toISOString().slice(0,10);
- const r=records.filter(r=>r.item==item&&r.staff==staff&&r.date==today).pop();
- if(r) db.collection("sales").doc(r.id).delete();
-}
+db.collection("sales").onSnapshot(snap=>{
+ records=snap.docs.map(d=>({id:d.id,...d.data()}));
+ renderAll();
+});
 
 /* ================= UI Render ================= */
+const staffSelect=document.getElementById("staffSelect");
+const btnContainer=document.getElementById("btnContainer");
+const boardTable=document.getElementById("boardTable");
+const staffListUI=document.getElementById("staffListUI");
+const itemListUI=document.getElementById("itemListUI");
+
+/* Staff Lock & Handover (★追加・修正) */
+let lockedStaff=localStorage.getItem("lockedStaff")||"";
+let isHandover = false;
+
+function toggleLock(){
+ if(lockedStaff){
+  lockedStaff="";
+  localStorage.removeItem("lockedStaff");
+  document.getElementById('lockBtn').textContent="🔓 固定OFF";
+  document.getElementById('lockBtn').classList.remove("locked");
+ }else{
+  lockedStaff=staffSelect.value;
+  localStorage.setItem("lockedStaff",lockedStaff);
+  document.getElementById('lockBtn').textContent="🔒 固定ON";
+  document.getElementById('lockBtn').classList.add("locked");
+ }
+ renderAll();
+}
+
+function toggleHandover(){
+ isHandover = !isHandover;
+ const btn = document.getElementById('handoverBtn');
+ const sel = document.getElementById('handoverSelect');
+ if(isHandover){
+  btn.textContent = "🤝 引き継ぎON";
+  btn.style.background = "#10b981";
+  btn.style.color = "white";
+  btn.style.borderColor = "#059669";
+  sel.style.display = "inline-block";
+ }else{
+  btn.textContent = "🤝 引き継ぎOFF";
+  btn.style.background = "#f1f5f9";
+  btn.style.color = "#64748b";
+  btn.style.borderColor = "#cbd5e0";
+  sel.style.display = "none";
+ }
+}
+
 function renderAll(){
  staffSelect.innerHTML=staffList.map(s=>`<option>${s.name}</option>`).join("");
- handoverSelect.innerHTML=staffSelect.innerHTML; // ★追加
-
  if(lockedStaff){
   staffSelect.value=lockedStaff;
   staffSelect.disabled=true;
+  document.getElementById('lockBtn').textContent="🔒 固定ON";
+  document.getElementById('lockBtn').classList.add("locked");
  }else{
   staffSelect.disabled=false;
+  document.getElementById('lockBtn').textContent="🔓 固定OFF";
+  document.getElementById('lockBtn').classList.remove("locked");
  }
 
- /* 既存 render 続行 */
+ // ★追加：引き継ぎ用プルダウンの描画
+ const hSel = document.getElementById("handoverSelect");
+ const hPrev = hSel.value;
+ hSel.innerHTML = staffList.map(s=>`<option>${s.name}</option>`).join("");
+ if(hPrev) hSel.value = hPrev;
+
+ btnContainer.innerHTML=itemList.map(it=>`
+ <div class="item-box">
+  <button class="item-btn" style="background:${it.color}" onclick="addRecord('${it.name}')">${it.name}</button>
+  <div class="item-footer">
+   <div style="display:flex; flex-direction:column;">
+    <span class="my-count" id="count_${it.name}">0件</span>
+    <div class="rank-mini" id="rank_${it.name}"></div>
+   </div>
+   <button class="minus" onclick="removeRecord('${it.name}')">− 取消</button>
+  </div>
+ </div>`).join("");
+
+ staffListUI.innerHTML=`<ul class="list-ui">` + staffList.map(s=>`
+ <li draggable="true" ondragstart="handleDragStart(event,'staff','${s.id}')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'${s.id}')" ondragend="handleDragEnd(event)">
+  <div style="display:flex; align-items:center; gap:8px; width:100%;">
+   <div class="drag-handle">☰</div>
+   <input class="setting-input" value="${s.name}" onchange="editSetting('${s.id}',this.value,null)">
+   <button class="delete-btn" onclick="deleteSetting('${s.id}')">削除</button>
+  </div>
+ </li>`).join("") + `</ul>`;
+
+ itemListUI.innerHTML=`<ul class="list-ui">` + itemList.map(it=>`
+ <li draggable="true" ondragstart="handleDragStart(event,'item','${it.id}')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'${it.id}')" ondragend="handleDragEnd(event)" style="border-left: 5px solid ${it.color};">
+  <div style="display:flex; align-items:center; gap:8px; width:100%;">
+   <div class="drag-handle">☰</div>
+   <input class="setting-input" value="${it.name}" onchange="editSetting('${it.id}',this.value,'${it.color}')">
+   <input type="color" value="${it.color}" list="paleColors" class="color-picker" onchange="editSetting('${it.id}','${it.name}',this.value)">
+   <button class="delete-btn" onclick="deleteSetting('${it.id}')">削除</button>
+  </div>
+ </li>`).join("") + `</ul>`;
+
+ updateCounts();
+ renderBoard();
 }
 
-/* ================= Board Table ================= */
+/* ================= Sales (★修正：引き継ぎロジック追加) ================= */
+function addRecord(item){
+ const originator = lockedStaff || staffSelect.value;
+ const receiver = isHandover ? document.getElementById("handoverSelect").value : originator;
+ const date = new Date().toISOString().slice(0,10);
+ // ★登録者(staff)には引き継ぎ者をセット。成約者(originator)も別途保存
+ db.collection("sales").add({staff: receiver, originator: originator, item: item, date: date});
+}
+
+function removeRecord(item){
+ const originator = lockedStaff || staffSelect.value;
+ const receiver = isHandover ? document.getElementById("handoverSelect").value : originator;
+ const today = new Date().toISOString().slice(0,10);
+ // ★成約者と登録者が一致するものを探して消す
+ const r = records.filter(r => r.item == item && r.staff == receiver && (r.originator == originator || !r.originator) && r.date == today).pop();
+ if(r) db.collection("sales").doc(r.id).delete();
+}
+
+/* ================= Counts + Ranking ================= */
+function updateCounts(){
+ const today=new Date().toISOString().slice(0,10);
+ // ★実績数は「引き継ぎ者(staff)」のものをカウントして表示する
+ const currentStaff = lockedStaff || staffSelect.value;
+
+ itemList.forEach(it=>{
+  const c=records.filter(r=>r.item==it.name&&r.staff==currentStaff&&r.date==today).length;
+  const countEl = document.getElementById("count_"+it.name);
+  if(countEl) countEl.textContent=c+"件";
+
+  const rank={};
+  records.filter(r=>r.item==it.name&&r.date==today).forEach(r=>{
+   rank[r.staff]=(rank[r.staff]||0)+1;
+  });
+  const sorted=Object.entries(rank).sort((a,b)=>b[1]-a[1]).slice(0,3);
+  const rankEl = document.getElementById("rank_"+it.name);
+  if(rankEl) rankEl.innerHTML=sorted.map((r,i)=>`${i+1}位 ${r[0]}:${r[1]}件`).join("<br>");
+ });
+}
+
+/* ================= Board Table (★修正：2段表示) ================= */
 function renderBoard(){
  const today=new Date().toISOString().slice(0,10);
  let maxCols = 20;
@@ -177,8 +391,10 @@ function renderBoard(){
   if(count > maxCols) maxCols = count;
  });
 
- let html="<tr><th class='row-header'>商材名</th><th>合計</th>";
- for(let i=1;i<=maxCols;i++) html+=`<th>${i}</th>`;
+ let html="<tr><th class='row-header' style='background:#f9fafb;'>商材名</th><th class='square-cell'>合計</th>";
+ for(let i=1; i<=maxCols; i++){
+  html+=`<th class='square-cell'>${i}</th>`;
+ }
  html+="</tr>";
 
  itemList.forEach(it=>{
@@ -186,25 +402,143 @@ function renderBoard(){
   const total=itemRecords.length;
 
   html+=`<tr>
-   <th class='row-header' style='background:${it.color};'>${it.name}</th>
-   <td class='square name-cell'>${total}件</td>`;
+   <th class='row-header' style='background:${it.color}; color:#333;'>${it.name}</th>
+   <td class='square name-cell' style="font-weight:bold;">${total}件</td>`;
 
-  for(let i=0;i<maxCols;i++){
-   const r=itemRecords[i];
-   if(!r){ html+=`<td class='square'></td>`; continue; }
-
-   if(r.registrar && r.registrar!==r.staff){
-     html+=`<td class='square name-cell'>${r.staff}<br><small>登録:${r.registrar}</small></td>`;
-   }else{
-     html+=`<td class='square name-cell'>${r.staff}</td>`;
+  for(let i=0; i<maxCols; i++){
+   const rec = itemRecords[i];
+   let cellHtml = '';
+   let cellClass = '';
+   if(rec){
+    cellClass = 'name-cell';
+    // ★引き継ぎが行われた場合は「1段目:成約者、2段目:(登録者)」で表示
+    if(rec.originator && rec.originator !== rec.staff){
+     cellHtml = `<div style="line-height:1.2;">${rec.originator}<br><span style="font-size:10px;color:#475569;">(${rec.staff})</span></div>`;
+    } else {
+     cellHtml = rec.staff;
+    }
    }
+   html+=`<td class='square ${cellClass}'>${cellHtml}</td>`;
   }
   html+="</tr>";
  });
 
  boardTable.innerHTML=html;
 }
-</script>
 
-</body>
-</html>
+/* ================= Settings CRUD ================= */
+function addStaff(){
+ const n=document.getElementById("newStaff").value;
+ if(n) db.collection("settings").add({type:"staff",name:n,order:Date.now()});
+ document.getElementById("newStaff").value = "";
+}
+function addItem(){
+ const n=document.getElementById("newItem").value;
+ const c=document.getElementById("newColor").value;
+ if(n) db.collection("settings").add({type:"item",name:n,color:c,order:Date.now()});
+ document.getElementById("newItem").value = "";
+}
+function editSetting(id,name,color){
+ const data={name};
+ if(color) data.color=color;
+ db.collection("settings").doc(id).update(data);
+}
+function deleteSetting(id){
+ if(confirm("本当に削除しますか？")) db.collection("settings").doc(id).delete();
+}
+
+/* ================= Drag & Drop ================= */
+let dragType = null;
+
+function handleDragStart(e, type, id) {
+ dragType = type;
+ e.dataTransfer.effectAllowed = 'move';
+ e.dataTransfer.setData('text/plain', id);
+ e.target.classList.add('dragging');
+}
+
+function handleDragOver(e) {
+ e.preventDefault();
+ e.dataTransfer.dropEffect = 'move';
+ const li = e.target.closest('li');
+ if (li && !li.classList.contains('dragging')) li.classList.add('over');
+ return false;
+}
+
+function handleDragLeave(e) {
+ const li = e.target.closest('li');
+ if (li) li.classList.remove('over');
+}
+
+async function handleDrop(e, targetId) {
+ e.stopPropagation();
+ e.preventDefault();
+ const li = e.target.closest('li');
+ if (li) li.classList.remove('over');
+ 
+ const sourceId = e.dataTransfer.getData('text/plain');
+ if (sourceId && sourceId !== targetId && dragType) {
+  const list = (dragType === 'staff') ? [...staffList] : [...itemList];
+  const draggedIdx = list.findIndex(i => i.id === sourceId);
+  const targetIdx = list.findIndex(i => i.id === targetId);
+  
+  if (draggedIdx > -1 && targetIdx > -1) {
+   const item = list.splice(draggedIdx, 1)[0];
+   list.splice(targetIdx, 0, item);
+   
+   const batch = db.batch();
+   list.forEach((it, index) => {
+    batch.update(db.collection("settings").doc(it.id), { order: index });
+   });
+   await batch.commit();
+  }
+ }
+ return false;
+}
+
+function handleDragEnd(e) {
+ document.querySelectorAll('.list-ui li').forEach(el => {
+  el.classList.remove('dragging', 'over');
+ });
+}
+
+/* ================= Goals ================= */
+let goals = {};
+
+db.collection("goals").onSnapshot(snap=>{
+ goals={};
+ snap.forEach(d=>{
+  goals[d.data().item]=d.data();
+ });
+ renderGoalPanel();
+ renderGoalsOnInput();
+});
+
+function renderGoalPanel(){
+ const goalPanel=document.getElementById("goalPanel");
+ if(!goalPanel) return;
+
+ goalPanel.innerHTML=itemList.map(it=>{
+  const g=goals[it.name]?.target||"";
+  return `
+   <div style="display:flex; gap:8px; margin-bottom:8px; align-items:center;">
+    <div style="flex:1; font-weight:bold;">${it.name}</div>
+    <input type="number" value="${g}" placeholder="目標件数" style="width:100px; padding:6px;" 
+     onchange="setGoal('${it.name}',this.value)">
+   </div>`;
+ }).join("");
+}
+
+function setGoal(item,val){
+ db.collection("goals").doc(item).set({item, target:Number(val)});
+}
+
+function renderGoalsOnInput(){
+ const box=document.getElementById("goalDisplay");
+ if(!box) return;
+ const today=new Date().toISOString().slice(0,10);
+
+ box.innerHTML=itemList.map(it=>{
+  const target=goals[it.name]?.target||0;
+  if(!target) return "";
+  const current=records.filter(r=>r.item==it.name&&r.
