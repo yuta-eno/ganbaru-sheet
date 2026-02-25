@@ -12,7 +12,7 @@
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f3f4f6}
 
 /* header */
-header{display:flex;gap:8px;padding:8px;background:#fff;border-bottom:1px solid #ddd;align-items:center}
+header{display:flex;gap:8px;padding:8px;background:#fff;border-bottom:1px solid #ddd;align-items:center;flex-wrap:wrap}
 .tab{padding:6px 14px;border-radius:8px;background:#e5e7eb;font-weight:bold;cursor:pointer}
 .tab.active{background:#2563eb;color:#fff}
 .date-wrap{margin-left:auto}
@@ -25,7 +25,7 @@ header{display:flex;gap:8px;padding:8px;background:#fff;border-bottom:1px solid 
 .card{background:#fff;border-radius:12px;padding:15px;margin-bottom:10px;box-shadow:0 2px 6px rgba(0,0,0,.1)}
 .items{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
 
-/* button */
+/* buttons */
 .item-btn{width:100%;padding:12px;border:none;border-radius:8px;font-weight:bold;font-size:16px}
 
 /* board */
@@ -47,6 +47,7 @@ td,th{border:1px solid #cbd5e0;padding:4px;text-align:center;font-size:12px}
  <div class="tab active" onclick="showTab('input',this)">入力</div>
  <div class="tab" onclick="showTab('board',this)">がんばるシート</div>
  <div class="tab" onclick="showTab('settings',this)">設定</div>
+ <div class="tab" onclick="showTab('monthly',this)">📊 月次集計</div>
  <div class="date-wrap"><input type="date" id="globalDate"></div>
 </header>
 
@@ -61,8 +62,9 @@ td,th{border:1px solid #cbd5e0;padding:4px;text-align:center;font-size:12px}
   <select id="handoffSelect" disabled></select>
  </div>
 
- <div class="card"><div class="items" id="btnContainer"></div></div>
- <div id="goalDisplay"></div>
+ <div class="card">
+  <div class="items" id="btnContainer"></div>
+ </div>
 </div>
 
 <!-- がんばるシート -->
@@ -77,7 +79,8 @@ td,th{border:1px solid #cbd5e0;padding:4px;text-align:center;font-size:12px}
 <div id="settings" class="page">
  <div class="card">
   <h3>スタッフ追加</h3>
-  <input id="newStaff"><button onclick="addStaff()">追加</button>
+  <input id="newStaff">
+  <button onclick="addStaff()">追加</button>
   <div id="staffListUI"></div>
  </div>
 
@@ -90,8 +93,32 @@ td,th{border:1px solid #cbd5e0;padding:4px;text-align:center;font-size:12px}
  </div>
 </div>
 
+<!-- 月次集計 -->
+<div id="monthly" class="page">
+ <div class="card">
+  <h3>📅 月次集計 商材選択</h3>
+  <div id="monthlyItemSelect"></div>
+  <button onclick="calculateMonthly()">集計</button>
+ </div>
+
+ <div class="card">
+  <h3>合計件数</h3>
+  <div id="monthlyTotal" style="font-size:24px;font-weight:bold"></div>
+ </div>
+
+ <div class="card">
+  <h3>🏆 TOP3</h3>
+  <div id="monthlyTop3"></div>
+ </div>
+
+ <div class="card">
+  <h3>スタッフ別件数一覧</h3>
+  <table id="monthlyTable"></table>
+ </div>
+</div>
+
 <script>
-/* Firebase */
+/* ================= Firebase ================= */
 firebase.initializeApp({
  apiKey:"AIzaSyCmerraKVr1iJsRoiW53lxUtgDUcOGVXtY",
  authDomain:"ganbaru-sheet-a32f3.firebaseapp.com",
@@ -99,28 +126,29 @@ firebase.initializeApp({
 });
 const db=firebase.firestore();
 
-/* Global */
-let staffList=[],itemList=[],records=[];
+/* ================= Global ================= */
+let staffList=[], itemList=[], records=[], monthlyRecords=[];
 let lockedStaff=localStorage.getItem("lockedStaff")||"";
 let currentDate=new Date().toISOString().slice(0,10);
 document.getElementById("globalDate").value=currentDate;
 
-/* TAB */
+/* ================= TAB ================= */
 function showTab(id,tab){
  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
  document.getElementById(id).classList.add("active");
  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
  tab.classList.add("active");
  updateAllViews();
+ if(id==="monthly") loadMonthlyData();
 }
 
-/* Date */
+/* ================= Date ================= */
 document.getElementById("globalDate").onchange=e=>{
  currentDate=e.target.value;
  loadSales();
 };
 
-/* Load Sales */
+/* ================= Load Sales ================= */
 let unsub=null;
 function loadSales(){
  if(unsub)unsub();
@@ -131,13 +159,13 @@ function loadSales(){
  });
 }
 
-/* Render */
+/* ================= Render ================= */
 function updateAllViews(){
  renderButtons();
  renderBoard();
 }
 
-/* Buttons */
+/* ================= Buttons ================= */
 function renderButtons(){
  const sSel=document.getElementById("staffSelect");
  const hSel=document.getElementById("handoffSelect");
@@ -149,9 +177,10 @@ function renderButtons(){
  if(lockedStaff){
   sSel.value=lockedStaff;
   sSel.disabled=true;
-  lockBtn.classList.add("locked");
+  lockBtn.textContent="🔒 固定ON";
  }else{
   sSel.disabled=false;
+  lockBtn.textContent="🔓 固定OFF";
  }
 
  btn.innerHTML=itemList.map(it=>`
@@ -159,20 +188,25 @@ function renderButtons(){
  `).join("");
 }
 
-/* Lock */
+/* ================= Lock ================= */
 function toggleLock(){
  const s=document.getElementById("staffSelect");
- if(lockedStaff){lockedStaff="";localStorage.removeItem("lockedStaff");}
- else{lockedStaff=s.value;localStorage.setItem("lockedStaff",lockedStaff);}
+ if(lockedStaff){
+  lockedStaff="";
+  localStorage.removeItem("lockedStaff");
+ }else{
+  lockedStaff=s.value;
+  localStorage.setItem("lockedStaff",lockedStaff);
+ }
  renderButtons();
 }
 
-/* Handoff */
+/* ================= Handoff ================= */
 function toggleHandoff(){
  handoffSelect.disabled=!handoffToggle.checked;
 }
 
-/* Add Record */
+/* ================= Add Record ================= */
 function addRecord(item){
  const base=lockedStaff||staffSelect.value;
  if(!base)return alert("スタッフ未選択");
@@ -185,7 +219,7 @@ function addRecord(item){
  db.collection("sales").add({staff,registrar,item,date:currentDate,groupId});
 }
 
-/* Board */
+/* ================= Board ================= */
 function groupBy(arr){
  const m={};
  arr.forEach(r=>{
@@ -227,7 +261,7 @@ function renderBoard(){
  table.innerHTML=html;
 }
 
-/* Settings */
+/* ================= Settings ================= */
 function addStaff(){
  const n=newStaff.value;
  if(n)db.collection("settings").add({type:"staff",name:n,order:Date.now()});
@@ -239,7 +273,7 @@ function addItem(){
  newItem.value="";
 }
 
-/* Settings realtime */
+/* realtime settings */
 db.collection("settings").orderBy("order").onSnapshot(snap=>{
  staffList=[];itemList=[];
  snap.forEach(d=>{
@@ -250,8 +284,64 @@ db.collection("settings").orderBy("order").onSnapshot(snap=>{
  renderButtons();
 });
 
-/* Start */
+/* ================= Monthly ================= */
+function getMonthRange(dateStr){
+ const d=new Date(dateStr);
+ const y=d.getFullYear(),m=d.getMonth();
+ return {
+  start:new Date(y,m,1).toISOString().slice(0,10),
+  end:new Date(y,m+1,0).toISOString().slice(0,10)
+ };
+}
+
+async function loadMonthlyData(){
+ const {start,end}=getMonthRange(currentDate);
+ const snap=await db.collection("sales")
+ .where("date",">=",start).where("date","<=",end).get();
+ monthlyRecords=snap.docs.map(d=>d.data());
+ renderMonthlyItemSelector();
+}
+
+function renderMonthlyItemSelector(){
+ const div=document.getElementById("monthlyItemSelect");
+ div.innerHTML=itemList.map(it=>`
+  <label style="margin-right:10px">
+   <input type="checkbox" value="${it.name}" checked> ${it.name}
+  </label>
+ `).join("");
+}
+
+function calculateMonthly(){
+ const checked=[...document.querySelectorAll("#monthlyItemSelect input:checked")].map(c=>c.value);
+ if(checked.length==0)return alert("商材選択してください");
+
+ const filtered=monthlyRecords.filter(r=>checked.includes(r.item));
+
+ const groups={};
+ filtered.forEach(r=>{ if(!groups[r.groupId])groups[r.groupId]=r; });
+ const total=Object.keys(groups).length;
+ document.getElementById("monthlyTotal").textContent=total+" 件";
+
+ const staffCount={};
+ Object.values(groups).forEach(r=>{
+  staffCount[r.staff]=(staffCount[r.staff]||0)+1;
+ });
+
+ const top3=Object.entries(staffCount).sort((a,b)=>b[1]-a[1]).slice(0,3);
+ document.getElementById("monthlyTop3").innerHTML=top3.map((r,i)=>
+  `<div>${i+1}位 ${r[0]}：${r[1]}件</div>`
+ ).join("");
+
+ let html="<tr><th>スタッフ</th><th>件数</th></tr>";
+ Object.entries(staffCount).sort((a,b)=>b[1]-a[1]).forEach(r=>{
+  html+=`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`;
+ });
+ document.getElementById("monthlyTable").innerHTML=html;
+}
+
+/* ================= Start ================= */
 loadSales();
 </script>
+
 </body>
 </html>
