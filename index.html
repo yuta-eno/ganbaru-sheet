@@ -12,9 +12,16 @@
 body{ margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background:#f3f4f6; }
 
 /* Tabs */
-header{ display:flex; gap:10px; padding:8px; background:white; border-bottom:1px solid #ddd; }
-.tab{ padding:6px 14px; border-radius:8px; cursor:pointer; background:#e5e7eb; font-weight:bold; color:#64748b;}
+header{ display:flex; gap:6px; padding:8px; background:white; border-bottom:1px solid #ddd; }
+.tab{ padding:8px 10px; border-radius:8px; cursor:pointer; background:#e5e7eb; font-weight:bold; color:#64748b; font-size:14px; flex:1; text-align:center; white-space:nowrap;}
 .tab.active{background:#2563eb;color:white;}
+
+/* Date Controller (★追加) */
+.date-controller { background:white; border-bottom:1px solid #ddd; padding:10px; display:flex; justify-content:center; gap:15px; align-items:center; }
+.date-btn { padding:6px 12px; border:1px solid #cbd5e0; border-radius:6px; background:#f8fafc; font-weight:bold; cursor:pointer; color:#475569;}
+.date-btn:active { background:#e2e8f0; }
+.date-btn-today { background:#3b82f6; color:white; border:none; padding:6px 12px; border-radius:6px; font-weight:bold; cursor:pointer;}
+#dateDisplay { font-weight:bold; font-size:16px; color:#1e293b; min-width:130px; text-align:center; }
 
 .page{display:none;padding:12px; max-width:1200px; margin:0 auto;}
 .page.active{display:block;}
@@ -22,6 +29,7 @@ header{ display:flex; gap:10px; padding:8px; background:white; border-bottom:1px
 /* Cards */
 .card{ background:white; border-radius:12px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,.08); margin-bottom:15px; }
 .card h3 { margin-top:0; border-bottom:2px solid #e2e8f0; padding-bottom:8px; color:#334155; margin-bottom:15px; }
+.full-width { grid-column: 1 / -1; }
 
 /* Staff selector */
 .staff-selector { display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-weight:bold; color:#475569; }
@@ -53,7 +61,7 @@ th,td{ border:1px solid #cbd5e0; padding:4px; text-align:center; font-size:12px;
 
 /* 引き継ぎ表示スタイル */
 .normal-name{ font-weight:bold; color:#000; }
-.handoff-main{ font-weight:bold; color:#dc2626; } /* 赤 */
+.handoff-main{ font-weight:bold; color:#dc2626; } 
 .handoff-sub{ font-size:10px; color:#64748b; }
 
 /* 引き継ぎ UI */
@@ -96,12 +104,19 @@ th,td{ border:1px solid #cbd5e0; padding:4px; text-align:center; font-size:12px;
 
 <header>
  <div class="tab active" onclick="showTab('input')">入力</div>
- <div class="tab" onclick="showTab('board')">がんばるシート</div>
+ <div class="tab" onclick="showTab('board')">シート</div>
+ <div class="tab" onclick="showTab('monthly')">月間集計</div>
  <div class="tab" onclick="showTab('settings')">設定</div>
 </header>
 
-<div id="input" class="page active">
+<div id="dateController" class="date-controller">
+ <button class="date-btn" onclick="changeDate(-1)">◀ 前日</button>
+ <div id="dateDisplay"></div>
+ <button class="date-btn" onclick="changeDate(1)">翌日 ▶</button>
+ <button class="date-btn-today" onclick="changeDate(0)">今日</button>
+</div>
 
+<div id="input" class="page active">
 <div class="card">
  <div class="staff-selector">
   <label>スタッフ:</label>
@@ -120,7 +135,6 @@ th,td{ border:1px solid #cbd5e0; padding:4px; text-align:center; font-size:12px;
 </div>
 
 <div class="card" id="goalDisplay" style="display:none; background:transparent; box-shadow:none; padding:0;"></div>
-
 </div>
 
 <div id="board" class="page">
@@ -128,6 +142,16 @@ th,td{ border:1px solid #cbd5e0; padding:4px; text-align:center; font-size:12px;
   <h3 id="boardTitle"></h3>
   <div class="board-wrap">
    <table id="boardTable"></table>
+  </div>
+ </div>
+</div>
+
+<div id="monthly" class="page">
+ <div class="card">
+  <h3 id="monthlyTitle"></h3>
+  <p style="font-size:12px; color:#64748b; margin-top:-10px;">※成約者（ボタンを押した人ではなく、ポイントが付与されたスタッフ）の月間トータル件数です。</p>
+  <div class="board-wrap">
+   <table id="monthlyTable"></table>
   </div>
  </div>
 </div>
@@ -143,6 +167,12 @@ th,td{ border:1px solid #cbd5e0; padding:4px; text-align:center; font-size:12px;
  <option value="#ccfbf1"></option>
  <option value="#f1f5f9"></option>
 </datalist>
+
+<div class="card full-width">
+ <h3 style="color:#ef4444;">🧹 データ大掃除</h3>
+ <p style="font-size:12px; color:#64748b; margin-bottom:10px;">Firebaseの容量節約のため、1ヶ月以上前の不要な過去データを消去します。</p>
+ <button onclick="deleteOldData()" style="background:#ef4444; color:white; border:none; padding:8px 15px; border-radius:6px; font-weight:bold; cursor:pointer;">🗑️ 1ヶ月以上前のデータを一括削除</button>
+</div>
 
 <div class="settings-grid">
  <div class="card">
@@ -166,7 +196,10 @@ th,td{ border:1px solid #cbd5e0; padding:4px; text-align:center; font-size:12px;
 </div>
 
 <div class="card">
- <h3>今日の目標設定</h3>
+ <h3 style="display:flex; justify-content:space-between; align-items:center;">
+  今日の目標設定
+  <button onclick="resetAllGoals()" style="background:#ef4444; color:white; border:none; padding:4px 10px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:bold;">🗑️ 全リセット</button>
+ </h3>
  <div id="goalPanel"></div>
 </div>
 </div>
@@ -181,12 +214,54 @@ const firebaseConfig={
 firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore();
 
+/* ★追加：タイムマシン機能（日付管理） */
+let viewDate = new Date();
+
+function getViewDateStr() {
+  const y = viewDate.getFullYear();
+  const m = String(viewDate.getMonth() + 1).padStart(2, '0');
+  const d = String(viewDate.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function getViewMonthStr() {
+  const y = viewDate.getFullYear();
+  const m = String(viewDate.getMonth() + 1).padStart(2, '0');
+  return `${y}-${m}`;
+}
+
+function updateDateDisplay() {
+  const y = viewDate.getFullYear();
+  const m = viewDate.getMonth() + 1;
+  const d = viewDate.getDate();
+  const w = ["日","月","火","水","木","金","土"][viewDate.getDay()];
+  document.getElementById("dateDisplay").textContent = `${y}年${m}月${d}日(${w})`;
+  document.getElementById("boardTitle").textContent = `${m}/${d} のがんばるシート`;
+  document.getElementById("monthlyTitle").textContent = `${y}年${m}月の月間集計`;
+}
+
+function changeDate(days) {
+  if(days === 0) {
+    viewDate = new Date(); // 今日へ戻る
+  } else {
+    viewDate.setDate(viewDate.getDate() + days); // 前後へ移動
+  }
+  updateDateDisplay();
+  updateCounts();
+  renderBoard();
+  renderGoalsOnInput();
+  renderMonthlyBoard();
+}
+
 /* Tabs */
 const ADMIN_PASSWORD="0000";
 function showTab(id){
  if(id==='settings'){
   const p=prompt("管理用パスワード:");
   if(p!==ADMIN_PASSWORD){ alert("NG"); return; }
+  document.getElementById('dateController').style.display = 'none'; // 設定時は日付隠す
+ } else {
+  document.getElementById('dateController').style.display = 'flex';
  }
  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
  document.getElementById(id).classList.add("active");
@@ -196,8 +271,9 @@ function showTab(id){
 
 /* Data */
 let staffList=[], itemList=[], records=[];
-const today=new Date();
-document.getElementById("boardTitle").textContent=`${today.getMonth()+1}/${today.getDate()} のがんばるシート`;
+
+// 初回の日付セット
+updateDateDisplay();
 
 /* Load settings */
 db.collection("settings").orderBy("order").onSnapshot(snap=>{
@@ -216,6 +292,7 @@ db.collection("sales").onSnapshot(snap=>{
  renderBoard();
  updateCounts(); 
  renderGoalsOnInput(); 
+ renderMonthlyBoard(); // ★月間ボードの更新も呼ぶ
 });
 
 /* UI refs */
@@ -299,16 +376,16 @@ function renderAll(){
 
 /* ランキングと件数の更新処理 */
 function updateCounts(){
- const todayDate=new Date().toISOString().slice(0,10);
+ const viewDateStr = getViewDateStr(); // ★現在見ている日付を使用
  const currentStaff = lockedStaff || staffSelect.value;
 
  itemList.forEach(it=>{
-  const c = records.filter(r=>r.item==it.name && r.staff==currentStaff && r.date==todayDate).length;
+  const c = records.filter(r=>r.item==it.name && r.staff==currentStaff && r.date==viewDateStr).length;
   const countEl = document.getElementById("count_"+it.name);
   if(countEl) countEl.textContent=c+"件";
 
   const rank={};
-  records.filter(r=>r.item==it.name && r.date==todayDate).forEach(r=>{
+  records.filter(r=>r.item==it.name && r.date==viewDateStr).forEach(r=>{
    rank[r.staff]=(rank[r.staff]||0)+1;
   });
   const sorted=Object.entries(rank).sort((a,b)=>b[1]-a[1]).slice(0,3);
@@ -322,18 +399,18 @@ function addRecord(item){
  const baseStaff = lockedStaff || staffSelect.value;
  const staff = handoffToggle.checked ? handoffSelect.value : baseStaff;
  const registrar = handoffToggle.checked ? baseStaff : "";
- const date=new Date().toISOString().slice(0,10);
- const groupId=Date.now().toString();
+ const date = getViewDateStr(); // ★現在見ている日付に記録を追加
+ const groupId = Date.now().toString();
  db.collection("sales").add({staff, registrar, item, date, groupId});
 }
 
-/* ★修正：取消ロジック（現在選択中のスタッフの成約だけを消す） */
+/* 取消 */
 function removeRecord(item){
  const baseStaff = lockedStaff || staffSelect.value;
  const targetStaff = handoffToggle.checked ? handoffSelect.value : baseStaff;
- const todayStr=new Date().toISOString().slice(0,10);
+ const viewDateStr = getViewDateStr(); // ★現在見ている日付から削除
  
- const r=records.filter(r=>r.item==item && r.date==todayStr && r.staff==targetStaff).pop();
+ const r=records.filter(r=>r.item==item && r.date==viewDateStr && r.staff==targetStaff).pop();
  if(!r) return;
  
  records.filter(x=>x.groupId==r.groupId).forEach(x=>{
@@ -341,13 +418,40 @@ function removeRecord(item){
  });
 }
 
+/* ★追加：月間ボード描画 */
+function renderMonthlyBoard(){
+  const monthStr = getViewMonthStr(); // 現在見ている「月」
+  const monthRecords = records.filter(r => r.date.startsWith(monthStr));
+
+  let html="<tr><th class='row-header' style='background:#f9fafb;'>商材 \\ スタッフ</th><th class='square' style='background:#f0fdf4; font-weight:bold;'>店舗合計</th>";
+  staffList.forEach(s => {
+    html += `<th class='square'>${s.name}</th>`;
+  });
+  html += "</tr>";
+
+  itemList.forEach(it => {
+    const itRecords = monthRecords.filter(r => r.item == it.name);
+    html += `<tr><th class='row-header' style="background:${it.color}; color:#333;">${it.name}</th>
+             <td class='square name-cell' style='font-weight:bold; font-size:14px; background:#dcfce7; color:#166534;'>${itRecords.length}</td>`;
+
+    staffList.forEach(s => {
+      // その月にそのスタッフ(staff)に入った件数をカウント
+      const staffCount = itRecords.filter(r => r.staff == s.name).length;
+      html += `<td class='square' style='${staffCount > 0 ? "font-weight:bold; color:#0369a1; background:#e0f2fe;" : "color:#cbd5e0;"}'>${staffCount > 0 ? staffCount : "-"}</td>`;
+    });
+    html += "</tr>";
+  });
+
+  document.getElementById("monthlyTable").innerHTML = html;
+}
+
 /* ボード描画 */
 function renderBoard(){
- const todayStr=new Date().toISOString().slice(0,10);
+ const viewDateStr = getViewDateStr();
  let maxCols=20;
 
  itemList.forEach(it=>{
-  const groups=groupBy(records.filter(r=>r.item==it.name && r.date==todayStr));
+  const groups=groupBy(records.filter(r=>r.item==it.name && r.date==viewDateStr));
   if(groups.length>maxCols) maxCols=groups.length;
  });
 
@@ -356,7 +460,7 @@ function renderBoard(){
  html+="</tr>";
 
  itemList.forEach(it=>{
-  const groups=groupBy(records.filter(r=>r.item==it.name && r.date==todayStr));
+  const groups=groupBy(records.filter(r=>r.item==it.name && r.date==viewDateStr));
   html+=`<tr><th class='row-header' style="background:${it.color}">${it.name}</th>
   <td>${groups.length}件</td>`;
 
@@ -418,105 +522,4 @@ function deleteSetting(id){
  if(confirm("本当に削除しますか？")) db.collection("settings").doc(id).delete();
 }
 
-let dragType = null;
-function handleDragStart(e, type, id) { dragType = type; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', id); e.target.classList.add('dragging'); }
-function handleDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; const li = e.target.closest('li'); if (li && !li.classList.contains('dragging')) li.classList.add('over'); return false; }
-function handleDragLeave(e) { const li = e.target.closest('li'); if (li) li.classList.remove('over'); }
-async function handleDrop(e, targetId) {
- e.stopPropagation(); e.preventDefault();
- const li = e.target.closest('li'); if (li) li.classList.remove('over');
- const sourceId = e.dataTransfer.getData('text/plain');
- if (sourceId && sourceId !== targetId && dragType) {
-  const list = (dragType === 'staff') ? [...staffList] : [...itemList];
-  const draggedIdx = list.findIndex(i => i.id === sourceId);
-  const targetIdx = list.findIndex(i => i.id === targetId);
-  if (draggedIdx > -1 && targetIdx > -1) {
-   const item = list.splice(draggedIdx, 1)[0];
-   list.splice(targetIdx, 0, item);
-   const batch = db.batch();
-   list.forEach((it, index) => { batch.update(db.collection("settings").doc(it.id), { order: index }); });
-   await batch.commit();
-  }
- }
- return false;
-}
-function handleDragEnd(e) { document.querySelectorAll('.list-ui li').forEach(el => { el.classList.remove('dragging', 'over'); }); }
-
-/* ================= Goals ================= */
-let goals = {};
-db.collection("goals").onSnapshot(snap=>{
- goals={};
- snap.forEach(d=>{ goals[d.data().item]=d.data(); });
- renderGoalPanel();
- renderGoalsOnInput();
-});
-
-function renderGoalPanel(){
- const goalPanel=document.getElementById("goalPanel");
- if(!goalPanel) return;
- 
- goalPanel.style.display="grid";
- goalPanel.style.gridTemplateRows="repeat(15, max-content)";
- goalPanel.style.gridAutoFlow="column";
- goalPanel.style.gap="4px 10px"; 
- goalPanel.style.overflowX="auto";
-
- goalPanel.innerHTML=itemList.map(it=>{
-  const g=goals[it.name]?.target||0;
-  let opts="";
-  for(let i=0; i<=99; i++){
-   const num = i < 10 ? "0" + i : i;
-   opts+=`<option value="${i}" ${g==i?'selected':''}>${num}</option>`;
-  }
-  return `
-   <div style="display:flex; align-items:center;">
-    <div style="font-weight:bold; font-size:14px; width:112px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${it.name}</div>
-    <select style="width:55px; padding:4px; border:1px solid #cbd5e0; border-radius:6px; font-size:16px; text-align:center; background:#fff; cursor:pointer;" 
-     onchange="setGoal('${it.name}',this.value)">
-     ${opts}
-    </select>
-   </div>`;
- }).join("");
-}
-
-function setGoal(item,val){
- if(val === "" || val == 0) {
-  db.collection("goals").doc(item).delete(); 
- } else {
-  db.collection("goals").doc(item).set({item, target:Number(val)});
- }
-}
-
-function renderGoalsOnInput(){
- const box=document.getElementById("goalDisplay");
- if(!box) return;
- const todayDate=new Date().toISOString().slice(0,10);
-
- const htmls = itemList.map(it=>{
-  const target=goals[it.name]?.target||0;
-  if(!target) return "";
-  
-  const current = groupBy(records.filter(r=>r.item==it.name && r.date==todayDate)).length;
-  const pct=Math.min(100, Math.round(current/target*100));
-
-  return `
-  <div class="goal-box">
-   🔥 ${it.name} 目標 ${target}件 / 現在 ${current}件 (${pct}%)
-   <div class="goal-progress">
-    <div class="goal-bar" style="width:${pct}%"></div>
-   </div>
-  </div>`;
- }).filter(h=>h!=="");
-
- if(htmls.length > 0) {
-  box.style.display = "block";
-  box.innerHTML = htmls.join("");
- } else {
-  box.style.display = "none";
-  box.innerHTML = "";
- }
-}
-</script>
-
-</body>
-</html>
+/* ★追加：古いデータのお掃
