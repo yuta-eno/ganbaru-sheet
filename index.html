@@ -97,9 +97,9 @@ th,td{ border:1px solid #cbd5e0; padding:4px; text-align:center; font-size:12px;
 <body>
 
 <header>
- <div class="tab active" onclick="showTab('input', this)">入力</div>
- <div class="tab" onclick="showTab('board', this)">がんばるシート</div>
- <div class="tab" onclick="showTab('settings', this)">設定</div>
+ <div class="tab active" id="tab-input" onclick="showTab('input')">入力</div>
+ <div class="tab" id="tab-board" onclick="showTab('board')">がんばるシート</div>
+ <div class="tab" id="tab-settings" onclick="showTab('settings')">設定</div>
  <div class="date-wrap">
   <input type="date" id="globalDate" onchange="changeDate(this.value)">
  </div>
@@ -113,7 +113,7 @@ th,td{ border:1px solid #cbd5e0; padding:4px; text-align:center; font-size:12px;
    <button onclick="toggleLock()" id="lockBtn">🔓 固定OFF</button>
 
    <div class="handoff-wrap">
-    <label><input type="checkbox" id="handoffToggle"> 引き継ぎ</label>
+    <label><input type="checkbox" id="handoffToggle" onchange="toggleHandoff()"> 引き継ぎ</label>
     <select id="handoffSelect" disabled></select>
    </div>
   </div>
@@ -178,24 +178,26 @@ th,td{ border:1px solid #cbd5e0; padding:4px; text-align:center; font-size:12px;
 </div>
 
 <script>
-/* ========================================================
-   1. 変数宣言・初期設定（クラッシュ防止のためすべて最初に定義）
-   ======================================================== */
+/* ==========================================
+   1. 変数と初期設定
+   ========================================== */
 const firebaseConfig={
  apiKey:"AIzaSyCmerraKVr1iJsRoiW53lxUtgDUcOGVXtY",
  authDomain:"ganbaru-sheet-a32f3.firebaseapp.com",
  projectId:"ganbaru-sheet-a32f3"
 };
-firebase.initializeApp(firebaseConfig);
-const db=firebase.firestore();
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
+const db = firebase.firestore();
 
-// 状態管理変数
-let staffList=[], itemList=[], records=[], goals={};
-let lockedStaff = localStorage.getItem("lockedStaff") || "";
+let staffList = [], itemList = [], records = [], goals = {};
+let lockedStaff = "";
+try { lockedStaff = localStorage.getItem("lockedStaff") || ""; } catch(e){}
 let dragType = null;
-const ADMIN_PASSWORD="0000";
+const ADMIN_PASSWORD = "0000";
 
-// 日付取得関数と初期設定
+// 今日の日付を取得 (YYYY-MM-DD形式)
 function getLocalYMD(dateObj) {
   const y = dateObj.getFullYear();
   const m = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -203,316 +205,301 @@ function getLocalYMD(dateObj) {
   return `${y}-${m}-${d}`;
 }
 let currentDate = getLocalYMD(new Date());
-
-// DOM要素の取得
-const staffSelect = document.getElementById("staffSelect");
-const handoffSelect = document.getElementById("handoffSelect");
-const btnContainer = document.getElementById("btnContainer");
-const boardTable = document.getElementById("boardTable");
-const lockBtn = document.getElementById("lockBtn");
-const handoffToggle = document.getElementById("handoffToggle");
-document.getElementById('globalDate').value = currentDate;
+let salesUnsubscribe = null; // 日付切り替え時のリスナー解除用
 
 
-/* ========================================================
-   2. UI制御・共通関数
-   ======================================================== */
-function showTab(id, tabElement){
- if(id==='settings'){
-  const p=prompt("管理用パスワード:");
-  if(p!==ADMIN_PASSWORD){ alert("NG"); return; }
- }
- document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
- document.getElementById(id).classList.add("active");
- document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
- 
- if(tabElement) {
-   tabElement.classList.add("active");
- } else {
-   const fallbackTab = document.querySelector(`.tab[onclick*="${id}"]`);
-   if(fallbackTab) fallbackTab.classList.add("active");
- }
+/* ==========================================
+   2. 起動処理 (HTML要素が準備完了してから実行)
+   ========================================== */
+window.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('globalDate').value = currentDate;
+    
+    // 設定データの読み込み
+    db.collection("settings").orderBy("order").onSnapshot(snap => {
+        staffList = []; itemList = [];
+        snap.forEach(d => {
+            const v = d.data(); v.id = d.id;
+            if(v.type === "staff") staffList.push(v);
+            if(v.type === "item") itemList.push(v);
+        });
+        renderAllSettingsAndButtons();
+    });
+
+    // 目標データの読み込み
+    db.collection("goals").onSnapshot(snap => {
+        goals = {};
+        snap.forEach(d => { goals[d.data().item] = d.data(); });
+        renderGoalPanel();
+        updateAllViews();
+    });
+
+    // 売上データ(今日の日付)の読み込みを開始
+    loadSalesData();
+});
+
+
+/* ==========================================
+   3. タブ・日付切り替え機能
+   ========================================== */
+function showTab(id) {
+    if (id === 'settings') {
+        const p = prompt("管理用パスワード:");
+        if (p !== ADMIN_PASSWORD) { alert("NG"); return; }
+    }
+    
+    // ページ表示切り替え
+    document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+    const targetPage = document.getElementById(id);
+    if(targetPage) targetPage.classList.add("active");
+
+    // タブの色切り替え (IDベースで確実に発火)
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    const targetTab = document.getElementById("tab-" + id);
+    if(targetTab) targetTab.classList.add("active");
+    
+    updateAllViews();
 }
 
 function changeDate(newDate) {
-  if(!newDate) return;
-  currentDate = newDate;
-  updateAllViews();
+    if(!newDate) return;
+    currentDate = newDate;
+    loadSalesData(); // 日付が変わったらデータを再取得
+}
+
+// 選択された日付のデータだけをFirebaseから取得する機能
+function loadSalesData() {
+    if(salesUnsubscribe) salesUnsubscribe(); // 過去の監視を解除
+    
+    salesUnsubscribe = db.collection("sales")
+        .where("date", "==", currentDate)
+        .onSnapshot(snap => {
+            records = snap.docs.map(d => ({id: d.id, ...d.data()}));
+            updateAllViews();
+        });
 }
 
 
-/* ========================================================
-   3. 描画・更新処理
-   ======================================================== */
+/* ==========================================
+   4. UI描画・更新統括
+   ========================================== */
 function updateAllViews() {
- document.getElementById("boardTitle").textContent=`${currentDate.replace(/-/g, '/')} のがんばるシート`;
- updateCounts();
- renderBoard();
- renderGoalsOnInput();
+    const boardTitle = document.getElementById("boardTitle");
+    if(boardTitle) boardTitle.textContent = `${currentDate.replace(/-/g, '/')} のがんばるシート`;
+    
+    updateCounts();
+    renderBoard();
+    renderGoalsOnInput();
 }
 
-function renderAllSettingsAndButtons(){
- const opts=staffList.map(s=>`<option>${s.name}</option>`).join("");
- staffSelect.innerHTML=opts;
- handoffSelect.innerHTML=opts;
+function renderAllSettingsAndButtons() {
+    const staffSelect = document.getElementById("staffSelect");
+    const handoffSelect = document.getElementById("handoffSelect");
+    const btnContainer = document.getElementById("btnContainer");
+    const lockBtn = document.getElementById("lockBtn");
+    
+    const opts = staffList.map(s => `<option>${s.name}</option>`).join("");
+    if(staffSelect) staffSelect.innerHTML = opts;
+    if(handoffSelect) handoffSelect.innerHTML = opts;
 
- if(lockedStaff){
-  staffSelect.value=lockedStaff;
-  staffSelect.disabled=true;
-  lockBtn.textContent="🔒 固定ON";
-  lockBtn.classList.add("locked");
- }else{
-  staffSelect.disabled=false;
-  lockBtn.textContent="🔓 固定OFF";
-  lockBtn.classList.remove("locked");
- }
+    if (lockedStaff && staffSelect) {
+        staffSelect.value = lockedStaff;
+        staffSelect.disabled = true;
+        if(lockBtn) { lockBtn.textContent = "🔒 固定ON"; lockBtn.classList.add("locked"); }
+    } else if (staffSelect) {
+        staffSelect.disabled = false;
+        if(lockBtn) { lockBtn.textContent = "🔓 固定OFF"; lockBtn.classList.remove("locked"); }
+    }
 
- btnContainer.innerHTML=itemList.map(it=>`
- <div class="item-box">
-  <button class="item-btn" style="background:${it.color}" onclick="addRecord('${it.name}')">${it.name}</button>
-  <div class="item-footer">
-   <div style="display:flex; flex-direction:column;">
-    <span class="my-count" id="count_${it.name}">0件</span>
-    <div class="rank-mini" id="rank_${it.name}"></div>
-   </div>
-   <button class="minus" onclick="removeRecord('${it.name}')">取消</button>
-  </div>
- </div>`).join("");
+    if(btnContainer) {
+        btnContainer.innerHTML = itemList.map(it => `
+        <div class="item-box">
+         <button class="item-btn" style="background:${it.color}" onclick="addRecord('${it.name}')">${it.name}</button>
+         <div class="item-footer">
+          <div style="display:flex; flex-direction:column;">
+           <span class="my-count" id="count_${it.name}">0件</span>
+           <div class="rank-mini" id="rank_${it.name}"></div>
+          </div>
+           <button class="minus" onclick="removeRecord('${it.name}')">取消</button>
+          </div>
+         </div>`).join("");
+    }
 
- document.getElementById("staffListUI").innerHTML=`<ul class="list-ui">` + staffList.map(s=>`
- <li draggable="true" ondragstart="handleDragStart(event,'staff','${s.id}')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'${s.id}')" ondragend="handleDragEnd(event)">
-  <div style="display:flex; align-items:center; gap:8px; width:100%;">
-   <div class="drag-handle">☰</div>
-   <input class="setting-input" value="${s.name}" onchange="editSetting('${s.id}',this.value,null)">
-   <button class="delete-btn" onclick="deleteSetting('${s.id}')">削除</button>
-  </div>
- </li>`).join("") + `</ul>`;
+    const staffListUI = document.getElementById("staffListUI");
+    if(staffListUI) {
+        staffListUI.innerHTML = `<ul class="list-ui">` + staffList.map(s=>`
+         <li draggable="true" ondragstart="handleDragStart(event,'staff','${s.id}')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'${s.id}')" ondragend="handleDragEnd(event)">
+          <div style="display:flex; align-items:center; gap:8px; width:100%;">
+           <div class="drag-handle">☰</div>
+           <input class="setting-input" value="${s.name}" onchange="editSetting('${s.id}',this.value,null)">
+           <button class="delete-btn" onclick="deleteSetting('${s.id}')">削除</button>
+          </div>
+         </li>`).join("") + `</ul>`;
+    }
 
- document.getElementById("itemListUI").innerHTML=`<ul class="list-ui">` + itemList.map(it=>`
- <li draggable="true" ondragstart="handleDragStart(event,'item','${it.id}')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'${it.id}')" ondragend="handleDragEnd(event)" style="border-left: 5px solid ${it.color};">
-  <div style="display:flex; align-items:center; gap:8px; width:100%;">
-   <div class="drag-handle">☰</div>
-   <input class="setting-input" value="${it.name}" onchange="editSetting('${it.id}',this.value,'${it.color}')">
-   <input type="color" value="${it.color}" list="paleColors" class="color-picker" onchange="editSetting('${it.id}','${it.name}',this.value)">
-   <button class="delete-btn" onclick="deleteSetting('${it.id}')">削除</button>
-  </div>
- </li>`).join("") + `</ul>`;
+    const itemListUI = document.getElementById("itemListUI");
+    if(itemListUI) {
+        itemListUI.innerHTML = `<ul class="list-ui">` + itemList.map(it=>`
+         <li draggable="true" ondragstart="handleDragStart(event,'item','${it.id}')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'${it.id}')" ondragend="handleDragEnd(event)" style="border-left: 5px solid ${it.color};">
+          <div style="display:flex; align-items:center; gap:8px; width:100%;">
+           <div class="drag-handle">☰</div>
+           <input class="setting-input" value="${it.name}" onchange="editSetting('${it.id}',this.value,'${it.color}')">
+           <input type="color" value="${it.color}" list="paleColors" class="color-picker" onchange="editSetting('${it.id}','${it.name}',this.value)">
+           <button class="delete-btn" onclick="deleteSetting('${it.id}')">削除</button>
+          </div>
+         </li>`).join("") + `</ul>`;
+    }
 
- renderGoalPanel();
- updateAllViews();
+    renderGoalPanel();
+    updateAllViews();
 }
 
-function toggleLock(){
- if(lockedStaff){
-  lockedStaff="";
-  localStorage.removeItem("lockedStaff");
-  lockBtn.textContent="🔓 固定OFF";
-  lockBtn.classList.remove("locked");
-  staffSelect.disabled = false;
- }else{
-  lockedStaff=staffSelect.value;
-  localStorage.setItem("lockedStaff",lockedStaff);
-  lockBtn.textContent="🔒 固定ON";
-  lockBtn.classList.add("locked");
-  staffSelect.disabled = true;
- }
- updateAllViews();
+
+/* ==========================================
+   5. 入力アクション・件数・ボード描画
+   ========================================== */
+function toggleLock() {
+    const staffSelect = document.getElementById("staffSelect");
+    if(!staffSelect) return;
+    
+    if (lockedStaff) {
+        lockedStaff = "";
+        try{ localStorage.removeItem("lockedStaff"); }catch(e){}
+    } else {
+        lockedStaff = staffSelect.value;
+        try{ localStorage.setItem("lockedStaff", lockedStaff); }catch(e){}
+    }
+    renderAllSettingsAndButtons();
 }
 
-function updateCounts(){
- const currentStaff = lockedStaff || staffSelect.value;
-
- itemList.forEach(it=>{
-  const c = records.filter(r=>r.item==it.name && r.staff==currentStaff && r.date==currentDate).length;
-  const countEl = document.getElementById("count_"+it.name);
-  if(countEl) countEl.textContent=c+"件";
-
-  const rank={};
-  records.filter(r=>r.item==it.name && r.date==currentDate).forEach(r=>{
-   rank[r.staff]=(rank[r.staff]||0)+1;
-  });
-  const sorted=Object.entries(rank).sort((a,b)=>b[1]-a[1]).slice(0,3);
-  const rankEl = document.getElementById("rank_"+it.name);
-  if(rankEl) rankEl.innerHTML=sorted.map((r,i)=>`${i+1}位 ${r[0]}:${r[1]}件`).join("<br>");
- });
+function toggleHandoff() {
+    const toggle = document.getElementById("handoffToggle");
+    const select = document.getElementById("handoffSelect");
+    if(toggle && select) select.disabled = !toggle.checked;
 }
 
-function addRecord(item){
- const baseStaff = lockedStaff || staffSelect.value;
- const staff = handoffToggle.checked ? handoffSelect.value : baseStaff;
- const registrar = handoffToggle.checked ? baseStaff : "";
- const date = currentDate;
- const groupId = Date.now().toString();
- db.collection("sales").add({staff, registrar, item, date, groupId});
+function updateCounts() {
+    const staffSelect = document.getElementById("staffSelect");
+    const currentStaff = lockedStaff || (staffSelect ? staffSelect.value : "");
+
+    itemList.forEach(it => {
+        // ※records は既に選択された日付のものだけになっています
+        const c = records.filter(r => r.item === it.name && r.staff === currentStaff).length;
+        const countEl = document.getElementById("count_" + it.name);
+        if(countEl) countEl.textContent = c + "件";
+
+        const rank = {};
+        records.filter(r => r.item === it.name).forEach(r => {
+            rank[r.staff] = (rank[r.staff] || 0) + 1;
+        });
+        const sorted = Object.entries(rank).sort((a,b) => b[1] - a[1]).slice(0, 3);
+        const rankEl = document.getElementById("rank_" + it.name);
+        if(rankEl) rankEl.innerHTML = sorted.map((r, i) => `${i+1}位 ${r[0]}:${r[1]}件`).join("<br>");
+    });
 }
 
-function removeRecord(item){
- const baseStaff = lockedStaff || staffSelect.value;
- const targetStaff = handoffToggle.checked ? handoffSelect.value : baseStaff;
- 
- const r=records.filter(r=>r.item==item && r.date==currentDate && r.staff==targetStaff).pop();
- if(!r) return;
- 
- records.filter(x=>x.groupId==r.groupId).forEach(x=>{
-  db.collection("sales").doc(x.id).delete();
- });
+function addRecord(item) {
+    const staffSelect = document.getElementById("staffSelect");
+    const handoffToggle = document.getElementById("handoffToggle");
+    const handoffSelect = document.getElementById("handoffSelect");
+    
+    const baseStaff = lockedStaff || (staffSelect ? staffSelect.value : "");
+    if(!baseStaff) return alert("スタッフが選択されていません。");
+
+    const isHandoff = handoffToggle ? handoffToggle.checked : false;
+    const staff = isHandoff ? handoffSelect.value : baseStaff;
+    const registrar = isHandoff ? baseStaff : "";
+    const groupId = Date.now().toString();
+
+    db.collection("sales").add({ staff, registrar, item, date: currentDate, groupId });
 }
 
-function renderBoard(){
- let maxCols=20;
+function removeRecord(item) {
+    const staffSelect = document.getElementById("staffSelect");
+    const handoffToggle = document.getElementById("handoffToggle");
+    const handoffSelect = document.getElementById("handoffSelect");
 
- itemList.forEach(it=>{
-  const groups=groupBy(records.filter(r=>r.item==it.name && r.date==currentDate));
-  if(groups.length>maxCols) maxCols=groups.length;
- });
-
- let html="<tr><th class='row-header'>商材</th><th>合計</th>";
- for(let i=1;i<=maxCols;i++) html+=`<th>${i}</th>`;
- html+="</tr>";
-
- itemList.forEach(it=>{
-  const groups=groupBy(records.filter(r=>r.item==it.name && r.date==currentDate));
-  html+=`<tr><th class='row-header' style="background:${it.color}">${it.name}</th>
-  <td>${groups.length}件</td>`;
-
-  for(let i=0;i<maxCols;i++){
-   if(!groups[i]){
-    html+=`<td class='square'></td>`;
-    continue;
-   }
-
-   const g=groups[i][0];
-
-   if(!g.registrar){
-    html+=`<td class='square name-cell'><div class="normal-name">${g.staff}</div></td>`;
-   }
-   else{
-    html+=`<td class='square name-cell'>
-      <div class="handoff-main">成：${g.staff}</div>
-      <div class="handoff-sub">${g.registrar}</div>
-    </td>`;
-   }
-  }
-  html+="</tr>";
- });
-
- boardTable.innerHTML=html;
+    const baseStaff = lockedStaff || (staffSelect ? staffSelect.value : "");
+    const isHandoff = handoffToggle ? handoffToggle.checked : false;
+    const targetStaff = isHandoff ? handoffSelect.value : baseStaff;
+    
+    const r = records.filter(x => x.item === item && x.staff === targetStaff).pop();
+    if(!r) return;
+    
+    records.filter(x => x.groupId === r.groupId).forEach(x => {
+        db.collection("sales").doc(x.id).delete();
+    });
 }
 
-function groupBy(arr){
- const m={};
- arr.forEach(r=>{
-  if(!m[r.groupId]) m[r.groupId]=[];
-  m[r.groupId].push(r);
- });
- return Object.values(m);
+function renderBoard() {
+    const boardTable = document.getElementById("boardTable");
+    if(!boardTable) return;
+
+    let maxCols = 20;
+    itemList.forEach(it => {
+        const groups = groupBy(records.filter(r => r.item === it.name));
+        if(groups.length > maxCols) maxCols = groups.length;
+    });
+
+    let html = "<tr><th class='row-header'>商材</th><th>合計</th>";
+    for(let i=1; i<=maxCols; i++) html += `<th>${i}</th>`;
+    html += "</tr>";
+
+    itemList.forEach(it => {
+        const groups = groupBy(records.filter(r => r.item === it.name));
+        html += `<tr><th class='row-header' style="background:${it.color}">${it.name}</th>
+        <td>${groups.length}件</td>`;
+
+        for(let i=0; i<maxCols; i++) {
+            if(!groups[i]) {
+                html += `<td class='square'></td>`;
+                continue;
+            }
+            const g = groups[i][0];
+            if(!g.registrar) {
+                html += `<td class='square name-cell'><div class="normal-name">${g.staff}</div></td>`;
+            } else {
+                html += `<td class='square name-cell'>
+                  <div class="handoff-main">成：${g.staff}</div>
+                  <div class="handoff-sub">${g.registrar}</div>
+                </td>`;
+            }
+        }
+        html += "</tr>";
+    });
+    boardTable.innerHTML = html;
 }
 
-handoffToggle.onchange=()=>handoffSelect.disabled=!handoffToggle.checked;
+function groupBy(arr) {
+    const m = {};
+    arr.forEach(r => {
+        if(!m[r.groupId]) m[r.groupId] = [];
+        m[r.groupId].push(r);
+    });
+    return Object.values(m);
+}
 
 
-/* ========================================================
-   4. 設定関連・ドラッグ＆ドロップ・目標関連
-   ======================================================== */
+/* ==========================================
+   6. 設定関連・ドラッグ＆ドロップ・目標
+   ========================================== */
 function addStaff(){
- const n=document.getElementById("newStaff").value;
- if(n) db.collection("settings").add({type:"staff",name:n,order:Date.now()});
+ const n = document.getElementById("newStaff").value;
+ if(n) db.collection("settings").add({type:"staff", name:n, order:Date.now()});
  document.getElementById("newStaff").value = "";
 }
 function addItem(){
- const n=document.getElementById("newItem").value;
- const c=document.getElementById("newColor").value;
- if(n) db.collection("settings").add({type:"item",name:n,color:c,order:Date.now()});
+ const n = document.getElementById("newItem").value;
+ const c = document.getElementById("newColor").value;
+ if(n) db.collection("settings").add({type:"item", name:n, color:c, order:Date.now()});
  document.getElementById("newItem").value = "";
 }
-function editSetting(id,name,color){
- const data={name};
- if(color) data.color=color;
+function editSetting(id, name, color){
+ const data = {name};
+ if(color) data.color = color;
  db.collection("settings").doc(id).update(data);
 }
 function deleteSetting(id){
  if(confirm("本当に削除しますか？")) db.collection("settings").doc(id).delete();
 }
 
-function handleDragStart(e, type, id) { dragType = type; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', id); e.target.classList.add('dragging'); }
-function handleDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; const li = e.target.closest('li'); if (li && !li.classList.contains('dragging')) li.classList.add('over'); return false; }
-function handleDragLeave(e) { const li = e.target.closest('li'); if (li) li.classList.remove('over'); }
-async function handleDrop(e, targetId) {
- e.stopPropagation(); e.preventDefault();
- const li = e.target.closest('li'); if (li) li.classList.remove('over');
- const sourceId = e.dataTransfer.getData('text/plain');
- if (sourceId && sourceId !== targetId && dragType) {
-  const list = (dragType === 'staff') ? [...staffList] : [...itemList];
-  const draggedIdx = list.findIndex(i => i.id === sourceId);
-  const targetIdx = list.findIndex(i => i.id === targetId);
-  if (draggedIdx > -1 && targetIdx > -1) {
-   const item = list.splice(draggedIdx, 1)[0];
-   list.splice(targetIdx, 0, item);
-   const batch = db.batch();
-   list.forEach((it, index) => { batch.update(db.collection("settings").doc(it.id), { order: index }); });
-   await batch.commit();
-  }
- }
- return false;
-}
-function handleDragEnd(e) { document.querySelectorAll('.list-ui li').forEach(el => { el.classList.remove('dragging', 'over'); }); }
-
-function renderGoalPanel(){
- const goalPanel=document.getElementById("goalPanel");
- if(!goalPanel || itemList.length === 0) return;
- 
- goalPanel.style.display="grid";
- goalPanel.style.gridTemplateRows="repeat(15, max-content)";
- goalPanel.style.gridAutoFlow="column";
- goalPanel.style.gap="4px 10px"; 
- goalPanel.style.overflowX="auto";
-
- goalPanel.innerHTML=itemList.map(it=>{
-  const g=goals[it.name]?.target||0;
-  let opts="";
-  for(let i=0; i<=99; i++){
-   const num = i < 10 ? "0" + i : i;
-   opts+=`<option value="${i}" ${g==i?'selected':''}>${num}</option>`;
-  }
-  return `
-   <div style="display:flex; align-items:center;">
-    <div style="font-weight:bold; font-size:14px; width:112px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${it.name}</div>
-    <select style="width:55px; padding:4px; border:1px solid #cbd5e0; border-radius:6px; font-size:16px; text-align:center; background:#fff; cursor:pointer;" 
-     onchange="setGoal('${it.name}',this.value)">
-     ${opts}
-    </select>
-   </div>`;
- }).join("");
-}
-
-function setGoal(item,val){
- if(val === "" || val == 0) {
-  db.collection("goals").doc(item).delete(); 
- } else {
-  db.collection("goals").doc(item).set({item, target:Number(val)});
- }
-}
-
-async function resetAllGoals(){
- if(!confirm("すべての目標をリセット（0件）にしますか？")) return;
- const snap = await db.collection("goals").get();
- const batch = db.batch();
- snap.forEach(d => batch.delete(d.ref));
- await batch.commit();
- alert("目標をすべてリセットしました！");
-}
-
-function renderGoalsOnInput(){
- const box=document.getElementById("goalDisplay");
- if(!box) return;
-
- const htmls = itemList.map(it=>{
-  const target=goals[it.name]?.target||0;
-  if(!target) return "";
-  
-  const current = groupBy(records.filter(r=>r.item==it.name && r.date==currentDate)).length;
-  const pct=Math.min(100, Math.round(current/target*100));
-
-  return `
-  <div class="goal-box">
-   🔥 ${it.name} 目標 ${target}件 / 現在 ${current}件 (${
+function handleDragStart(e, type, id) { dragType = 
