@@ -11,17 +11,15 @@
 <style>
 body{ margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background:#f3f4f6; }
 
-/* Tabs */
-header{ display:flex; gap:6px; padding:8px; background:white; border-bottom:1px solid #ddd; overflow-x:auto; }
-.tab{ padding:8px 10px; border-radius:8px; cursor:pointer; background:#e5e7eb; font-weight:bold; color:#64748b; font-size:14px; flex:1; text-align:center; white-space:nowrap; min-width:80px;}
+/* Tabs & Header */
+header{ display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:white; border-bottom:1px solid #ddd; }
+.tabs-wrap { display:flex; gap:10px; flex-wrap:wrap; }
+.tab{ padding:6px 14px; border-radius:8px; cursor:pointer; background:#e5e7eb; font-weight:bold; color:#64748b;}
 .tab.active{background:#2563eb;color:white;}
 
-/* Date/Month Controller */
-.date-controller { background:white; border-bottom:1px solid #ddd; padding:10px; display:flex; justify-content:center; gap:15px; align-items:center; }
-.date-btn { padding:6px 12px; border:1px solid #cbd5e0; border-radius:6px; background:#f8fafc; font-weight:bold; cursor:pointer; color:#475569;}
-.date-btn:active { background:#e2e8f0; }
-.date-btn-today { background:#3b82f6; color:white; border:none; padding:6px 12px; border-radius:6px; font-weight:bold; cursor:pointer;}
-#dateDisplay, #monthDisplay { font-weight:bold; font-size:16px; color:#1e293b; min-width:130px; text-align:center; }
+/* 日付選択UI */
+.date-selector { display:flex; align-items:center; gap:8px; }
+.date-selector input[type="date"] { padding:6px 10px; border:1px solid #cbd5e0; border-radius:8px; font-family:inherit; font-size:14px; font-weight:bold; color:#334155; background:#f8fafc; cursor:pointer; }
 
 .page{display:none;padding:12px; max-width:1200px; margin:0 auto;}
 .page.active{display:block;}
@@ -29,7 +27,6 @@ header{ display:flex; gap:6px; padding:8px; background:white; border-bottom:1px 
 /* Cards */
 .card{ background:white; border-radius:12px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,.08); margin-bottom:15px; }
 .card h3 { margin-top:0; border-bottom:2px solid #e2e8f0; padding-bottom:8px; color:#334155; margin-bottom:15px; }
-.full-width { grid-column: 1 / -1; }
 
 /* Staff selector */
 .staff-selector { display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-weight:bold; color:#475569; }
@@ -37,19 +34,17 @@ header{ display:flex; gap:6px; padding:8px; background:white; border-bottom:1px 
 #lockBtn { padding:10px 15px; border:1px solid #cbd5e0; background:#f1f5f9; color:#64748b; border-radius:8px; cursor:pointer; font-weight:bold; }
 #lockBtn.locked { background:#3b82f6; color:white; }
 
-/* 引き継ぎ UI */
-.handoff-wrap { display:flex; align-items:center; gap:8px; padding-left:15px; margin-left:5px; border-left:2px solid #cbd5e0; }
-.handoff-wrap select { font-size:16px; padding:8px; border-radius:8px; border:1px solid #cbd5e0; background:#f8fafc; }
-
 /* Items */
 .items{ display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:10px; }
 .item-box{ border:1px solid #ddd; border-radius:10px; padding:8px; background:white; }
 .item-btn{ 
   width:100%; padding:12px; border:none; border-radius:8px; font-size:16px; font-weight:bold; cursor:pointer;
-  color:#000; text-shadow: 1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 0px 2px 4px rgba(0,0,0,0.2);
+  color:#000;
+  text-shadow: 1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 0px 2px 4px rgba(0,0,0,0.2);
 }
 .item-footer{ display:flex; justify-content:space-between; margin-top:6px; font-size:14px; align-items:center;}
 .minus{ background:#f1f5f9; border:1px solid #e2e8f0; padding:4px 10px; border-radius:6px; font-weight:bold; cursor:pointer; }
+
 .my-count { font-size:16px; font-weight:bold; color:#475569; }
 .rank-mini { font-size:12px; color:#64748b; margin-top:4px; }
 
@@ -60,9 +55,21 @@ th,td{ border:1px solid #cbd5e0; padding:4px; text-align:center; font-size:12px;
 .row-header { position:sticky; left:0; z-index:1; font-weight:bold; background:#f8fafc; }
 .square{ width:60px; height:60px; font-size:12px; background:#fff; vertical-align:middle; }
 .name-cell{ background:#f0f9ff; }
+
+/* 引き継ぎ表示スタイル */
 .normal-name{ font-weight:bold; color:#000; }
 .handoff-main{ font-weight:bold; color:#dc2626; } 
 .handoff-sub{ font-size:10px; color:#64748b; }
+
+/* 引き継ぎ UI */
+.handoff-wrap {
+ display:flex; align-items:center; gap:8px;
+ padding-left:15px; margin-left:5px; border-left:2px solid #cbd5e0;
+}
+.handoff-wrap select {
+ font-size:16px; padding:8px; border-radius:8px;
+ border:1px solid #cbd5e0; background:#f8fafc;
+}
 
 /* Settings */
 .settings-grid { display: grid; grid-template-columns: 320px 1fr; gap: 20px; }
@@ -81,46 +88,30 @@ th,td{ border:1px solid #cbd5e0; padding:4px; text-align:center; font-size:12px;
 .setting-input { flex:1; min-width:50px; padding:8px; border:1px solid #cbd5e0; border-radius:6px; font-weight:bold; }
 .color-picker { cursor:pointer; width:40px; height:36px; border:1px solid #cbd5e0; border-radius:4px; padding:2px; flex-shrink:0;}
 
-.goal-box{ background:linear-gradient(135deg,#fde047,#f97316); padding:15px; border-radius:12px; color:#000; font-weight:bold; box-shadow:0 4px 10px rgba(0,0,0,0.2); margin-bottom:10px; }
+.goal-box{
+ background:linear-gradient(135deg,#fde047,#f97316); padding:15px; border-radius:12px;
+ color:#000; font-weight:bold; box-shadow:0 4px 10px rgba(0,0,0,0.2); margin-bottom:10px;
+}
 .goal-progress{ background:white; height:14px; border-radius:8px; overflow:hidden; margin-top:6px; }
 .goal-bar{ height:100%; background:#22c55e; }
-
-/* Ranking Styles */
-.rank-top{display:flex;gap:12px;margin-bottom:12px;}
-.rank-card{ flex:1;padding:18px;border-radius:16px;color:white; font-size:22px;font-weight:bold;text-align:center; text-shadow:1px 1px 2px rgba(0,0,0,0.3); }
-.rank-1{background:linear-gradient(135deg,#facc15,#f59e0b);}
-.rank-2{background:linear-gradient(135deg,#94a3b8,#475569);}
-.rank-3{background:linear-gradient(135deg,#f87171,#b91c1c);}
-.rank-list{background:white;border-radius:12px;padding:10px;font-size:16px; line-height:1.8;}
-.rank-item-label { display:inline-block; margin-right:15px; margin-bottom:10px; font-size:14px; font-weight:bold; background:#f1f5f9; padding:6px 10px; border-radius:6px; border:1px solid #cbd5e0;}
 </style>
 </head>
 
 <body>
 
 <header>
- <div class="tab active" onclick="showTab('input')">入力</div>
- <div class="tab" onclick="showTab('board')">日別ボード</div>
- <div class="tab" onclick="showTab('monthly')">月間ボード</div>
- <div class="tab" onclick="showTab('ranking')">🏆 ランキング</div>
- <div class="tab" onclick="showTab('settings')">設定</div>
+ <div class="tabs-wrap">
+  <div class="tab active" onclick="showTab('input')">入力</div>
+  <div class="tab" onclick="showTab('board')">がんばるシート</div>
+  <div class="tab" onclick="showTab('settings')">設定</div>
+ </div>
+ <div class="date-selector">
+  <input type="date" id="dateSelect" onchange="changeDate(this.value)">
+ </div>
 </header>
 
-<div id="dateController" class="date-controller">
- <button class="date-btn" onclick="changeDate(-1)">◀ 前日</button>
- <div id="dateDisplay"></div>
- <button class="date-btn" onclick="changeDate(1)">翌日 ▶</button>
- <button class="date-btn-today" onclick="changeDate(0)">今日</button>
-</div>
-
-<div id="monthController" class="date-controller" style="display:none;">
- <button class="date-btn" onclick="changeMonth(-1)">◀ 前月</button>
- <div id="monthDisplay"></div>
- <button class="date-btn" onclick="changeMonth(1)">翌月 ▶</button>
- <button class="date-btn-today" onclick="changeMonth(0)">今月</button>
-</div>
-
 <div id="input" class="page active">
+
 <div class="card">
  <div class="staff-selector">
   <label>スタッフ:</label>
@@ -139,6 +130,7 @@ th,td{ border:1px solid #cbd5e0; padding:4px; text-align:center; font-size:12px;
 </div>
 
 <div class="card" id="goalDisplay" style="display:none; background:transparent; box-shadow:none; padding:0;"></div>
+
 </div>
 
 <div id="board" class="page">
@@ -150,42 +142,17 @@ th,td{ border:1px solid #cbd5e0; padding:4px; text-align:center; font-size:12px;
  </div>
 </div>
 
-<div id="monthly" class="page">
- <div class="card">
-  <h3 id="monthlyTitle"></h3>
-  <p style="font-size:12px; color:#64748b; margin-top:-10px;">※成約者（ポイント付与者）の月間トータル件数です。</p>
-  <div class="board-wrap">
-   <table id="monthlyTable"></table>
-  </div>
- </div>
-</div>
-
-<div id="ranking" class="page">
- <div class="card">
-  <h3 id="rankingTitle">🏆 月間スタッフ総合ランキング</h3>
-  <p style="font-size:12px; color:#64748b; margin-top:-10px;">※設定画面で選ばれた「ランキング対象商材」の合計成約数です。</p>
-  <div id="rankingTop" class="rank-top"></div>
-  <div id="rankingList" class="rank-list"></div>
- </div>
-</div>
-
 <div id="settings" class="page">
 <datalist id="paleColors">
- <option value="#e0f2fe"></option><option value="#fce7f3"></option><option value="#dcfce7"></option><option value="#fef9c3"></option>
- <option value="#f3e8ff"></option><option value="#ffedd5"></option><option value="#ccfbf1"></option><option value="#f1f5f9"></option>
+ <option value="#e0f2fe"></option>
+ <option value="#fce7f3"></option>
+ <option value="#dcfce7"></option>
+ <option value="#fef9c3"></option>
+ <option value="#f3e8ff"></option>
+ <option value="#ffedd5"></option>
+ <option value="#ccfbf1"></option>
+ <option value="#f1f5f9"></option>
 </datalist>
-
-<div class="card full-width">
- <h3 style="color:#ef4444;">🧹 データ大掃除</h3>
- <p style="font-size:12px; color:#64748b; margin-bottom:10px;">容量節約のため、1ヶ月以上前の不要な過去データを消去します。</p>
- <button onclick="deleteOldData()" style="background:#ef4444; color:white; border:none; padding:8px 15px; border-radius:6px; font-weight:bold; cursor:pointer;">🗑️ 1ヶ月以上前のデータを一括削除</button>
-</div>
-
-<div class="card full-width" style="background:#f0fdf4; border:1px solid #86efac;">
- <h3>🏆 月間ランキング対象商材の選択</h3>
- <p style="font-size:12px; color:#166534; margin-top:-10px;">チェックを入れた商材だけがランキングの集計対象になります。</p>
- <div id="rankingItemSelect" style="display:flex; flex-wrap:wrap; gap:10px;"></div>
-</div>
 
 <div class="settings-grid">
  <div class="card">
@@ -227,57 +194,6 @@ const firebaseConfig={
 firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore();
 
-/* ================= DATE & MONTH CONTROLLERS ================= */
-let viewDate = new Date();
-let viewMonth = new Date();
-
-function getViewDateStr() {
-  const y = viewDate.getFullYear();
-  const m = String(viewDate.getMonth() + 1).padStart(2, '0');
-  const d = String(viewDate.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
-
-function getViewMonthStr() {
-  const y = viewMonth.getFullYear();
-  const m = String(viewMonth.getMonth() + 1).padStart(2, '0');
-  return `${y}-${m}`;
-}
-
-function updateDateDisplay() {
-  const y = viewDate.getFullYear();
-  const m = viewDate.getMonth() + 1;
-  const d = viewDate.getDate();
-  const w = ["日","月","火","水","木","金","土"][viewDate.getDay()];
-  document.getElementById("dateDisplay").textContent = `${y}年${m}月${d}日(${w})`;
-  document.getElementById("boardTitle").textContent = `${m}/${d} のがんばるシート`;
-}
-
-function updateMonthDisplay() {
-  const y = viewMonth.getFullYear();
-  const m = viewMonth.getMonth() + 1;
-  document.getElementById("monthDisplay").textContent = `${y}年${m}月`;
-  document.getElementById("monthlyTitle").textContent = `${y}年${m}月の月間集計`;
-  document.getElementById("rankingTitle").textContent = `🏆 ${y}年${m}月 スタッフ総合ランキング`;
-}
-
-function changeDate(days) {
-  if(days === 0) viewDate = new Date();
-  else viewDate.setDate(viewDate.getDate() + days);
-  updateDateDisplay();
-  updateCounts();
-  renderBoard();
-  renderGoalsOnInput();
-}
-
-function changeMonth(months) {
-  if(months === 0) viewMonth = new Date();
-  else viewMonth.setMonth(viewMonth.getMonth() + months);
-  updateMonthDisplay();
-  renderMonthlyBoard();
-  renderRanking();
-}
-
 /* Tabs */
 const ADMIN_PASSWORD="0000";
 function showTab(id){
@@ -285,23 +201,44 @@ function showTab(id){
   const p=prompt("管理用パスワード:");
   if(p!==ADMIN_PASSWORD){ alert("NG"); return; }
  }
- 
  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
  document.getElementById(id).classList.add("active");
  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
  event.target.classList.add("active");
-
- // コントローラーの切り替え
- document.getElementById('dateController').style.display = (id === 'input' || id === 'board') ? 'flex' : 'none';
- document.getElementById('monthController').style.display = (id === 'monthly' || id === 'ranking') ? 'flex' : 'none';
 }
 
-/* Data */
+/* Data & Date Management */
 let staffList=[], itemList=[], records=[];
 
-// 初回の日付セット
-updateDateDisplay();
-updateMonthDisplay();
+// UTCズレを防ぐためローカルタイムで YYYY-MM-DD を取得
+function getLocalYYYYMMDD(date) {
+  const y = date.getFullYear();
+  const m = ("0" + (date.getMonth() + 1)).slice(-2);
+  const d = ("0" + date.getDate()).slice(-2);
+  return `${y}-${m}-${d}`;
+}
+
+let currentDate = getLocalYYYYMMDD(new Date());
+
+// 初期表示時の日付セット
+document.getElementById("dateSelect").value = currentDate;
+updateBoardTitle();
+
+function updateBoardTitle() {
+ const d = new Date(currentDate);
+ document.getElementById("boardTitle").textContent=`${d.getMonth()+1}/${d.getDate()} のがんばるシート`;
+}
+
+// 日付切り替えイベント
+function changeDate(newDate) {
+ if(!newDate) return;
+ currentDate = newDate;
+ updateBoardTitle();
+ updateCounts();
+ renderBoard();
+ renderGoalsOnInput();
+}
+
 
 /* Load settings */
 db.collection("settings").orderBy("order").onSnapshot(snap=>{
@@ -320,8 +257,6 @@ db.collection("sales").onSnapshot(snap=>{
  renderBoard();
  updateCounts(); 
  renderGoalsOnInput(); 
- renderMonthlyBoard();
- renderRanking();
 });
 
 /* UI refs */
@@ -401,21 +336,20 @@ function renderAll(){
 
  updateCounts();
  renderGoalPanel();
- renderRankingTargetUI();
 }
 
-/* ランキングと件数の更新処理（日別） */
+/* ランキングと件数の更新処理 */
 function updateCounts(){
- const viewDateStr = getViewDateStr(); 
+ const todayDate = currentDate; // ★ currentDateを使用
  const currentStaff = lockedStaff || staffSelect.value;
 
  itemList.forEach(it=>{
-  const c = records.filter(r=>r.item==it.name && r.staff==currentStaff && r.date==viewDateStr).length;
+  const c = records.filter(r=>r.item==it.name && r.staff==currentStaff && r.date==todayDate).length;
   const countEl = document.getElementById("count_"+it.name);
   if(countEl) countEl.textContent=c+"件";
 
   const rank={};
-  records.filter(r=>r.item==it.name && r.date==viewDateStr).forEach(r=>{
+  records.filter(r=>r.item==it.name && r.date==todayDate).forEach(r=>{
    rank[r.staff]=(rank[r.staff]||0)+1;
   });
   const sorted=Object.entries(rank).sort((a,b)=>b[1]-a[1]).slice(0,3);
@@ -429,7 +363,7 @@ function addRecord(item){
  const baseStaff = lockedStaff || staffSelect.value;
  const staff = handoffToggle.checked ? handoffSelect.value : baseStaff;
  const registrar = handoffToggle.checked ? baseStaff : "";
- const date = getViewDateStr(); 
+ const date = currentDate; // ★ currentDateを使用
  const groupId = Date.now().toString();
  db.collection("sales").add({staff, registrar, item, date, groupId});
 }
@@ -438,9 +372,9 @@ function addRecord(item){
 function removeRecord(item){
  const baseStaff = lockedStaff || staffSelect.value;
  const targetStaff = handoffToggle.checked ? handoffSelect.value : baseStaff;
- const viewDateStr = getViewDateStr(); 
+ const todayStr = currentDate; // ★ currentDateを使用
  
- const r=records.filter(r=>r.item==item && r.date==viewDateStr && r.staff==targetStaff).pop();
+ const r=records.filter(r=>r.item==item && r.date==todayStr && r.staff==targetStaff).pop();
  if(!r) return;
  
  records.filter(x=>x.groupId==r.groupId).forEach(x=>{
@@ -448,27 +382,154 @@ function removeRecord(item){
  });
 }
 
-/* 月間ボード描画 */
-function renderMonthlyBoard(){
-  const monthStr = getViewMonthStr(); 
-  const monthRecords = records.filter(r => r.date.startsWith(monthStr));
+/* ボード描画 */
+function renderBoard(){
+ const todayStr = currentDate; // ★ currentDateを使用
+ let maxCols=20;
 
-  let html="<tr><th class='row-header' style='background:#f9fafb;'>商材 \\ スタッフ</th><th class='square' style='background:#f0fdf4; font-weight:bold;'>店舗合計</th>";
-  staffList.forEach(s => {
-    html += `<th class='square'>${s.name}</th>`;
-  });
-  html += "</tr>";
+ itemList.forEach(it=>{
+  const groups=groupBy(records.filter(r=>r.item==it.name && r.date==todayStr));
+  if(groups.length>maxCols) maxCols=groups.length;
+ });
 
-  itemList.forEach(it => {
-    const itRecords = monthRecords.filter(r => r.item == it.name);
-    
-    // 店舗合計は groupId でユニーク化して数える（成約数ベース）
-    const totalCount = groupBy(itRecords).length;
-    
-    html += `<tr><th class='row-header' style="background:${it.color}; color:#333;">${it.name}</th>
-             <td class='square name-cell' style='font-weight:bold; font-size:14px; background:#dcfce7; color:#166534;'>${totalCount}</td>`;
+ let html="<tr><th class='row-header'>商材</th><th>合計</th>";
+ for(let i=1;i<=maxCols;i++) html+=`<th>${i}</th>`;
+ html+="</tr>";
 
-    staffList.forEach(s => {
-      // 個人の件数
-      const staffCount = itRecords.filter(r => r.staff == s.name).length;
-      html += `<td class='square' style='${staffCount > 0 ? "font-weight:bold; color:#0369a1; background:#e0f
+ itemList.forEach(it=>{
+  const groups=groupBy(records.filter(r=>r.item==it.name && r.date==todayStr));
+  html+=`<tr><th class='row-header' style="background:${it.color}">${it.name}</th>
+  <td>${groups.length}件</td>`;
+
+  for(let i=0;i<maxCols;i++){
+   if(!groups[i]){
+    html+=`<td class='square'></td>`;
+    continue;
+   }
+
+   const g=groups[i][0];
+
+   if(!g.registrar){
+    html+=`<td class='square name-cell'><div class="normal-name">${g.staff}</div></td>`;
+   }
+   else{
+    html+=`<td class='square name-cell'>
+      <div class="handoff-main">成：${g.staff}</div>
+      <div class="handoff-sub">${g.registrar}</div>
+    </td>`;
+   }
+  }
+  html+="</tr>";
+ });
+
+ boardTable.innerHTML=html;
+}
+
+/* group helper */
+function groupBy(arr){
+ const m={};
+ arr.forEach(r=>{
+  if(!m[r.groupId]) m[r.groupId]=[];
+  m[r.groupId].push(r);
+ });
+ return Object.values(m);
+}
+
+/* 引き継ぎ select disable */
+handoffToggle.onchange=()=>handoffSelect.disabled=!handoffToggle.checked;
+
+/* ================= Settings CRUD & Drag/Drop ================= */
+function addStaff(){
+ const n=document.getElementById("newStaff").value;
+ if(n) db.collection("settings").add({type:"staff",name:n,order:Date.now()});
+ document.getElementById("newStaff").value = "";
+}
+function addItem(){
+ const n=document.getElementById("newItem").value;
+ const c=document.getElementById("newColor").value;
+ if(n) db.collection("settings").add({type:"item",name:n,color:c,order:Date.now()});
+ document.getElementById("newItem").value = "";
+}
+function editSetting(id,name,color){
+ const data={name};
+ if(color) data.color=color;
+ db.collection("settings").doc(id).update(data);
+}
+function deleteSetting(id){
+ if(confirm("本当に削除しますか？")) db.collection("settings").doc(id).delete();
+}
+
+let dragType = null;
+function handleDragStart(e, type, id) { dragType = type; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', id); e.target.classList.add('dragging'); }
+function handleDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; const li = e.target.closest('li'); if (li && !li.classList.contains('dragging')) li.classList.add('over'); return false; }
+function handleDragLeave(e) { const li = e.target.closest('li'); if (li) li.classList.remove('over'); }
+async function handleDrop(e, targetId) {
+ e.stopPropagation(); e.preventDefault();
+ const li = e.target.closest('li'); if (li) li.classList.remove('over');
+ const sourceId = e.dataTransfer.getData('text/plain');
+ if (sourceId && sourceId !== targetId && dragType) {
+  const list = (dragType === 'staff') ? [...staffList] : [...itemList];
+  const draggedIdx = list.findIndex(i => i.id === sourceId);
+  const targetIdx = list.findIndex(i => i.id === targetId);
+  if (draggedIdx > -1 && targetIdx > -1) {
+   const item = list.splice(draggedIdx, 1)[0];
+   list.splice(targetIdx, 0, item);
+   const batch = db.batch();
+   list.forEach((it, index) => { batch.update(db.collection("settings").doc(it.id), { order: index }); });
+   await batch.commit();
+  }
+ }
+ return false;
+}
+function handleDragEnd(e) { document.querySelectorAll('.list-ui li').forEach(el => { el.classList.remove('dragging', 'over'); }); }
+
+/* ================= Goals ================= */
+let goals = {};
+db.collection("goals").onSnapshot(snap=>{
+ goals={};
+ snap.forEach(d=>{ goals[d.data().item]=d.data(); });
+ renderGoalPanel();
+ renderGoalsOnInput();
+});
+
+function renderGoalPanel(){
+ const goalPanel=document.getElementById("goalPanel");
+ if(!goalPanel) return;
+ 
+ goalPanel.style.display="grid";
+ goalPanel.style.gridTemplateRows="repeat(15, max-content)";
+ goalPanel.style.gridAutoFlow="column";
+ goalPanel.style.gap="4px 10px"; 
+ goalPanel.style.overflowX="auto";
+
+ goalPanel.innerHTML=itemList.map(it=>{
+  const g=goals[it.name]?.target||0;
+  let opts="";
+  for(let i=0; i<=99; i++){
+   const num = i < 10 ? "0" + i : i;
+   opts+=`<option value="${i}" ${g==i?'selected':''}>${num}</option>`;
+  }
+  return `
+   <div style="display:flex; align-items:center;">
+    <div style="font-weight:bold; font-size:14px; width:112px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${it.name}</div>
+    <select style="width:55px; padding:4px; border:1px solid #cbd5e0; border-radius:6px; font-size:16px; text-align:center; background:#fff; cursor:pointer;" 
+     onchange="setGoal('${it.name}',this.value)">
+     ${opts}
+    </select>
+   </div>`;
+ }).join("");
+}
+
+function setGoal(item,val){
+ if(val === "" || val == 0) {
+  db.collection("goals").doc(item).delete(); 
+ } else {
+  db.collection("goals").doc(item).set({item, target:Number(val)});
+ }
+}
+
+async function resetAllGoals(){
+ if(!confirm("すべての目標をリセット（0件）にしますか？")) return;
+ const snap = await db.collection("goals").get();
+ const batch = db.batch();
+ snap.forEach(
