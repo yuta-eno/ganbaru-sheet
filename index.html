@@ -363,16 +363,16 @@ function renderAll(){
 function addRecord(item){
  const staff=lockedStaff||staffSelect.value;
  const handoffToggle=document.getElementById("handoffToggle");
- const handoff=(handoffToggle&&handoffToggle.checked)?document.getElementById("handoffSelect").value:staff;
+ const handoff=(handoffToggle&&handoffToggle.checked)?document.getElementById("handoffSelect").value:"";
  const date=new Date().toISOString().slice(0,10);
  db.collection("sales").add({staff,item,date,handoff});
 }
 function removeRecord(item){
  const staff=lockedStaff||staffSelect.value;
  const handoffToggle=document.getElementById("handoffToggle");
- const handoff=(handoffToggle&&handoffToggle.checked)?document.getElementById("handoffSelect").value:staff;
+ const handoff=(handoffToggle&&handoffToggle.checked)?document.getElementById("handoffSelect").value:"";
  const today=new Date().toISOString().slice(0,10);
- const r=records.filter(r=>r.item==item&&r.staff==staff&&(r.handoff||r.staff)==handoff&&r.date==today).pop();
+ const r=records.filter(r=>r.item==item&&r.staff==staff&&(r.handoff||"")==handoff&&r.date==today).pop();
  if(r) db.collection("sales").doc(r.id).delete();
 }
 
@@ -428,7 +428,12 @@ function renderBoard(){
    if(r){
     const seiyaku = r.handoff || r.staff;
     const touroku = r.staff;
-    html+=`<td class='square name-cell'><div style="line-height:1.2;">${seiyaku}<br><span style="font-size:9px;color:#64748b;">${touroku}</span></div></td>`;
+    
+    if(r.handoff && r.handoff !== r.staff) {
+     html+=`<td class='square name-cell'><div style="line-height:1.2;">${seiyaku}<br><span style="font-size:9px;color:#64748b;">${touroku}</span></div></td>`;
+    } else {
+     html+=`<td class='square name-cell'>${seiyaku}</td>`;
+    }
    }else{
     html+=`<td class='square'></td>`;
    }
@@ -553,6 +558,4 @@ function renderGoalsOnInput(){
 
  box.innerHTML=itemList.map(it=>{
   const target=goals[it.name]?.target||0;
-  if(!target) return "";
-  const current=records.filter(r=>r.item==it.name&&r.date==today).length;
-  const pct=Math.min(100, Math.r
+  if(!target)
