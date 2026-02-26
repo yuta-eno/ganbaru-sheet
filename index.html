@@ -1,680 +1,963 @@
 <!DOCTYPE html>
+
 <html lang="ja">
+
 <head>
+
 <meta charset="UTF-8">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
 <title>GANBARU SHEET PRO</title>
 
+
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
 
+
 <style>
-body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f3f4f6}
 
-/* header */
-header{display:flex;gap:8px;padding:8px;background:#fff;border-bottom:1px solid #ddd;align-items:center;flex-wrap:wrap}
-.tab{padding:6px 14px;border-radius:8px;background:#e5e7eb;font-weight:bold;cursor:pointer}
-.tab.active{background:#2563eb;color:#fff}
-.date-wrap{margin-left:auto}
-.date-wrap input {padding:4px 8px; border:1px solid #cbd5e0; border-radius:6px; font-weight:bold; font-size:14px;}
+body{ margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background:#f3f4f6; }
 
-/* page */
+
+/* Tabs */
+
+header{ display:flex; gap:10px; padding:8px; background:white; border-bottom:1px solid #ddd; }
+
+.tab{ padding:6px 14px; border-radius:8px; cursor:pointer; background:#e5e7eb; font-weight:bold; color:#64748b;}
+
+.tab.active{background:#2563eb;color:white;}
+
+
 .page{display:none;padding:12px; max-width:1200px; margin:0 auto;}
-.page.active{display:block}
 
-/* card */
-.card{background:#fff;border-radius:12px;padding:15px;margin-bottom:15px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.page.active{display:block;}
+
+
+/* Cards */
+
+.card{ background:white; border-radius:12px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,.08); margin-bottom:15px; }
+
 .card h3 { margin-top:0; border-bottom:2px solid #e2e8f0; padding-bottom:8px; color:#334155; margin-bottom:15px; }
 
-/* input section */
+
+/* Staff selector */
+
 .staff-selector { display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-weight:bold; color:#475569; }
-.staff-selector select { font-size:16px; padding:8px; flex:1; min-width:120px; max-width:200px; border-radius:8px; border:1px solid #cbd5e0; background:#f8fafc; }
-#lockBtn { padding:8px 12px; border:1px solid #cbd5e0; background:#f1f5f9; color:#64748b; border-radius:8px; cursor:pointer; font-weight:bold; }
+
+.staff-selector select { font-size:16px; padding:10px; flex:1; min-width:150px; max-width:300px; border-radius:8px; border:1px solid #cbd5e0; background:#f8fafc; }
+
+#lockBtn { padding:10px 15px; border:1px solid #cbd5e0; background:#f1f5f9; color:#64748b; border-radius:8px; cursor:pointer; font-weight:bold; }
+
 #lockBtn.locked { background:#3b82f6; color:white; }
 
-/* handoff */
-.handoff-wrap { display:flex; align-items:center; gap:8px; padding-left:10px; margin-left:5px; border-left:2px solid #cbd5e0; }
 
-/* items */
-.items{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+/* Items */
+
+.items{ display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:10px; }
+
 .item-box{ border:1px solid #ddd; border-radius:10px; padding:8px; background:white; }
+
 .item-btn{ 
+
   width:100%; padding:12px; border:none; border-radius:8px; font-size:16px; font-weight:bold; cursor:pointer;
-  color:#000; text-shadow: 1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 0px 2px 4px rgba(0,0,0,0.2);
+
+  color:#000;
+
+  text-shadow: 1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 0px 2px 4px rgba(0,0,0,0.2);
+
 }
+
 .item-footer{ display:flex; justify-content:space-between; margin-top:6px; font-size:14px; align-items:center;}
-.minus{ background:#f1f5f9; border:1px solid #e2e8f0; padding:4px 10px; border-radius:6px; font-weight:bold; cursor:pointer; color:#64748b; }
+
+.minus{ background:#f1f5f9; border:1px solid #e2e8f0; padding:4px 10px; border-radius:6px; font-weight:bold; cursor:pointer; }
+
+
 .my-count { font-size:16px; font-weight:bold; color:#475569; }
-.rank-mini { font-size:12px; color:#64748b; margin-top:4px; line-height:1.2;}
 
-/* board */
+.rank-mini { font-size:12px; color:#64748b; margin-top:4px; }
+
+
+/* Board */
+
 .board-wrap{ overflow-x:auto; }
-table{border-collapse:collapse;background:#fff;width:max-content;}
-td,th{border:1px solid #cbd5e0;padding:4px;text-align:center;font-size:12px}
-.square{width:60px;height:60px; vertical-align:middle;}
-.row-header{position:sticky;left:0;background:#f8fafc;font-weight:bold;z-index:1;}
-.normal-name{font-weight:bold;color:#000}
-.handoff-main{font-weight:bold;color:#dc2626}
-.handoff-sub{font-size:10px;color:#64748b}
 
-/* Settings & Goals Restored */
+table{ border-collapse:collapse; width:max-content; background:white; }
+
+th,td{ border:1px solid #cbd5e0; padding:4px; text-align:center; font-size:12px; }
+
+.row-header { position:sticky; left:0; z-index:1; font-weight:bold; background:#f8fafc; }
+
+.square{ width:60px; height:60px; font-size:12px; background:#fff; vertical-align:middle; }
+
+.name-cell{ background:#f0f9ff; }
+
+
+/* 引き継ぎ表示スタイル */
+
+.normal-name{ font-weight:bold; color:#000; }
+
+.handoff-main{ font-weight:bold; color:#dc2626; } /* 赤 */
+
+.handoff-sub{ font-size:10px; color:#64748b; }
+
+
+/* 引き継ぎ UI */
+
+.handoff-wrap {
+
+ display:flex; align-items:center; gap:8px;
+
+ padding-left:15px; margin-left:5px; border-left:2px solid #cbd5e0;
+
+}
+
+.handoff-wrap select {
+
+ font-size:16px; padding:8px; border-radius:8px;
+
+ border:1px solid #cbd5e0; background:#f8fafc;
+
+}
+
+
+/* Settings */
+
 .settings-grid { display: grid; grid-template-columns: 320px 1fr; gap: 20px; }
+
 @media (max-width: 768px) { .settings-grid { grid-template-columns: 1fr; } }
-.full-width { grid-column: 1 / -1; }
+
 .add-form { display:flex; gap:8px; align-items:center; margin-bottom:15px; }
+
 .add-form input[type="text"] { flex:1; min-width:0; padding:10px; border:1px solid #cbd5e0; border-radius:6px; font-size:14px; }
+
 .add-form input[type="color"] { width:45px; height:40px; padding:2px; border:1px solid #cbd5e0; border-radius:6px; cursor:pointer; flex-shrink:0;}
+
 .add-form button { padding:10px 15px; background:#64748b; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold; flex-shrink:0;}
-.list-ui { list-style:none; padding:0; margin:0; max-height:400px; overflow-y:auto; }
+
+.list-ui { list-style:none; padding:0; margin:0; max-height:500px; overflow-y:auto; }
+
 .list-ui li { display:flex; justify-content:space-between; align-items:center; padding:6px 8px; border-bottom:1px solid #edf2f7; background:white; margin-bottom:4px; border-radius:6px; transition:0.2s;}
+
 .drag-handle { cursor: grab; font-size: 18px; color: #94a3b8; padding: 0 4px; user-select: none; }
+
 .drag-handle:active { cursor: grabbing; }
+
 .list-ui li.dragging { opacity: 0.4; background: #f8fafc; border: 1px dashed #cbd5e0; }
+
 .list-ui li.over { border-top: 3px solid #3b82f6; }
+
 .delete-btn { background:#fca5a5; color:#7f1d1d; border:none; padding:8px 12px; border-radius:6px; font-size:12px; cursor:pointer; font-weight:bold; flex-shrink:0;}
+
 .setting-input { flex:1; min-width:50px; padding:8px; border:1px solid #cbd5e0; border-radius:6px; font-weight:bold; }
+
 .color-picker { cursor:pointer; width:40px; height:36px; border:1px solid #cbd5e0; border-radius:4px; padding:2px; flex-shrink:0;}
 
-.goal-box{ background:linear-gradient(135deg,#fde047,#f97316); padding:15px; border-radius:12px; color:#000; font-weight:bold; box-shadow:0 4px 10px rgba(0,0,0,0.2); margin-bottom:10px; }
+
+.goal-box{
+
+ background:linear-gradient(135deg,#fde047,#f97316); padding:15px; border-radius:12px;
+
+ color:#000; font-weight:bold; box-shadow:0 4px 10px rgba(0,0,0,0.2); margin-bottom:10px;
+
+}
+
 .goal-progress{ background:white; height:14px; border-radius:8px; overflow:hidden; margin-top:6px; }
+
 .goal-bar{ height:100%; background:#22c55e; }
+
 </style>
+
 </head>
+
 
 <body>
 
+
 <header>
- <div class="tab active" onclick="showTab('input',this)">入力</div>
- <div class="tab" onclick="showTab('board',this)">がんばるシート</div>
- <div class="tab" onclick="showTab('monthly',this)">📊 月次集計</div>
- <div class="tab" onclick="showTab('settings',this)">設定</div>
- <div class="date-wrap"><input type="date" id="globalDate"></div>
+
+ <div class="tab active" onclick="showTab('input')">入力</div>
+
+ <div class="tab" onclick="showTab('board')">がんばるシート</div>
+
+ <div class="tab" onclick="showTab('settings')">設定</div>
+
+ <input type="date" id="dateSelect" onchange="changeDate()" style="margin-left:auto; padding:6px 10px; border-radius:8px; border:1px solid #cbd5e0; background:#f8fafc; font-weight:bold; color:#475569; font-size:14px; cursor:pointer; outline:none;">
+
 </header>
 
+
 <div id="input" class="page active">
- <div class="card">
-  <div class="staff-selector">
-   <label>スタッフ:</label>
-   <select id="staffSelect" onchange="updateCounts()"></select>
-   <button id="lockBtn" onclick="toggleLock()">🔓 固定OFF</button>
 
-   <div class="handoff-wrap">
-    <label><input type="checkbox" id="handoffToggle" onchange="toggleHandoff()"> 引き継ぎ</label>
-    <select id="handoffSelect" disabled></select>
-   </div>
+
+<div class="card">
+
+ <div class="staff-selector">
+
+  <label>スタッフ:</label>
+
+  <select id="staffSelect" onchange="updateCounts()"></select>
+
+  <button onclick="toggleLock()" id="lockBtn">🔓 固定OFF</button>
+
+
+  <div class="handoff-wrap">
+
+   <label><input type="checkbox" id="handoffToggle"> 引き継ぎ</label>
+
+   <select id="handoffSelect" disabled></select>
+
   </div>
+
  </div>
 
- <div class="card">
-  <div class="items" id="btnContainer"></div>
- </div>
-
- <div class="card" id="goalDisplay" style="display:none; background:transparent; box-shadow:none; padding:0;"></div>
 </div>
+
+
+<div class="card">
+
+ <div class="items" id="btnContainer"></div>
+
+</div>
+
+
+<div class="card" id="goalDisplay" style="display:none; background:transparent; box-shadow:none; padding:0;"></div>
+
+
+</div>
+
 
 <div id="board" class="page">
+
  <div class="card">
+
   <h3 id="boardTitle"></h3>
+
   <div class="board-wrap">
+
    <table id="boardTable"></table>
+
   </div>
+
  </div>
+
 </div>
 
-<div id="monthly" class="page">
- <div class="card">
-  <h3>📅 月次集計 商材選択</h3>
-  <div style="margin-bottom:10px;">
-   <button onclick="deselectAllMonthlyItems()" style="background:#e2e8f0; color:#475569; border:none; padding:6px 12px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">☑ 選択を全て解除</button>
-  </div>
-  <div id="monthlyItemSelect" style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:15px;"></div>
-  <button onclick="calculateMonthly()" style="background:#2563eb; color:white; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; cursor:pointer;">集計</button>
- </div>
-
- <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:15px;">
-  <div class="card">
-   <h3>合計件数</h3>
-   <div id="monthlyTotal" style="font-size:32px; font-weight:bold; color:#2563eb; text-align:center; padding:10px;">0 件</div>
-  </div>
-
-  <div class="card">
-   <h3>🏆 TOP3</h3>
-   <div id="monthlyTop3" style="font-size:16px; line-height:1.8;"></div>
-  </div>
- </div>
-
- <div class="card">
-  <h3>スタッフ別件数一覧</h3>
-  <div class="board-wrap">
-   <table id="monthlyTable" style="width:100%; max-width:400px;"></table>
-  </div>
- </div>
-
- <div class="card">
-  <h3>📋 商材 月累計件数ボード</h3>
-  <div class="board-wrap">
-   <table id="monthlyItemBoard"></table>
-  </div>
- </div>
-</div>
 
 <div id="settings" class="page">
- <datalist id="paleColors">
-  <option value="#e0f2fe"></option><option value="#fce7f3"></option><option value="#dcfce7"></option><option value="#fef9c3"></option>
-  <option value="#f3e8ff"></option><option value="#ffedd5"></option><option value="#ccfbf1"></option><option value="#f1f5f9"></option>
- </datalist>
 
- <div class="card full-width">
-  <h3 style="color:#ef4444;">🧹 データ大掃除</h3>
-  <p style="font-size:12px; color:#64748b; margin-bottom:10px;">容量節約のため、1ヶ月以上前の不要な過去データを消去します。</p>
-  <button onclick="deleteOldData()" style="background:#ef4444; color:white; border:none; padding:8px 15px; border-radius:6px; font-weight:bold; cursor:pointer;">🗑️ 1ヶ月以上前のデータを一括削除</button>
- </div>
+<datalist id="paleColors">
 
- <div class="settings-grid">
-  <div class="card">
-   <h3>スタッフ管理</h3>
-   <div class="add-form">
-    <input type="text" id="newStaff" placeholder="名前">
-    <button onclick="addStaff()">追加</button>
-   </div>
-   <div id="staffListUI"></div>
+ <option value="#e0f2fe"></option>
+
+ <option value="#fce7f3"></option>
+
+ <option value="#dcfce7"></option>
+
+ <option value="#fef9c3"></option>
+
+ <option value="#f3e8ff"></option>
+
+ <option value="#ffedd5"></option>
+
+ <option value="#ccfbf1"></option>
+
+ <option value="#f1f5f9"></option>
+
+</datalist>
+
+
+<div class="settings-grid">
+
+ <div class="card">
+
+  <h3>スタッフ管理</h3>
+
+  <div class="add-form">
+
+   <input type="text" id="newStaff" placeholder="名前">
+
+   <button onclick="addStaff()">追加</button>
+
   </div>
 
-  <div class="card">
-   <h3>商材管理</h3>
-   <div class="add-form">
-    <input type="text" id="newItem" placeholder="新商材">
-    <input type="color" id="newColor" value="#e0f2fe" list="paleColors">
-    <button onclick="addItem()">追加</button>
-   </div>
-   <div id="itemListUI"></div>
-  </div>
+  <div id="staffListUI"></div>
+
  </div>
 
- <div class="card full-width">
-  <h3 style="display:flex; justify-content:space-between; align-items:center;">
-   🎯 目標設定（表示中の日付）
-   <button onclick="resetAllGoals()" style="background:#ef4444; color:white; border:none; padding:4px 10px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:bold;">🗑️ 全リセット</button>
-  </h3>
-  <div id="goalPanel"></div>
+
+ <div class="card">
+
+  <h3>商材管理</h3>
+
+  <div class="add-form">
+
+   <input type="text" id="newItem" placeholder="新商材">
+
+   <input type="color" id="newColor" value="#e0f2fe" list="paleColors">
+
+   <button onclick="addItem()">追加</button>
+
+  </div>
+
+  <div id="itemListUI"></div>
+
  </div>
+
 </div>
 
+
+<div class="card">
+
+ <h3>今日の目標設定</h3>
+
+ <div id="goalPanel"></div>
+
+</div>
+
+</div>
+
+
 <script>
-/* ================= Firebase ================= */
-firebase.initializeApp({
+
+/* Firebase */
+
+const firebaseConfig={
+
  apiKey:"AIzaSyCmerraKVr1iJsRoiW53lxUtgDUcOGVXtY",
+
  authDomain:"ganbaru-sheet-a32f3.firebaseapp.com",
+
  projectId:"ganbaru-sheet-a32f3"
-});
+
+};
+
+firebase.initializeApp(firebaseConfig);
+
 const db=firebase.firestore();
 
-/* ================= Global Variables ================= */
-let staffList=[], itemList=[], records=[], monthlyRecords=[];
-let goals={};
-let lockedStaff=localStorage.getItem("lockedStaff")||"";
-let currentDate=new Date().toISOString().slice(0,10);
-document.getElementById("globalDate").value=currentDate;
+
+/* Tabs */
 
 const ADMIN_PASSWORD="0000";
 
-/* ================= TAB Controller ================= */
-function showTab(id,tab){
+function showTab(id){
+
  if(id==='settings'){
+
   const p=prompt("管理用パスワード:");
+
   if(p!==ADMIN_PASSWORD){ alert("NG"); return; }
+
  }
+
  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+
  document.getElementById(id).classList.add("active");
+
  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
- tab.classList.add("active");
- 
- updateAllViews();
- if(id==="monthly") loadMonthlyData();
+
+ event.target.classList.add("active");
+
 }
 
-/* ================= Date Controller ================= */
-document.getElementById("globalDate").onchange=e=>{
- currentDate=e.target.value;
- loadDailyData(); // ★カレンダー変更時に実績と目標を再読み込み
-};
 
-/* ================= Realtime Listeners ================= */
-let unsubSales=null;
-let unsubGoals=null;
+function changeDate(){
 
-function loadDailyData(){
- // 1. カレンダーで選ばれている日付の「実績（sales）」を取得
- if(unsubSales) unsubSales();
- unsubSales=db.collection("sales").where("date","==",currentDate).onSnapshot(snap=>{
-  records=snap.docs.map(d=>({...d.data(),id:d.id}));
-  updateAllViews();
- });
+ const d = new Date(document.getElementById("dateSelect").value);
 
- // 2. カレンダーで選ばれている日付の「目標（goals）」を取得
- if(unsubGoals) unsubGoals();
- unsubGoals=db.collection("goals").where("date","==",currentDate).onSnapshot(snap=>{
-  goals={};
-  snap.forEach(d=>{ goals[d.data().item]=d.data(); });
-  renderGoalPanel();
-  renderGoalsOnInput();
- });
+ document.getElementById("boardTitle").textContent=`${d.getMonth()+1}/${d.getDate()} のがんばるシート`;
+
+ updateCounts();
+
+ renderBoard();
+
+ renderGoalsOnInput();
+
 }
+
+
+/* Data */
+
+let staffList=[], itemList=[], records=[];
+
+const today=new Date();
+
+document.getElementById("dateSelect").value = today.toISOString().slice(0,10);
+
+document.getElementById("boardTitle").textContent=`${today.getMonth()+1}/${today.getDate()} のがんばるシート`;
+
+
+/* Load settings */
 
 db.collection("settings").orderBy("order").onSnapshot(snap=>{
+
  staffList=[]; itemList=[];
+
  snap.forEach(d=>{
+
   const v=d.data(); v.id=d.id;
+
   if(v.type=="staff") staffList.push(v);
+
   if(v.type=="item") itemList.push(v);
+
  });
- renderStaffItemLists(); 
- updateAllViews();
+
+ renderAll();
+
 });
 
-/* ================= Core Render ================= */
-function updateAllViews(){
- renderButtons();
+
+/* Load sales */
+
+db.collection("sales").onSnapshot(snap=>{
+
+ records=snap.docs.map(d=>({id:d.id,...d.data()}));
+
  renderBoard();
+
+ updateCounts(); 
+
+ renderGoalsOnInput(); 
+
+});
+
+
+/* UI refs */
+
+const staffSelect=document.getElementById("staffSelect");
+
+const handoffSelect=document.getElementById("handoffSelect");
+
+const btnContainer=document.getElementById("btnContainer");
+
+const boardTable=document.getElementById("boardTable");
+
+const lockBtn=document.getElementById("lockBtn");
+
+const handoffToggle=document.getElementById("handoffToggle");
+
+
+/* Lock */
+
+let lockedStaff=localStorage.getItem("lockedStaff")||"";
+
+function toggleLock(){
+
+ if(lockedStaff){
+
+  lockedStaff="";
+
+  localStorage.removeItem("lockedStaff");
+
+  lockBtn.textContent="🔓 固定OFF";
+
+  lockBtn.classList.remove("locked");
+
+  staffSelect.disabled = false;
+
+ }else{
+
+  lockedStaff=staffSelect.value;
+
+  localStorage.setItem("lockedStaff",lockedStaff);
+
+  lockBtn.textContent="🔒 固定ON";
+
+  lockBtn.classList.add("locked");
+
+  staffSelect.disabled = true;
+
+ }
+
  updateCounts();
- renderGoalsOnInput();
+
 }
 
-/* ================= Input Panel (Buttons, Counts, Ranking) ================= */
-function renderButtons(){
- const sSel=document.getElementById("staffSelect");
- const hSel=document.getElementById("handoffSelect");
- const btn=document.getElementById("btnContainer");
+
+/* Render */
+
+function renderAll(){
 
  const opts=staffList.map(s=>`<option>${s.name}</option>`).join("");
- sSel.innerHTML=opts;
- hSel.innerHTML=opts;
+
+ staffSelect.innerHTML=opts;
+
+ handoffSelect.innerHTML=opts;
+
 
  if(lockedStaff){
-  sSel.value=lockedStaff;
-  sSel.disabled=true;
-  document.getElementById("lockBtn").textContent="🔒 固定ON";
-  document.getElementById("lockBtn").classList.add("locked");
+
+  staffSelect.value=lockedStaff;
+
+  staffSelect.disabled=true;
+
+  document.getElementById('lockBtn').textContent="🔒 固定ON";
+
+  document.getElementById('lockBtn').classList.add("locked");
+
  }else{
-  sSel.disabled=false;
-  document.getElementById("lockBtn").textContent="🔓 固定OFF";
-  document.getElementById("lockBtn").classList.remove("locked");
+
+  staffSelect.disabled=false;
+
+  document.getElementById('lockBtn').textContent="🔓 固定OFF";
+
+  document.getElementById('lockBtn').classList.remove("locked");
+
  }
 
- btn.innerHTML=itemList.map(it=>`
-  <div class="item-box">
-   <button class="item-btn" style="background:${it.color}" onclick="addRecord('${it.name}')">${it.name}</button>
-   <div class="item-footer">
-    <div style="display:flex; flex-direction:column;">
-     <span class="my-count" id="count_${it.name}">0件</span>
-     <div class="rank-mini" id="rank_${it.name}"></div>
-    </div>
-    <button class="minus" onclick="removeRecord('${it.name}')">取消</button>
+
+ btnContainer.innerHTML=itemList.map(it=>`
+
+ <div class="item-box">
+
+  <button class="item-btn" style="background:${it.color}" onclick="addRecord('${it.name}')">${it.name}</button>
+
+  <div class="item-footer">
+
+   <div style="display:flex; flex-direction:column;">
+
+    <span class="my-count" id="count_${it.name}">0件</span>
+
+    <div class="rank-mini" id="rank_${it.name}"></div>
+
    </div>
+
+   <button class="minus" onclick="removeRecord('${it.name}')">取消</button>
+
   </div>
- `).join("");
- 
- updateCounts();
-}
 
-function updateCounts(){
- const currentStaff = lockedStaff || document.getElementById("staffSelect").value;
- if(!currentStaff) return;
+ </div>`).join("");
 
- itemList.forEach(it=>{
-  // 自分の件数
-  const c = records.filter(r=>r.item==it.name && r.staff==currentStaff).length;
-  const countEl = document.getElementById("count_"+it.name);
-  if(countEl) countEl.textContent=c+"件";
 
-  // その商材のランキング
-  const rank={};
-  records.filter(r=>r.item==it.name).forEach(r=>{
-   rank[r.staff]=(rank[r.staff]||0)+1;
-  });
-  const sorted=Object.entries(rank).sort((a,b)=>b[1]-a[1]).slice(0,3);
-  const rankEl = document.getElementById("rank_"+it.name);
-  if(rankEl) rankEl.innerHTML=sorted.map((r,i)=>`${i+1}位 ${r[0]}:${r[1]}件`).join("<br>");
- });
-}
-
-/* ================= Input Actions ================= */
-function toggleLock(){
- const s=document.getElementById("staffSelect");
- if(lockedStaff){
-  lockedStaff="";
-  localStorage.removeItem("lockedStaff");
-  s.disabled = false;
- }else{
-  lockedStaff=s.value;
-  localStorage.setItem("lockedStaff",lockedStaff);
-  s.disabled = true;
- }
- renderButtons();
-}
-
-function toggleHandoff(){
- document.getElementById("handoffSelect").disabled=!document.getElementById("handoffToggle").checked;
-}
-
-function addRecord(item){
- const base=lockedStaff||document.getElementById("staffSelect").value;
- if(!base)return alert("スタッフ未選択");
-
- const isH=document.getElementById("handoffToggle").checked;
- const staff=isH?document.getElementById("handoffSelect").value:base;
- const registrar=isH?base:"";
- const groupId=Date.now().toString();
-
- db.collection("sales").add({staff,registrar,item,date:currentDate,groupId});
-}
-
-function removeRecord(item){
- const baseStaff = lockedStaff || document.getElementById("staffSelect").value;
- const targetStaff = document.getElementById("handoffToggle").checked ? document.getElementById("handoffSelect").value : baseStaff;
- 
- const r=records.filter(r=>r.item==item && r.staff==targetStaff).pop();
- if(!r) return;
- 
- db.collection("sales").where("groupId","==",r.groupId).get().then(snap=>{
-  const batch=db.batch();
-  snap.forEach(d=>batch.delete(d.ref));
-  batch.commit();
- });
-}
-
-/* ================= Daily Board ================= */
-function groupBy(arr){
- const m={};
- arr.forEach(r=>{
-  if(!m[r.groupId])m[r.groupId]=[];
-  m[r.groupId].push(r);
- });
- return Object.values(m);
-}
-
-function renderBoard(){
- const table=document.getElementById("boardTable");
- const title=document.getElementById("boardTitle");
- title.textContent=currentDate.replace(/-/g,"/")+" のがんばるシート";
-
- let max=20;
- itemList.forEach(it=>{
-  const g=groupBy(records.filter(r=>r.item==it.name));
-  if(g.length>max)max=g.length;
- });
-
- let html="<tr><th class='row-header'>商材</th><th>合計</th>";
- for(let i=1;i<=max;i++)html+=`<th>${i}</th>`;
- html+="</tr>";
-
- itemList.forEach(it=>{
-  const g=groupBy(records.filter(r=>r.item==it.name));
-  html+=`<tr><th class='row-header' style="background:${it.color}">${it.name}</th><td style="font-weight:bold;">${g.length}件</td>`;
-  for(let i=0;i<max;i++){
-   if(!g[i]){html+="<td class='square'></td>";continue;}
-   const r=g[i][0];
-   if(!r.registrar){
-    html+=`<td class='square normal-name name-cell'>${r.staff}</td>`;
-   }else{
-    html+=`<td class='square name-cell'><div class='handoff-main'>成：${r.staff}</div><div class='handoff-sub'>${r.registrar}</div></td>`;
-   }
-  }
-  html+="</tr>";
- });
- table.innerHTML=html;
-}
-
-/* ================= Monthly Logic ================= */
-function getMonthRange(dateStr){
- const d=new Date(dateStr);
- const y=d.getFullYear(),m=d.getMonth();
- return {
-  start:new Date(y,m,1).toISOString().slice(0,10),
-  end:new Date(y,m+1,0).toISOString().slice(0,10)
- };
-}
-
-async function loadMonthlyData(){
- const {start,end}=getMonthRange(currentDate);
- const snap=await db.collection("sales")
-  .where("date",">=",start).where("date","<=",end).get();
- monthlyRecords=snap.docs.map(d=>d.data());
- renderMonthlyItemSelector();
- renderMonthlyItemBoard();
-}
-
-function renderMonthlyItemSelector(){
- const div=document.getElementById("monthlyItemSelect");
- div.innerHTML=itemList.map(it=>`
-  <label style="margin-right:10px; font-weight:bold; background:#f1f5f9; padding:6px 10px; border-radius:6px; border:1px solid #cbd5e0;">
-   <input type="checkbox" value="${it.name}" checked> ${it.name}
-  </label>
- `).join("");
-}
-
-function deselectAllMonthlyItems(){
- document.querySelectorAll("#monthlyItemSelect input[type='checkbox']").forEach(cb => cb.checked = false);
-}
-
-function calculateMonthly(){
- const checked=[...document.querySelectorAll("#monthlyItemSelect input:checked")].map(c=>c.value);
- if(checked.length==0)return alert("商材選択してください");
-
- const filtered=monthlyRecords.filter(r=>checked.includes(r.item));
-
- const groups={};
- filtered.forEach(r=>{ if(!groups[r.groupId])groups[r.groupId]=r; });
- const total=Object.keys(groups).length;
- document.getElementById("monthlyTotal").textContent=total+" 件";
-
- const staffCount={};
- Object.values(groups).forEach(r=>{
-  staffCount[r.staff]=(staffCount[r.staff]||0)+1;
- });
-
- const sorted = Object.entries(staffCount).sort((a,b)=>b[1]-a[1]);
- const medals = ["🥇", "🥈", "🥉"];
- document.getElementById("monthlyTop3").innerHTML=sorted.slice(0,3).map((r,i)=>
-  `<div style="margin-bottom:8px; font-size:18px;">${medals[i]} <strong>${r[0]}</strong>：${r[1]}件</div>`
- ).join("");
-
- let html="<tr><th style='background:#f8fafc;'>スタッフ</th><th style='background:#f8fafc;'>件数</th></tr>";
- sorted.forEach(r=>{
-  html+=`<tr><td style="font-weight:bold;">${r[0]}</td><td>${r[1]}</td></tr>`;
- });
- document.getElementById("monthlyTable").innerHTML=html;
-}
-
-function renderMonthlyItemBoard(){
- const itemCount={};
- const groups={};
- monthlyRecords.forEach(r=>{
-  if(!groups[r.groupId]) groups[r.groupId]=[];
-  groups[r.groupId].push(r);
- });
-
- Object.values(groups).forEach(g=>{
-  g.forEach(r=>{
-   itemCount[r.item]=(itemCount[r.item]||0)+1;
-  });
- });
-
- let html="<tr><th style='background:#f8fafc;'>商材</th><th style='background:#f8fafc;'>月累計件数</th></tr>";
- itemList.forEach(it=>{
-  const c=itemCount[it.name]||0;
-  html+=`<tr><th style="background:${it.color};">${it.name}</th><td style="font-weight:bold;">${c}</td></tr>`;
- });
- document.getElementById("monthlyItemBoard").innerHTML=html;
-}
-
-/* ================= Settings (Drag&Drop, Sweep, etc) ================= */
-function addStaff(){
- const n=document.getElementById("newStaff").value;
- if(n) db.collection("settings").add({type:"staff",name:n,order:Date.now()});
- document.getElementById("newStaff").value="";
-}
-function addItem(){
- const n=document.getElementById("newItem").value;
- const c=document.getElementById("newColor").value;
- if(n) db.collection("settings").add({type:"item",name:n,color:c,order:Date.now()});
- document.getElementById("newItem").value="";
-}
-function editSetting(id,name,color){
- const data={name};
- if(color) data.color=color;
- db.collection("settings").doc(id).update(data);
-}
-function deleteSetting(id){
- if(confirm("本当に削除しますか？")) db.collection("settings").doc(id).delete();
-}
-
-function renderStaffItemLists() {
  document.getElementById("staffListUI").innerHTML=`<ul class="list-ui">` + staffList.map(s=>`
-  <li draggable="true" ondragstart="handleDragStart(event,'staff','${s.id}')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'${s.id}')" ondragend="handleDragEnd(event)">
-   <div style="display:flex; align-items:center; gap:8px; width:100%;">
-    <div class="drag-handle">☰</div>
-    <input class="setting-input" value="${s.name}" onchange="editSetting('${s.id}',this.value,null)">
-    <button class="delete-btn" onclick="deleteSetting('${s.id}')">削除</button>
-   </div>
-  </li>`).join("") + `</ul>`;
+
+ <li draggable="true" ondragstart="handleDragStart(event,'staff','${s.id}')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'${s.id}')" ondragend="handleDragEnd(event)">
+
+  <div style="display:flex; align-items:center; gap:8px; width:100%;">
+
+   <div class="drag-handle">☰</div>
+
+   <input class="setting-input" value="${s.name}" onchange="editSetting('${s.id}',this.value,null)">
+
+   <button class="delete-btn" onclick="deleteSetting('${s.id}')">削除</button>
+
+  </div>
+
+ </li>`).join("") + `</ul>`;
+
 
  document.getElementById("itemListUI").innerHTML=`<ul class="list-ui">` + itemList.map(it=>`
-  <li draggable="true" ondragstart="handleDragStart(event,'item','${it.id}')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'${it.id}')" ondragend="handleDragEnd(event)" style="border-left: 5px solid ${it.color};">
-   <div style="display:flex; align-items:center; gap:8px; width:100%;">
-    <div class="drag-handle">☰</div>
-    <input class="setting-input" value="${it.name}" onchange="editSetting('${it.id}',this.value,'${it.color}')">
-    <input type="color" value="${it.color}" list="paleColors" class="color-picker" onchange="editSetting('${it.id}','${it.name}',this.value)">
-    <button class="delete-btn" onclick="deleteSetting('${it.id}')">削除</button>
-   </div>
-  </li>`).join("") + `</ul>`;
+
+ <li draggable="true" ondragstart="handleDragStart(event,'item','${it.id}')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'${it.id}')" ondragend="handleDragEnd(event)" style="border-left: 5px solid ${it.color};">
+
+  <div style="display:flex; align-items:center; gap:8px; width:100%;">
+
+   <div class="drag-handle">☰</div>
+
+   <input class="setting-input" value="${it.name}" onchange="editSetting('${it.id}',this.value,'${it.color}')">
+
+   <input type="color" value="${it.color}" list="paleColors" class="color-picker" onchange="editSetting('${it.id}','${it.name}',this.value)">
+
+   <button class="delete-btn" onclick="deleteSetting('${it.id}')">削除</button>
+
+  </div>
+
+ </li>`).join("") + `</ul>`;
+
+
+ updateCounts();
+
+ renderGoalPanel();
+
 }
 
-async function deleteOldData() {
- if(!confirm("【警告】\n1ヶ月以上前の過去データをすべて削除します。\n本当によろしいですか？")) return;
- const oneMonthAgo = new Date();
- oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
- const y = oneMonthAgo.getFullYear();
- const m = String(oneMonthAgo.getMonth() + 1).padStart(2, '0');
- const d = String(oneMonthAgo.getDate()).padStart(2, '0');
- const limitStr = `${y}-${m}-${d}`;
 
- const snap = await db.collection("sales").where("date", "<", limitStr).get();
- if(snap.empty) return alert("削除する対象の古いデータはありませんでした。");
+/* ランキングと件数の更新処理 */
 
- const batch = db.batch();
- snap.forEach(doc => batch.delete(doc.ref));
- await batch.commit();
- alert(`完了しました！\n${snap.size}件の古いデータを削除しました。`);
+function updateCounts(){
+
+ const todayDate=document.getElementById("dateSelect").value;
+
+ const currentStaff = lockedStaff || staffSelect.value;
+
+
+ itemList.forEach(it=>{
+
+  const c = records.filter(r=>r.item==it.name && r.staff==currentStaff && r.date==todayDate).length;
+
+  const countEl = document.getElementById("count_"+it.name);
+
+  if(countEl) countEl.textContent=c+"件";
+
+
+  const rank={};
+
+  records.filter(r=>r.item==it.name && r.date==todayDate).forEach(r=>{
+
+   rank[r.staff]=(rank[r.staff]||0)+1;
+
+  });
+
+  const sorted=Object.entries(rank).sort((a,b)=>b[1]-a[1]).slice(0,3);
+
+  const rankEl = document.getElementById("rank_"+it.name);
+
+  if(rankEl) rankEl.innerHTML=sorted.map((r,i)=>`${i+1}位 ${r[0]}:${r[1]}件`).join("<br>");
+
+ });
+
 }
 
-/* Drag & Drop logic */
-let dragType = null;
-function handleDragStart(e, type, id) { dragType = type; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', id); e.target.classList.add('dragging'); }
-function handleDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; const li = e.target.closest('li'); if (li && !li.classList.contains('dragging')) li.classList.add('over'); return false; }
-function handleDragLeave(e) { const li = e.target.closest('li'); if (li) li.classList.remove('over'); }
-async function handleDrop(e, targetId) {
- e.stopPropagation(); e.preventDefault();
- const li = e.target.closest('li'); if (li) li.classList.remove('over');
- const sourceId = e.dataTransfer.getData('text/plain');
- if (sourceId && sourceId !== targetId && dragType) {
-  const list = (dragType === 'staff') ? [...staffList] : [...itemList];
-  const draggedIdx = list.findIndex(i => i.id === sourceId);
-  const targetIdx = list.findIndex(i => i.id === targetId);
-  if (draggedIdx > -1 && targetIdx > -1) {
-   const item = list.splice(draggedIdx, 1)[0];
-   list.splice(targetIdx, 0, item);
-   const batch = db.batch();
-   list.forEach((it, index) => { batch.update(db.collection("settings").doc(it.id), { order: index }); });
-   await batch.commit();
+
+/* 成約登録 */
+
+function addRecord(item){
+
+ const baseStaff = lockedStaff || staffSelect.value;
+
+ const staff = handoffToggle.checked ? handoffSelect.value : baseStaff;
+
+ const registrar = handoffToggle.checked ? baseStaff : "";
+
+ const date=document.getElementById("dateSelect").value;
+
+ const groupId=Date.now().toString();
+
+ db.collection("sales").add({staff, registrar, item, date, groupId});
+
+}
+
+
+/* ★修正：取消ロジック（現在選択中のスタッフの成約だけを消す） */
+
+function removeRecord(item){
+
+ const baseStaff = lockedStaff || staffSelect.value;
+
+ const targetStaff = handoffToggle.checked ? handoffSelect.value : baseStaff;
+
+ const todayStr=document.getElementById("dateSelect").value;
+
+ 
+
+ const r=records.filter(r=>r.item==item && r.date==todayStr && r.staff==targetStaff).pop();
+
+ if(!r) return;
+
+ 
+
+ records.filter(x=>x.groupId==r.groupId).forEach(x=>{
+
+  db.collection("sales").doc(x.id).delete();
+
+ });
+
+}
+
+
+/* ボード描画 */
+
+function renderBoard(){
+
+ const todayStr=document.getElementById("dateSelect").value;
+
+ let maxCols=20;
+
+
+ itemList.forEach(it=>{
+
+  const groups=groupBy(records.filter(r=>r.item==it.name && r.date==todayStr));
+
+  if(groups.length>maxCols) maxCols=groups.length;
+
+ });
+
+
+ let html="<tr><th class='row-header'>商材</th><th>合計</th>";
+
+ for(let i=1;i<=maxCols;i++) html+=`<th>${i}</th>`;
+
+ html+="</tr>";
+
+
+ itemList.forEach(it=>{
+
+  const groups=groupBy(records.filter(r=>r.item==it.name && r.date==todayStr));
+
+  html+=`<tr><th class='row-header' style="background:${it.color}">${it.name}</th>
+
+  <td>${groups.length}件</td>`;
+
+
+  for(let i=0;i<maxCols;i++){
+
+   if(!groups[i]){
+
+    html+=`<td class='square'></td>`;
+
+    continue;
+
+   }
+
+
+   const g=groups[i][0];
+
+
+   if(!g.registrar){
+
+    html+=`<td class='square name-cell'><div class="normal-name">${g.staff}</div></td>`;
+
+   }
+
+   else{
+
+    html+=`<td class='square name-cell'>
+
+      <div class="handoff-main">成：${g.staff}</div>
+
+      <div class="handoff-sub">${g.registrar}</div>
+
+    </td>`;
+
+   }
+
   }
- }
- return false;
+
+  html+="</tr>";
+
+ });
+
+
+ boardTable.innerHTML=html;
+
 }
+
+
+/* group helper */
+
+function groupBy(arr){
+
+ const m={};
+
+ arr.forEach(r=>{
+
+  if(!m[r.groupId]) m[r.groupId]=[];
+
+  m[r.groupId].push(r);
+
+ });
+
+ return Object.values(m);
+
+}
+
+
+/* 引き継ぎ select disable */
+
+handoffToggle.onchange=()=>handoffSelect.disabled=!handoffToggle.checked;
+
+
+/* ================= Settings CRUD & Drag/Drop ================= */
+
+function addStaff(){
+
+ const n=document.getElementById("newStaff").value;
+
+ if(n) db.collection("settings").add({type:"staff",name:n,order:Date.now()});
+
+ document.getElementById("newStaff").value = "";
+
+}
+
+function addItem(){
+
+ const n=document.getElementById("newItem").value;
+
+ const c=document.getElementById("newColor").value;
+
+ if(n) db.collection("settings").add({type:"item",name:n,color:c,order:Date.now()});
+
+ document.getElementById("newItem").value = "";
+
+}
+
+function editSetting(id,name,color){
+
+ const data={name};
+
+ if(color) data.color=color;
+
+ db.collection("settings").doc(id).update(data);
+
+}
+
+function deleteSetting(id){
+
+ if(confirm("本当に削除しますか？")) db.collection("settings").doc(id).delete();
+
+}
+
+
+let dragType = null;
+
+function handleDragStart(e, type, id) { dragType = type; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', id); e.target.classList.add('dragging'); }
+
+function handleDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; const li = e.target.closest('li'); if (li && !li.classList.contains('dragging')) li.classList.add('over'); return false; }
+
+function handleDragLeave(e) { const li = e.target.closest('li'); if (li) li.classList.remove('over'); }
+
+async function handleDrop(e, targetId) {
+
+ e.stopPropagation(); e.preventDefault();
+
+ const li = e.target.closest('li'); if (li) li.classList.remove('over');
+
+ const sourceId = e.dataTransfer.getData('text/plain');
+
+ if (sourceId && sourceId !== targetId && dragType) {
+
+  const list = (dragType === 'staff') ? [...staffList] : [...itemList];
+
+  const draggedIdx = list.findIndex(i => i.id === sourceId);
+
+  const targetIdx = list.findIndex(i => i.id === targetId);
+
+  if (draggedIdx > -1 && targetIdx > -1) {
+
+   const item = list.splice(draggedIdx, 1)[0];
+
+   list.splice(targetIdx, 0, item);
+
+   const batch = db.batch();
+
+   list.forEach((it, index) => { batch.update(db.collection("settings").doc(it.id), { order: index }); });
+
+   await batch.commit();
+
+  }
+
+ }
+
+ return false;
+
+}
+
 function handleDragEnd(e) { document.querySelectorAll('.list-ui li').forEach(el => { el.classList.remove('dragging', 'over'); }); }
 
+
 /* ================= Goals ================= */
+
+let goals = {};
+
+db.collection("goals").onSnapshot(snap=>{
+
+ goals={};
+
+ snap.forEach(d=>{ goals[d.data().item]=d.data(); });
+
+ renderGoalPanel();
+
+ renderGoalsOnInput();
+
+});
+
+
 function renderGoalPanel(){
+
  const goalPanel=document.getElementById("goalPanel");
+
  if(!goalPanel) return;
+
  
+
  goalPanel.style.display="grid";
+
  goalPanel.style.gridTemplateRows="repeat(15, max-content)";
+
  goalPanel.style.gridAutoFlow="column";
+
  goalPanel.style.gap="4px 10px"; 
+
  goalPanel.style.overflowX="auto";
 
+
  goalPanel.innerHTML=itemList.map(it=>{
+
   const g=goals[it.name]?.target||0;
+
   let opts="";
+
   for(let i=0; i<=99; i++){
+
    const num = i < 10 ? "0" + i : i;
+
    opts+=`<option value="${i}" ${g==i?'selected':''}>${num}</option>`;
+
   }
+
   return `
+
    <div style="display:flex; align-items:center;">
+
     <div style="font-weight:bold; font-size:14px; width:112px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${it.name}</div>
+
     <select style="width:55px; padding:4px; border:1px solid #cbd5e0; border-radius:6px; font-size:16px; text-align:center; background:#fff; cursor:pointer;" 
+
      onchange="setGoal('${it.name}',this.value)">
+
      ${opts}
+
     </select>
+
    </div>`;
+
  }).join("");
+
 }
 
-// ★修正：目標を「日付（currentDate）」ごとに保存するように変更
+
 function setGoal(item,val){
- const docId = currentDate + "_" + item; // 日付と商材名を組み合わせた一意のID
+
  if(val === "" || val == 0) {
-  db.collection("goals").doc(docId).delete(); 
+
+  db.collection("goals").doc(item).delete(); 
+
  } else {
-  db.collection("goals").doc(docId).set({item: item, target: Number(val), date: currentDate});
+
+  db.collection("goals").doc(item).set({item, target:Number(val)});
+
  }
+
 }
 
-// ★修正：表示中の日付の目標だけをリセットするように変更
-function resetAllGoals(){
- if(!confirm(`表示中の日付（${currentDate}）の目標をすべてリセット（0件）にしますか？`)) return;
- db.collection("goals").where("date", "==", currentDate).get().then(snap => {
-   const batch = db.batch();
-   snap.forEach(d => batch.delete(d.ref));
-   batch.commit().then(() => alert("表示中の目標をすべてリセットしました！"));
- });
-}
 
 function renderGoalsOnInput(){
+
  const box=document.getElementById("goalDisplay");
+
  if(!box) return;
 
+ const todayDate=document.getElementById("dateSelect").value;
+
+
  const htmls = itemList.map(it=>{
+
   const target=goals[it.name]?.target||0;
+
   if(!target) return "";
+
   
-  // 今日の成約数
-  const current = groupBy(records.filter(r=>r.item==it.name)).length;
+
+  const current = groupBy(records.filter(r=>r.item==it.name && r.date==todayDate)).length;
+
   const pct=Math.min(100, Math.round(current/target*100));
 
+
   return `
+
   <div class="goal-box">
-   🔥 ${it.name} 目標 ${target}件 / 現在 ${current}件 (${pct}%)
-   <div class="goal-progress">
-    <div class="goal-bar" style="width:${pct}%"></div>
-   </div>
-  </div>`;
- }).filter(h=>h!=="");
 
- if(htmls.length > 0) {
-  box.style.display = "block";
-  box.innerHTML = htmls.join("");
- } else {
-  box.style.display = "none";
-  box.innerHTML = "";
- }
-}
-
-/* ================= Start ================= */
-loadDailyData();
-</script>
-
-</body>
-</html>
+   🔥 ${it.name} 目標 ${target}件 / 現在 
