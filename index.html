@@ -530,4 +530,151 @@ function deleteSetting(id){
 }
 
 function renderStaffItemLists() {
- document.getElementById("staffListUI").innerH
+ document.getElementById("staffListUI").innerHTML=`<ul class="list-ui">` + staffList.map(s=>`
+  <li draggable="true" ondragstart="handleDragStart(event,'staff','${s.id}')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'${s.id}')" ondragend="handleDragEnd(event)">
+   <div style="display:flex; align-items:center; gap:8px; width:100%;">
+    <div class="drag-handle">☰</div>
+    <input class="setting-input" value="${s.name}" onchange="editSetting('${s.id}',this.value,null)">
+    <button class="delete-btn" onclick="deleteSetting('${s.id}')">削除</button>
+   </div>
+  </li>`).join("") + `</ul>`;
+
+ document.getElementById("itemListUI").innerHTML=`<ul class="list-ui">` + itemList.map(it=>`
+  <li draggable="true" ondragstart="handleDragStart(event,'item','${it.id}')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'${it.id}')" ondragend="handleDragEnd(event)" style="border-left: 5px solid ${it.color};">
+   <div style="display:flex; align-items:center; gap:8px; width:100%;">
+    <div class="drag-handle">☰</div>
+    <input class="setting-input" value="${it.name}" onchange="editSetting('${it.id}',this.value,'${it.color}')">
+    <input type="color" value="${it.color}" list="paleColors" class="color-picker" onchange="editSetting('${it.id}','${it.name}',this.value)">
+    <button class="delete-btn" onclick="deleteSetting('${it.id}')">削除</button>
+   </div>
+  </li>`).join("") + `</ul>`;
+}
+
+async function deleteOldData() {
+ if(!confirm("【警告】\n1ヶ月以上前の過去データをすべて削除します。\n本当によろしいですか？")) return;
+ const oneMonthAgo = new Date();
+ oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+ const y = oneMonthAgo.getFullYear();
+ const m = String(oneMonthAgo.getMonth() + 1).padStart(2, '0');
+ const d = String(oneMonthAgo.getDate()).padStart(2, '0');
+ const limitStr = `${y}-${m}-${d}`;
+
+ const snap = await db.collection("sales").where("date", "<", limitStr).get();
+ if(snap.empty) return alert("削除する対象の古いデータはありませんでした。");
+
+ const batch = db.batch();
+ snap.forEach(doc => batch.delete(doc.ref));
+ await batch.commit();
+ alert(`完了しました！\n${snap.size}件の古いデータを削除しました。`);
+}
+
+/* Drag & Drop logic */
+let dragType = null;
+function handleDragStart(e, type, id) { dragType = type; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', id); e.target.classList.add('dragging'); }
+function handleDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; const li = e.target.closest('li'); if (li && !li.classList.contains('dragging')) li.classList.add('over'); return false; }
+function handleDragLeave(e) { const li = e.target.closest('li'); if (li) li.classList.remove('over'); }
+async function handleDrop(e, targetId) {
+ e.stopPropagation(); e.preventDefault();
+ const li = e.target.closest('li'); if (li) li.classList.remove('over');
+ const sourceId = e.dataTransfer.getData('text/plain');
+ if (sourceId && sourceId !== targetId && dragType) {
+  const list = (dragType === 'staff') ? [...staffList] : [...itemList];
+  const draggedIdx = list.findIndex(i => i.id === sourceId);
+  const targetIdx = list.findIndex(i => i.id === targetId);
+  if (draggedIdx > -1 && targetIdx > -1) {
+   const item = list.splice(draggedIdx, 1)[0];
+   list.splice(targetIdx, 0, item);
+   const batch = db.batch();
+   list.forEach((it, index) => { batch.update(db.collection("settings").doc(it.id), { order: index }); });
+   await batch.commit();
+  }
+ }
+ return false;
+}
+function handleDragEnd(e) { document.querySelectorAll('.list-ui li').forEach(el => { el.classList.remove('dragging', 'over'); }); }
+
+/* ================= Goals ================= */
+function renderGoalPanel(){
+ const goalPanel=document.getElementById("goalPanel");
+ if(!goalPanel) return;
+ 
+ goalPanel.style.display="grid";
+ goalPanel.style.gridTemplateRows="repeat(15, max-content)";
+ goalPanel.style.gridAutoFlow="column";
+ goalPanel.style.gap="4px 10px"; 
+ goalPanel.style.overflowX="auto";
+
+ goalPanel.innerHTML=itemList.map(it=>{
+  const g=goals[it.name]?.target||0;
+  let opts="";
+  for(let i=0; i<=99; i++){
+   const num = i < 10 ? "0" + i : i;
+   opts+=`<option value="${i}" ${g==i?'selected':''}>${num}</option>`;
+  }
+  return `
+   <div style="display:flex; align-items:center;">
+    <div style="font-weight:bold; font-size:14px; width:112px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${it.name}</div>
+    <select style="width:55px; padding:4px; border:1px solid #cbd5e0; border-radius:6px; font-size:16px; text-align:center; background:#fff; cursor:pointer;" 
+     onchange="setGoal('${it.name}',this.value)">
+     ${opts}
+    </select>
+   </div>`;
+ }).join("");
+}
+
+// ★修正：目標を「日付（currentDate）」ごとに保存するように変更
+function setGoal(item,val){
+ const docId = currentDate + "_" + item; // 日付と商材名を組み合わせた一意のID
+ if(val === "" || val == 0) {
+  db.collection("goals").doc(docId).delete(); 
+ } else {
+  db.collection("goals").doc(docId).set({item: item, target: Number(val), date: currentDate});
+ }
+}
+
+// ★修正：表示中の日付の目標だけをリセットするように変更
+function resetAllGoals(){
+ if(!confirm(`表示中の日付（${currentDate}）の目標をすべてリセット（0件）にしますか？`)) return;
+ db.collection("goals").where("date", "==", currentDate).get().then(snap => {
+   const batch = db.batch();
+   snap.forEach(d => batch.delete(d.ref));
+   batch.commit().then(() => alert("表示中の目標をすべてリセットしました！"));
+ });
+}
+
+function renderGoalsOnInput(){
+ const box=document.getElementById("goalDisplay");
+ if(!box) return;
+
+ const htmls = itemList.map(it=>{
+  const target=goals[it.name]?.target||0;
+  if(!target) return "";
+  
+  // 今日の成約数
+  const current = groupBy(records.filter(r=>r.item==it.name)).length;
+  const pct=Math.min(100, Math.round(current/target*100));
+
+  return `
+  <div class="goal-box">
+   🔥 ${it.name} 目標 ${target}件 / 現在 ${current}件 (${pct}%)
+   <div class="goal-progress">
+    <div class="goal-bar" style="width:${pct}%"></div>
+   </div>
+  </div>`;
+ }).filter(h=>h!=="");
+
+ if(htmls.length > 0) {
+  box.style.display = "block";
+  box.innerHTML = htmls.join("");
+ } else {
+  box.style.display = "none";
+  box.innerHTML = "";
+ }
+}
+
+/* ================= Start ================= */
+loadDailyData();
+</script>
+
+</body>
+</html>
