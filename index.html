@@ -16,7 +16,7 @@ header{display:flex;gap:8px;padding:8px;background:#fff;border-bottom:1px solid 
 .tab{padding:6px 14px;border-radius:8px;background:#e5e7eb;font-weight:bold;cursor:pointer}
 .tab.active{background:#2563eb;color:#fff}
 .date-wrap{margin-left:auto}
-.date-wrap input {padding:4px 8px; border:1px solid #cbd5e0; border-radius:6px; font-weight:bold; font-size:14px;}
+.date-wrap input {padding:8px 12px; border:1px solid #cbd5e0; border-radius:6px; font-weight:bold; font-size:18px;}
 
 /* page */
 .page{display:none;padding:12px; max-width:1200px; margin:0 auto;}
@@ -166,8 +166,11 @@ td,th{border:1px solid #cbd5e0;padding:4px;text-align:center;font-size:12px}
 
  <div class="card full-width">
   <h3 style="color:#ef4444;">🧹 データ大掃除</h3>
-  <p style="font-size:12px; color:#64748b; margin-bottom:10px;">容量節約のため、1ヶ月以上前の不要な過去データを消去します。</p>
-  <button onclick="deleteOldData()" style="background:#ef4444; color:white; border:none; padding:8px 15px; border-radius:6px; font-weight:bold; cursor:pointer;">🗑️ 1ヶ月以上前のデータを一括削除</button>
+  <p style="font-size:12px; color:#64748b; margin-bottom:10px;">指定した月のデータを一括削除します。</p>
+  <div style="display:flex; gap:10px; align-items:center;">
+   <select id="deleteMonthSelect" style="padding:8px; border-radius:6px; border:1px solid #cbd5e0; font-size:16px; font-weight:bold;"></select>
+   <button onclick="deleteSelectedMonthData()" style="background:#ef4444; color:white; border:none; padding:8px 15px; border-radius:6px; font-weight:bold; cursor:pointer;">🗑️ 削除実行</button>
+  </div>
  </div>
 
  <div class="settings-grid">
@@ -213,7 +216,10 @@ const db=firebase.firestore();
 let staffList=[], itemList=[], records=[], monthlyRecords=[];
 let goals={};
 let lockedStaff=localStorage.getItem("lockedStaff")||"";
-let currentDate=new Date().toISOString().slice(0,10);
+
+let _tz=new Date();
+_tz.setMinutes(_tz.getMinutes()-_tz.getTimezoneOffset());
+let currentDate=_tz.toISOString().slice(0,10);
 document.getElementById("globalDate").value=currentDate;
 
 const ADMIN_PASSWORD="0000";
@@ -223,6 +229,7 @@ function showTab(id,tab){
  if(id==='settings'){
   const p=prompt("管理用パスワード:");
   if(p!==ADMIN_PASSWORD){ alert("NG"); return; }
+  renderDeleteMonthOptions();
  }
  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
  document.getElementById(id).classList.add("active");
@@ -236,7 +243,7 @@ function showTab(id,tab){
 /* ================= Date Controller ================= */
 document.getElementById("globalDate").onchange=e=>{
  currentDate=e.target.value;
- loadDailyData(); // ★カレンダー変更時に実績と目標を再読み込み
+ loadDailyData(); 
 };
 
 /* ================= Realtime Listeners ================= */
@@ -244,14 +251,12 @@ let unsubSales=null;
 let unsubGoals=null;
 
 function loadDailyData(){
- // 1. カレンダーで選ばれている日付の「実績（sales）」を取得
  if(unsubSales) unsubSales();
  unsubSales=db.collection("sales").where("date","==",currentDate).onSnapshot(snap=>{
   records=snap.docs.map(d=>({...d.data(),id:d.id}));
   updateAllViews();
  });
 
- // 2. カレンダーで選ばれている日付の「目標（goals）」を取得
  if(unsubGoals) unsubGoals();
  unsubGoals=db.collection("goals").where("date","==",currentDate).onSnapshot(snap=>{
   goals={};
@@ -322,12 +327,10 @@ function updateCounts(){
  if(!currentStaff) return;
 
  itemList.forEach(it=>{
-  // 自分の件数
   const c = records.filter(r=>r.item==it.name && r.staff==currentStaff).length;
   const countEl = document.getElementById("count_"+it.name);
   if(countEl) countEl.textContent=c+"件";
 
-  // その商材のランキング
   const rank={};
   records.filter(r=>r.item==it.name).forEach(r=>{
    rank[r.staff]=(rank[r.staff]||0)+1;
@@ -448,7 +451,7 @@ function renderMonthlyItemSelector(){
  const div=document.getElementById("monthlyItemSelect");
  div.innerHTML=itemList.map(it=>`
   <label style="margin-right:10px; font-weight:bold; background:#f1f5f9; padding:6px 10px; border-radius:6px; border:1px solid #cbd5e0;">
-   <input type="checkbox" value="${it.name}" checked> ${it.name}
+   <input type="checkbox" value="${it.name}"> ${it.name}
   </label>
  `).join("");
 }
@@ -550,22 +553,57 @@ function renderStaffItemLists() {
   </li>`).join("") + `</ul>`;
 }
 
-async function deleteOldData() {
- if(!confirm("【警告】\n1ヶ月以上前の過去データをすべて削除します。\n本当によろしいですか？")) return;
- const oneMonthAgo = new Date();
- oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
- const y = oneMonthAgo.getFullYear();
- const m = String(oneMonthAgo.getMonth() + 1).padStart(2, '0');
- const d = String(oneMonthAgo.getDate()).padStart(2, '0');
- const limitStr = `${y}-${m}-${d}`;
+async function renderDeleteMonthOptions() {
+ const select = document.getElementById("deleteMonthSelect");
+ select.innerHTML = "<option value=''>読み込み中...</option>";
+ 
+ const snap = await db.collection("sales").get();
+ const months = new Set();
+ snap.forEach(doc => {
+  const d = doc.data().date;
+  if(d) months.add(d.slice(0, 7));
+ });
+ 
+ const sortedMonths = Array.from(months).sort((a,b) => b.localeCompare(a));
+ 
+ if(sortedMonths.length === 0) {
+  select.innerHTML = "<option value=''>データなし</option>";
+  return;
+ }
+ 
+ select.innerHTML = sortedMonths.map(m => {
+  const [y, mon] = m.split("-");
+  return `<option value="${m}">${y}年${parseInt(mon)}月分</option>`;
+ }).join("");
+}
 
- const snap = await db.collection("sales").where("date", "<", limitStr).get();
- if(snap.empty) return alert("削除する対象の古いデータはありませんでした。");
+async function deleteSelectedMonthData() {
+ const select = document.getElementById("deleteMonthSelect");
+ const targetMonth = select.value;
+ if(!targetMonth) return alert("削除する月を選択してください。");
+
+ const [y, m] = targetMonth.split("-");
+ if(!confirm(`【警告】\n${y}年${parseInt(m)}月分のデータをすべて削除します。\n本当によろしいですか？`)) return;
+
+ const start = `${targetMonth}-01`;
+ const end = `${targetMonth}-31`;
+
+ const snap = await db.collection("sales")
+  .where("date", ">=", start)
+  .where("date", "<=", end)
+  .get();
+
+ if(snap.empty) {
+  alert("対象のデータが見つかりませんでした。");
+  return;
+ }
 
  const batch = db.batch();
  snap.forEach(doc => batch.delete(doc.ref));
  await batch.commit();
- alert(`完了しました！\n${snap.size}件の古いデータを削除しました。`);
+
+ alert(`完了しました！\n${y}年${parseInt(m)}月分のデータ（${snap.size}件）を削除しました。`);
+ renderDeleteMonthOptions(); 
 }
 
 /* Drag & Drop logic */
@@ -622,9 +660,8 @@ function renderGoalPanel(){
  }).join("");
 }
 
-// ★修正：目標を「日付（currentDate）」ごとに保存するように変更
 function setGoal(item,val){
- const docId = currentDate + "_" + item; // 日付と商材名を組み合わせた一意のID
+ const docId = currentDate + "_" + item; 
  if(val === "" || val == 0) {
   db.collection("goals").doc(docId).delete(); 
  } else {
@@ -632,7 +669,6 @@ function setGoal(item,val){
  }
 }
 
-// ★修正：表示中の日付の目標だけをリセットするように変更
 function resetAllGoals(){
  if(!confirm(`表示中の日付（${currentDate}）の目標をすべてリセット（0件）にしますか？`)) return;
  db.collection("goals").where("date", "==", currentDate).get().then(snap => {
@@ -650,7 +686,6 @@ function renderGoalsOnInput(){
   const target=goals[it.name]?.target||0;
   if(!target) return "";
   
-  // 今日の成約数
   const current = groupBy(records.filter(r=>r.item==it.name)).length;
   const pct=Math.min(100, Math.round(current/target*100));
 
