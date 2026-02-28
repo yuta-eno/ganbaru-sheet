@@ -11,6 +11,9 @@
 <style>
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f3f4f6}
 
+/* ★追加：iPadなどでのダブルタップズームを完全に防止し、連打をサクサクにする魔法 */
+button, input, select, .tab, label { touch-action: manipulation; }
+
 /* header */
 header{display:flex;gap:8px;padding:8px;background:#fff;border-bottom:1px solid #ddd;align-items:center;flex-wrap:wrap}
 .tab{padding:6px 14px;border-radius:8px;background:#e5e7eb;font-weight:bold;cursor:pointer}
@@ -282,6 +285,7 @@ function updateAllViews(){
  renderButtons();
  renderBoard();
  updateCounts();
+ renderGoalPanel(); // ★追加：商材が追加・削除された時に目標パネルも再描画する
  renderGoalsOnInput();
 }
 
