@@ -11,9 +11,6 @@
 <style>
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f3f4f6}
 
-/* ★追加：iPadなどでのダブルタップズームを完全に防止し、連打をサクサクにする魔法 */
-button, input, select, .tab, label { touch-action: manipulation; }
-
 /* header */
 header{display:flex;gap:8px;padding:8px;background:#fff;border-bottom:1px solid #ddd;align-items:center;flex-wrap:wrap}
 .tab{padding:6px 14px;border-radius:8px;background:#e5e7eb;font-weight:bold;cursor:pointer}
@@ -126,9 +123,10 @@ td,th{border:1px solid #cbd5e0;padding:4px;text-align:center;font-size:12px}
 
 <div id="monthly" class="page">
  <div class="card">
-  <h3>📅 月次集計 商材選択</h3>
-  <div style="margin-bottom:10px;">
-   <button onclick="deselectAllMonthlyItems()" style="background:#e2e8f0; color:#475569; border:none; padding:6px 12px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">☑ 選択を全て解除</button>
+  <h3>📅 月次集計 対象月・商材選択</h3>
+  <div style="margin-bottom:15px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+   <input type="month" id="monthlyMonthPicker" onchange="loadMonthlyData()" style="padding:6px 12px; border:1px solid #cbd5e0; border-radius:6px; font-weight:bold; font-size:16px; color:#475569;">
+   <button onclick="deselectAllMonthlyItems()" style="background:#e2e8f0; color:#475569; border:none; padding:8px 12px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">☑ 選択を全て解除</button>
   </div>
   <div id="monthlyItemSelect" style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:15px;"></div>
   <button onclick="calculateMonthly()" style="background:#2563eb; color:white; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; cursor:pointer;">集計</button>
@@ -225,6 +223,9 @@ _tz.setMinutes(_tz.getMinutes()-_tz.getTimezoneOffset());
 let currentDate=_tz.toISOString().slice(0,10);
 document.getElementById("globalDate").value=currentDate;
 
+// ★追加：月次集計ピッカーの初期値を「今月」にセット
+document.getElementById("monthlyMonthPicker").value=currentDate.slice(0,7);
+
 const ADMIN_PASSWORD="0000";
 
 /* ================= TAB Controller ================= */
@@ -285,7 +286,6 @@ function updateAllViews(){
  renderButtons();
  renderBoard();
  updateCounts();
- renderGoalPanel(); // ★追加：商材が追加・削除された時に目標パネルも再描画する
  renderGoalsOnInput();
 }
 
@@ -433,22 +433,32 @@ function renderBoard(){
 }
 
 /* ================= Monthly Logic ================= */
-function getMonthRange(dateStr){
- const d=new Date(dateStr);
- const y=d.getFullYear(),m=d.getMonth();
+// ★修正：月次ピッカーの「YYYY-MM」形式を受け取って月末日を計算する
+function getMonthRange(monthStr){
+ const [y, m] = monthStr.split("-").map(Number);
+ const lastDay = new Date(y, m, 0).getDate();
  return {
-  start:new Date(y,m,1).toISOString().slice(0,10),
-  end:new Date(y,m+1,0).toISOString().slice(0,10)
+  start: `${y}-${String(m).padStart(2,'0')}-01`,
+  end: `${y}-${String(m).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`
  };
 }
 
 async function loadMonthlyData(){
- const {start,end}=getMonthRange(currentDate);
+ // ★修正：月選択ピッカーから値を取得
+ const targetMonth = document.getElementById("monthlyMonthPicker").value;
+ if(!targetMonth) return;
+
+ const {start,end}=getMonthRange(targetMonth);
  const snap=await db.collection("sales")
   .where("date",">=",start).where("date","<=",end).get();
  monthlyRecords=snap.docs.map(d=>d.data());
  renderMonthlyItemSelector();
  renderMonthlyItemBoard();
+
+ // ★追加：月を変更した際に古い集計結果をリセットする
+ document.getElementById("monthlyTotal").textContent="0 件";
+ document.getElementById("monthlyTop3").innerHTML="";
+ document.getElementById("monthlyTable").innerHTML="";
 }
 
 function renderMonthlyItemSelector(){
