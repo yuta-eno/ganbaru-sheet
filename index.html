@@ -11,6 +11,9 @@
 <style>
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f3f4f6}
 
+/* ★追加：iPadなどでのダブルタップズームを完全に防止し、連打をサクサクにする魔法 */
+button, input, select, .tab, label { touch-action: manipulation; }
+
 /* header */
 header{display:flex;gap:8px;padding:8px;background:#fff;border-bottom:1px solid #ddd;align-items:center;flex-wrap:wrap}
 .tab{padding:6px 14px;border-radius:8px;background:#e5e7eb;font-weight:bold;cursor:pointer}
@@ -29,8 +32,10 @@ header{display:flex;gap:8px;padding:8px;background:#fff;border-bottom:1px solid 
 /* input section */
 .staff-selector { display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-weight:bold; color:#475569; }
 .staff-selector select { font-size:16px; padding:8px; flex:1; min-width:120px; max-width:200px; border-radius:8px; border:1px solid #cbd5e0; background:#f8fafc; }
-#lockBtn { padding:8px 12px; border:1px solid #cbd5e0; background:#f1f5f9; color:#64748b; border-radius:8px; cursor:pointer; font-weight:bold; }
-#lockBtn.locked { background:#3b82f6; color:white; }
+
+/* ★修正：ロックボタン2つ分のスタイルに変更 */
+#lockBtnMain, #lockBtnHandoff { padding:8px 12px; border:1px solid #cbd5e0; background:#f1f5f9; color:#64748b; border-radius:8px; cursor:pointer; font-weight:bold; }
+#lockBtnMain.locked, #lockBtnHandoff.locked { background:#3b82f6; color:white; }
 
 /* handoff */
 .handoff-wrap { display:flex; align-items:center; gap:8px; padding-left:10px; margin-left:5px; border-left:2px solid #cbd5e0; }
@@ -96,11 +101,12 @@ td,th{border:1px solid #cbd5e0;padding:4px;text-align:center;font-size:12px}
   <div class="staff-selector">
    <label>スタッフ:</label>
    <select id="staffSelect" onchange="updateCounts()"></select>
-   <button id="lockBtn" onclick="toggleLock()">🔓 固定OFF</button>
+   <button id="lockBtnMain" onclick="toggleMainLock()">🔓 固定OFF</button>
 
    <div class="handoff-wrap">
     <label><input type="checkbox" id="handoffToggle" onchange="toggleHandoff()"> 引き継ぎ</label>
     <select id="handoffSelect" disabled></select>
+    <button id="lockBtnHandoff" onclick="toggleHandoffLock()">🔓 固定OFF</button>
    </div>
   </div>
  </div>
@@ -215,7 +221,11 @@ const db=firebase.firestore();
 /* ================= Global Variables ================= */
 let staffList=[], itemList=[], records=[], monthlyRecords=[];
 let goals={};
+
+// ★修正：ロック情報を別々に取得
 let lockedStaff=localStorage.getItem("lockedStaff")||"";
+let lockedHandoffCheck=localStorage.getItem("lockedHandoffCheck")||"";
+let lockedHandoffStaff=localStorage.getItem("lockedHandoffStaff")||"";
 
 let _tz=new Date();
 _tz.setMinutes(_tz.getMinutes()-_tz.getTimezoneOffset());
@@ -282,6 +292,7 @@ function updateAllViews(){
  renderButtons();
  renderBoard();
  updateCounts();
+ renderGoalPanel();
  renderGoalsOnInput();
 }
 
@@ -289,36 +300,49 @@ function updateAllViews(){
 function renderButtons(){
  const sSel=document.getElementById("staffSelect");
  const hSel=document.getElementById("handoffSelect");
+ const hToggle=document.getElementById("handoffToggle");
  const btn=document.getElementById("btnContainer");
+
+ // 現在の選択値を退避
+ const currentStaff = sSel.value;
+ const currentHandoffStaff = hSel.value;
 
  const opts=staffList.map(s=>`<option>${s.name}</option>`).join("");
  sSel.innerHTML=opts;
  hSel.innerHTML=opts;
 
+ // 選択値を復元（もしあれば）
+ if(currentStaff && staffList.some(s=>s.name === currentStaff)) sSel.value = currentStaff;
+ if(currentHandoffStaff && staffList.some(s=>s.name === currentHandoffStaff)) hSel.value = currentHandoffStaff;
+
+ // ★修正：メインスタッフのロック処理
  if(lockedStaff){
   sSel.value=lockedStaff;
   sSel.disabled=true;
-  
-  // ★追加：引き継ぎ設定の復元とロック
-  document.getElementById("handoffToggle").checked = (localStorage.getItem("lockedHandoffCheck") === "true");
-  document.getElementById("handoffToggle").disabled = true;
-  const savedHandoffStaff = localStorage.getItem("lockedHandoffStaff");
-  if(savedHandoffStaff) {
-      hSel.value = savedHandoffStaff;
+  document.getElementById("lockBtnMain").textContent="🔒 固定ON";
+  document.getElementById("lockBtnMain").classList.add("locked");
+ }else{
+  sSel.disabled=false;
+  document.getElementById("lockBtnMain").textContent="🔓 固定OFF";
+  document.getElementById("lockBtnMain").classList.remove("locked");
+ }
+
+ // ★追加：引き継ぎのロック処理
+ if(lockedHandoffCheck !== ""){
+  hToggle.checked = (lockedHandoffCheck === "true");
+  hToggle.disabled = true;
+  if(lockedHandoffStaff) {
+      hSel.value = lockedHandoffStaff;
   }
   hSel.disabled = true;
 
-  document.getElementById("lockBtn").textContent="🔒 固定ON";
-  document.getElementById("lockBtn").classList.add("locked");
+  document.getElementById("lockBtnHandoff").textContent="🔒 固定ON";
+  document.getElementById("lockBtnHandoff").classList.add("locked");
  }else{
-  sSel.disabled=false;
-
-  // ★追加：引き継ぎ設定のロック解除
-  document.getElementById("handoffToggle").disabled = false;
-  hSel.disabled = !document.getElementById("handoffToggle").checked;
-
-  document.getElementById("lockBtn").textContent="🔓 固定OFF";
-  document.getElementById("lockBtn").classList.remove("locked");
+  hToggle.disabled = false;
+  hSel.disabled = !hToggle.checked;
+  document.getElementById("lockBtnHandoff").textContent="🔓 固定OFF";
+  document.getElementById("lockBtnHandoff").classList.remove("locked");
  }
 
  btn.innerHTML=itemList.map(it=>`
@@ -357,30 +381,40 @@ function updateCounts(){
 }
 
 /* ================= Input Actions ================= */
-function toggleLock(){
+// ★修正：メインスタッフのロック切替関数
+function toggleMainLock(){
  const s=document.getElementById("staffSelect");
- const hToggle=document.getElementById("handoffToggle");
- const hSel=document.getElementById("handoffSelect");
-
  if(lockedStaff){
   lockedStaff="";
   localStorage.removeItem("lockedStaff");
-  // ★追加：引き継ぎロック情報も削除
-  localStorage.removeItem("lockedHandoffCheck");
-  localStorage.removeItem("lockedHandoffStaff");
-  
   s.disabled = false;
-  hToggle.disabled = false;
-  hSel.disabled = !hToggle.checked;
  }else{
   lockedStaff=s.value;
   localStorage.setItem("lockedStaff",lockedStaff);
-  
-  // ★追加：引き継ぎ設定のロック情報を保存
-  localStorage.setItem("lockedHandoffCheck", hToggle.checked);
-  localStorage.setItem("lockedHandoffStaff", hSel.value);
-  
   s.disabled = true;
+ }
+ renderButtons();
+}
+
+// ★追加：引き継ぎのロック切替関数
+function toggleHandoffLock(){
+ const hToggle=document.getElementById("handoffToggle");
+ const hSel=document.getElementById("handoffSelect");
+
+ if(lockedHandoffCheck !== ""){
+  lockedHandoffCheck = "";
+  lockedHandoffStaff = "";
+  localStorage.removeItem("lockedHandoffCheck");
+  localStorage.removeItem("lockedHandoffStaff");
+  
+  hToggle.disabled = false;
+  hSel.disabled = !hToggle.checked;
+ }else{
+  lockedHandoffCheck = hToggle.checked.toString();
+  lockedHandoffStaff = hSel.value;
+  localStorage.setItem("lockedHandoffCheck", lockedHandoffCheck);
+  localStorage.setItem("lockedHandoffStaff", lockedHandoffStaff);
+  
   hToggle.disabled = true;
   hSel.disabled = true;
  }
