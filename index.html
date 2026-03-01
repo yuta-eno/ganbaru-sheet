@@ -11,6 +11,9 @@
 <style>
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f3f4f6}
 
+/* ★追加：iPadなどでのダブルタップズームを完全に防止し、連打をサクサクにする魔法 */
+button, input, select, .tab, label { touch-action: manipulation; }
+
 /* header */
 header{display:flex;gap:8px;padding:8px;background:#fff;border-bottom:1px solid #ddd;align-items:center;flex-wrap:wrap}
 .tab{padding:6px 14px;border-radius:8px;background:#e5e7eb;font-weight:bold;cursor:pointer}
@@ -29,8 +32,8 @@ header{display:flex;gap:8px;padding:8px;background:#fff;border-bottom:1px solid 
 /* input section */
 .staff-selector { display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-weight:bold; color:#475569; }
 .staff-selector select { font-size:16px; padding:8px; flex:1; min-width:120px; max-width:200px; border-radius:8px; border:1px solid #cbd5e0; background:#f8fafc; }
-#lockBtn { padding:8px 12px; border:1px solid #cbd5e0; background:#f1f5f9; color:#64748b; border-radius:8px; cursor:pointer; font-weight:bold; }
-#lockBtn.locked { background:#3b82f6; color:white; }
+#lockBtn, #handoffLockBtn { padding:8px 12px; border:1px solid #cbd5e0; background:#f1f5f9; color:#64748b; border-radius:8px; cursor:pointer; font-weight:bold; }
+#lockBtn.locked, #handoffLockBtn.locked { background:#3b82f6; color:white; }
 
 /* handoff */
 .handoff-wrap { display:flex; align-items:center; gap:8px; padding-left:10px; margin-left:5px; border-left:2px solid #cbd5e0; }
@@ -88,7 +91,10 @@ td,th{border:1px solid #cbd5e0;padding:4px;text-align:center;font-size:12px}
  <div class="tab" onclick="showTab('board',this)">がんばるシート</div>
  <div class="tab" onclick="showTab('monthly',this)">📊 月次集計</div>
  <div class="tab" onclick="showTab('settings',this)">設定</div>
- <div class="date-wrap"><input type="date" id="globalDate"></div>
+ <div class="date-wrap" style="display:flex; align-items:center; gap:8px;">
+  <button onclick="location.reload()" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e0; padding:8px 12px; border-radius:6px; font-weight:bold; font-size:16px; cursor:pointer; white-space:nowrap;">🔄 更新</button>
+  <input type="date" id="globalDate">
+ </div>
 </header>
 
 <div id="input" class="page active">
@@ -101,6 +107,7 @@ td,th{border:1px solid #cbd5e0;padding:4px;text-align:center;font-size:12px}
    <div class="handoff-wrap">
     <label><input type="checkbox" id="handoffToggle" onchange="toggleHandoff()"> 引き継ぎ</label>
     <select id="handoffSelect" disabled></select>
+    <button id="handoffLockBtn" onclick="toggleHandoffLock()">🔓 固定OFF</button>
    </div>
   </div>
  </div>
@@ -285,6 +292,7 @@ function updateAllViews(){
  renderButtons();
  renderBoard();
  updateCounts();
+ renderGoalPanel(); 
  renderGoalsOnInput();
 }
 
@@ -298,6 +306,7 @@ function renderButtons(){
  sSel.innerHTML=opts;
  hSel.innerHTML=opts;
 
+ // メインスタッフのロック復元
  if(lockedStaff){
   sSel.value=lockedStaff;
   sSel.disabled=true;
@@ -307,6 +316,22 @@ function renderButtons(){
   sSel.disabled=false;
   document.getElementById("lockBtn").textContent="🔓 固定OFF";
   document.getElementById("lockBtn").classList.remove("locked");
+ }
+
+ // ★引継ぎスタッフのロック復元
+ const savedHandoffStaff = localStorage.getItem("lockedHandoffStaff");
+ if(savedHandoffStaff) {
+  document.getElementById("handoffToggle").checked = (localStorage.getItem("lockedHandoffCheck") === "true");
+  document.getElementById("handoffToggle").disabled = true;
+  hSel.value = savedHandoffStaff;
+  hSel.disabled = true;
+  document.getElementById("handoffLockBtn").textContent="🔒 固定ON";
+  document.getElementById("handoffLockBtn").classList.add("locked");
+ }else{
+  document.getElementById("handoffToggle").disabled = false;
+  hSel.disabled = !document.getElementById("handoffToggle").checked;
+  document.getElementById("handoffLockBtn").textContent="🔓 固定OFF";
+  document.getElementById("handoffLockBtn").classList.remove("locked");
  }
 
  btn.innerHTML=itemList.map(it=>`
@@ -355,6 +380,25 @@ function toggleLock(){
   lockedStaff=s.value;
   localStorage.setItem("lockedStaff",lockedStaff);
   s.disabled = true;
+ }
+ renderButtons();
+}
+
+// ★引継ぎスタッフ用の独立したロック機能
+function toggleHandoffLock(){
+ const hToggle=document.getElementById("handoffToggle");
+ const hSel=document.getElementById("handoffSelect");
+
+ if(localStorage.getItem("lockedHandoffStaff")){
+  localStorage.removeItem("lockedHandoffCheck");
+  localStorage.removeItem("lockedHandoffStaff");
+  hToggle.disabled = false;
+  hSel.disabled = !hToggle.checked;
+ }else{
+  localStorage.setItem("lockedHandoffCheck", hToggle.checked);
+  localStorage.setItem("lockedHandoffStaff", hSel.value);
+  hToggle.disabled = true;
+  hSel.disabled = true;
  }
  renderButtons();
 }
@@ -696,8 +740,20 @@ function renderGoalsOnInput(){
   const target=goals[it.name]?.target||0;
   if(!target) return "";
   
-  const current = groupBy(records.filter(r=>r.item==it.name)).length;
+  const itemRecords = records.filter(r=>r.item==it.name);
+  const current = groupBy(itemRecords).length;
   const pct=Math.min(100, Math.round(current/target*100));
+
+  // ★復活：スタッフ別の成約内訳
+  const staffCount = {};
+  groupBy(itemRecords).forEach(g => {
+   const s = g[0].staff;
+   staffCount[s] = (staffCount[s]||0) + 1;
+  });
+  const staffHtml = Object.entries(staffCount)
+   .sort((a,b)=>b[1]-a[1])
+   .map(r => `<span style="display:inline-block; margin-top:6px; margin-right:8px; font-size:13px; background:rgba(255,255,255,0.4); padding:2px 8px; border-radius:4px;">${r[0]} ${r[1]}件</span>`)
+   .join("");
 
   return `
   <div class="goal-box">
@@ -705,6 +761,7 @@ function renderGoalsOnInput(){
    <div class="goal-progress">
     <div class="goal-bar" style="width:${pct}%"></div>
    </div>
+   ${staffHtml}
   </div>`;
  }).filter(h=>h!=="");
 
