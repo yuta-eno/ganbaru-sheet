@@ -32,8 +32,6 @@ header{display:flex;gap:8px;padding:8px;background:#fff;border-bottom:1px solid 
 /* input section */
 .staff-selector { display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-weight:bold; color:#475569; }
 .staff-selector select { font-size:16px; padding:8px; flex:1; min-width:120px; max-width:200px; border-radius:8px; border:1px solid #cbd5e0; background:#f8fafc; }
-
-/* ★修正：ロックボタン2つ分のスタイルに変更 */
 #lockBtnMain, #lockBtnHandoff { padding:8px 12px; border:1px solid #cbd5e0; background:#f1f5f9; color:#64748b; border-radius:8px; cursor:pointer; font-weight:bold; }
 #lockBtnMain.locked, #lockBtnHandoff.locked { background:#3b82f6; color:white; }
 
@@ -129,8 +127,9 @@ td,th{border:1px solid #cbd5e0;padding:4px;text-align:center;font-size:12px}
 
 <div id="monthly" class="page">
  <div class="card">
-  <h3>📅 月次集計 商材選択</h3>
-  <div style="margin-bottom:10px;">
+  <h3>📅 月次集計 対象月・商材選択</h3>
+  <div style="margin-bottom:15px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+   <input type="month" id="monthlyMonthPicker" onchange="loadMonthlyData()" style="padding:6px 12px; border:1px solid #cbd5e0; border-radius:6px; font-weight:bold; font-size:16px; color:#475569;">
    <button onclick="deselectAllMonthlyItems()" style="background:#e2e8f0; color:#475569; border:none; padding:6px 12px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">☑ 選択を全て解除</button>
   </div>
   <div id="monthlyItemSelect" style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:15px;"></div>
@@ -222,7 +221,6 @@ const db=firebase.firestore();
 let staffList=[], itemList=[], records=[], monthlyRecords=[];
 let goals={};
 
-// ★修正：ロック情報を別々に取得
 let lockedStaff=localStorage.getItem("lockedStaff")||"";
 let lockedHandoffCheck=localStorage.getItem("lockedHandoffCheck")||"";
 let lockedHandoffStaff=localStorage.getItem("lockedHandoffStaff")||"";
@@ -231,6 +229,8 @@ let _tz=new Date();
 _tz.setMinutes(_tz.getMinutes()-_tz.getTimezoneOffset());
 let currentDate=_tz.toISOString().slice(0,10);
 document.getElementById("globalDate").value=currentDate;
+
+document.getElementById("monthlyMonthPicker").value=currentDate.slice(0,7);
 
 const ADMIN_PASSWORD="0000";
 
@@ -303,7 +303,6 @@ function renderButtons(){
  const hToggle=document.getElementById("handoffToggle");
  const btn=document.getElementById("btnContainer");
 
- // 現在の選択値を退避
  const currentStaff = sSel.value;
  const currentHandoffStaff = hSel.value;
 
@@ -311,11 +310,9 @@ function renderButtons(){
  sSel.innerHTML=opts;
  hSel.innerHTML=opts;
 
- // 選択値を復元（もしあれば）
  if(currentStaff && staffList.some(s=>s.name === currentStaff)) sSel.value = currentStaff;
  if(currentHandoffStaff && staffList.some(s=>s.name === currentHandoffStaff)) hSel.value = currentHandoffStaff;
 
- // ★修正：メインスタッフのロック処理
  if(lockedStaff){
   sSel.value=lockedStaff;
   sSel.disabled=true;
@@ -327,7 +324,6 @@ function renderButtons(){
   document.getElementById("lockBtnMain").classList.remove("locked");
  }
 
- // ★追加：引き継ぎのロック処理
  if(lockedHandoffCheck !== ""){
   hToggle.checked = (lockedHandoffCheck === "true");
   hToggle.disabled = true;
@@ -381,7 +377,6 @@ function updateCounts(){
 }
 
 /* ================= Input Actions ================= */
-// ★修正：メインスタッフのロック切替関数
 function toggleMainLock(){
  const s=document.getElementById("staffSelect");
  if(lockedStaff){
@@ -396,7 +391,6 @@ function toggleMainLock(){
  renderButtons();
 }
 
-// ★追加：引き継ぎのロック切替関数
 function toggleHandoffLock(){
  const hToggle=document.getElementById("handoffToggle");
  const hSel=document.getElementById("handoffSelect");
@@ -494,22 +488,29 @@ function renderBoard(){
 }
 
 /* ================= Monthly Logic ================= */
-function getMonthRange(dateStr){
- const d=new Date(dateStr);
- const y=d.getFullYear(),m=d.getMonth();
+function getMonthRange(monthStr){
+ const [y, m] = monthStr.split("-").map(Number);
+ const lastDay = new Date(y, m, 0).getDate();
  return {
-  start:new Date(y,m,1).toISOString().slice(0,10),
-  end:new Date(y,m+1,0).toISOString().slice(0,10)
+  start: `${y}-${String(m).padStart(2,'0')}-01`,
+  end: `${y}-${String(m).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`
  };
 }
 
 async function loadMonthlyData(){
- const {start,end}=getMonthRange(currentDate);
+ const targetMonth = document.getElementById("monthlyMonthPicker").value;
+ if(!targetMonth) return;
+
+ const {start,end}=getMonthRange(targetMonth);
  const snap=await db.collection("sales")
   .where("date",">=",start).where("date","<=",end).get();
  monthlyRecords=snap.docs.map(d=>d.data());
  renderMonthlyItemSelector();
  renderMonthlyItemBoard();
+
+ document.getElementById("monthlyTotal").textContent="0 件";
+ document.getElementById("monthlyTop3").innerHTML="";
+ document.getElementById("monthlyTable").innerHTML="";
 }
 
 function renderMonthlyItemSelector(){
@@ -755,7 +756,6 @@ function renderGoalsOnInput(){
   const current = groupBy(itemRecords).length;
   const pct=Math.min(100, Math.round(current/target*100));
 
-  // ★追加：スタッフ別の成約内訳
   const staffCount = {};
   groupBy(itemRecords).forEach(g => {
    const s = g[0].staff;
