@@ -32,8 +32,8 @@ header{display:flex;gap:8px;padding:8px;background:#fff;border-bottom:1px solid 
 /* input section */
 .staff-selector { display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-weight:bold; color:#475569; }
 .staff-selector select { font-size:16px; padding:8px; flex:1; min-width:120px; max-width:200px; border-radius:8px; border:1px solid #cbd5e0; background:#f8fafc; }
-#lockBtnMain, #lockBtnHandoff { padding:8px 12px; border:1px solid #cbd5e0; background:#f1f5f9; color:#64748b; border-radius:8px; cursor:pointer; font-weight:bold; }
-#lockBtnMain.locked, #lockBtnHandoff.locked { background:#3b82f6; color:white; }
+#lockBtn { padding:8px 12px; border:1px solid #cbd5e0; background:#f1f5f9; color:#64748b; border-radius:8px; cursor:pointer; font-weight:bold; }
+#lockBtn.locked { background:#3b82f6; color:white; }
 
 /* handoff */
 .handoff-wrap { display:flex; align-items:center; gap:8px; padding-left:10px; margin-left:5px; border-left:2px solid #cbd5e0; }
@@ -91,7 +91,10 @@ td,th{border:1px solid #cbd5e0;padding:4px;text-align:center;font-size:12px}
  <div class="tab" onclick="showTab('board',this)">がんばるシート</div>
  <div class="tab" onclick="showTab('monthly',this)">📊 月次集計</div>
  <div class="tab" onclick="showTab('settings',this)">設定</div>
- <div class="date-wrap"><input type="date" id="globalDate"></div>
+ <div class="date-wrap" style="display:flex; align-items:center; gap:8px;">
+  <button onclick="location.reload()" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e0; padding:8px 12px; border-radius:6px; font-weight:bold; font-size:16px; cursor:pointer; white-space:nowrap;">🔄 更新</button>
+  <input type="date" id="globalDate">
+ </div>
 </header>
 
 <div id="input" class="page active">
@@ -99,12 +102,11 @@ td,th{border:1px solid #cbd5e0;padding:4px;text-align:center;font-size:12px}
   <div class="staff-selector">
    <label>スタッフ:</label>
    <select id="staffSelect" onchange="updateCounts()"></select>
-   <button id="lockBtnMain" onclick="toggleMainLock()">🔓 固定OFF</button>
+   <button id="lockBtn" onclick="toggleLock()">🔓 固定OFF</button>
 
    <div class="handoff-wrap">
     <label><input type="checkbox" id="handoffToggle" onchange="toggleHandoff()"> 引き継ぎ</label>
     <select id="handoffSelect" disabled></select>
-    <button id="lockBtnHandoff" onclick="toggleHandoffLock()">🔓 固定OFF</button>
    </div>
   </div>
  </div>
@@ -127,10 +129,10 @@ td,th{border:1px solid #cbd5e0;padding:4px;text-align:center;font-size:12px}
 
 <div id="monthly" class="page">
  <div class="card">
-  <h3>📅 月次集計 対象月・商材選択</h3>
+  <h3>📅 月次集計 商材選択</h3>
   <div style="margin-bottom:15px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
    <input type="month" id="monthlyMonthPicker" onchange="loadMonthlyData()" style="padding:6px 12px; border:1px solid #cbd5e0; border-radius:6px; font-weight:bold; font-size:16px; color:#475569;">
-   <button onclick="deselectAllMonthlyItems()" style="background:#e2e8f0; color:#475569; border:none; padding:6px 12px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">☑ 選択を全て解除</button>
+   <button onclick="deselectAllMonthlyItems()" style="background:#e2e8f0; color:#475569; border:none; padding:8px 12px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">☑ 選択を全て解除</button>
   </div>
   <div id="monthlyItemSelect" style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:15px;"></div>
   <button onclick="calculateMonthly()" style="background:#2563eb; color:white; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; cursor:pointer;">集計</button>
@@ -220,10 +222,7 @@ const db=firebase.firestore();
 /* ================= Global Variables ================= */
 let staffList=[], itemList=[], records=[], monthlyRecords=[];
 let goals={};
-
 let lockedStaff=localStorage.getItem("lockedStaff")||"";
-let lockedHandoffCheck=localStorage.getItem("lockedHandoffCheck")||"";
-let lockedHandoffStaff=localStorage.getItem("lockedHandoffStaff")||"";
 
 let _tz=new Date();
 _tz.setMinutes(_tz.getMinutes()-_tz.getTimezoneOffset());
@@ -292,7 +291,7 @@ function updateAllViews(){
  renderButtons();
  renderBoard();
  updateCounts();
- renderGoalPanel();
+ renderGoalPanel(); 
  renderGoalsOnInput();
 }
 
@@ -300,45 +299,34 @@ function updateAllViews(){
 function renderButtons(){
  const sSel=document.getElementById("staffSelect");
  const hSel=document.getElementById("handoffSelect");
- const hToggle=document.getElementById("handoffToggle");
  const btn=document.getElementById("btnContainer");
-
- const currentStaff = sSel.value;
- const currentHandoffStaff = hSel.value;
 
  const opts=staffList.map(s=>`<option>${s.name}</option>`).join("");
  sSel.innerHTML=opts;
  hSel.innerHTML=opts;
 
- if(currentStaff && staffList.some(s=>s.name === currentStaff)) sSel.value = currentStaff;
- if(currentHandoffStaff && staffList.some(s=>s.name === currentHandoffStaff)) hSel.value = currentHandoffStaff;
-
  if(lockedStaff){
   sSel.value=lockedStaff;
   sSel.disabled=true;
-  document.getElementById("lockBtnMain").textContent="🔒 固定ON";
-  document.getElementById("lockBtnMain").classList.add("locked");
- }else{
-  sSel.disabled=false;
-  document.getElementById("lockBtnMain").textContent="🔓 固定OFF";
-  document.getElementById("lockBtnMain").classList.remove("locked");
- }
-
- if(lockedHandoffCheck !== ""){
-  hToggle.checked = (lockedHandoffCheck === "true");
-  hToggle.disabled = true;
-  if(lockedHandoffStaff) {
-      hSel.value = lockedHandoffStaff;
+  
+  document.getElementById("handoffToggle").checked = (localStorage.getItem("lockedHandoffCheck") === "true");
+  document.getElementById("handoffToggle").disabled = true;
+  const savedHandoffStaff = localStorage.getItem("lockedHandoffStaff");
+  if(savedHandoffStaff) {
+      hSel.value = savedHandoffStaff;
   }
   hSel.disabled = true;
 
-  document.getElementById("lockBtnHandoff").textContent="🔒 固定ON";
-  document.getElementById("lockBtnHandoff").classList.add("locked");
+  document.getElementById("lockBtn").textContent="🔒 固定ON";
+  document.getElementById("lockBtn").classList.add("locked");
  }else{
-  hToggle.disabled = false;
-  hSel.disabled = !hToggle.checked;
-  document.getElementById("lockBtnHandoff").textContent="🔓 固定OFF";
-  document.getElementById("lockBtnHandoff").classList.remove("locked");
+  sSel.disabled=false;
+
+  document.getElementById("handoffToggle").disabled = false;
+  hSel.disabled = !document.getElementById("handoffToggle").checked;
+
+  document.getElementById("lockBtn").textContent="🔓 固定OFF";
+  document.getElementById("lockBtn").classList.remove("locked");
  }
 
  btn.innerHTML=itemList.map(it=>`
@@ -377,38 +365,28 @@ function updateCounts(){
 }
 
 /* ================= Input Actions ================= */
-function toggleMainLock(){
+function toggleLock(){
  const s=document.getElementById("staffSelect");
- if(lockedStaff){
-  lockedStaff="";
-  localStorage.removeItem("lockedStaff");
-  s.disabled = false;
- }else{
-  lockedStaff=s.value;
-  localStorage.setItem("lockedStaff",lockedStaff);
-  s.disabled = true;
- }
- renderButtons();
-}
-
-function toggleHandoffLock(){
  const hToggle=document.getElementById("handoffToggle");
  const hSel=document.getElementById("handoffSelect");
 
- if(lockedHandoffCheck !== ""){
-  lockedHandoffCheck = "";
-  lockedHandoffStaff = "";
+ if(lockedStaff){
+  lockedStaff="";
+  localStorage.removeItem("lockedStaff");
   localStorage.removeItem("lockedHandoffCheck");
   localStorage.removeItem("lockedHandoffStaff");
   
+  s.disabled = false;
   hToggle.disabled = false;
   hSel.disabled = !hToggle.checked;
  }else{
-  lockedHandoffCheck = hToggle.checked.toString();
-  lockedHandoffStaff = hSel.value;
-  localStorage.setItem("lockedHandoffCheck", lockedHandoffCheck);
-  localStorage.setItem("lockedHandoffStaff", lockedHandoffStaff);
+  lockedStaff=s.value;
+  localStorage.setItem("lockedStaff",lockedStaff);
   
+  localStorage.setItem("lockedHandoffCheck", hToggle.checked);
+  localStorage.setItem("lockedHandoffStaff", hSel.value);
+  
+  s.disabled = true;
   hToggle.disabled = true;
   hSel.disabled = true;
  }
