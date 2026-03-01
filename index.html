@@ -16,7 +16,7 @@ header{display:flex;gap:8px;padding:8px;background:#fff;border-bottom:1px solid 
 .tab{padding:6px 14px;border-radius:8px;background:#e5e7eb;font-weight:bold;cursor:pointer}
 .tab.active{background:#2563eb;color:#fff}
 .date-wrap{margin-left:auto}
-.date-wrap input {padding:4px 8px; border:1px solid #cbd5e0; border-radius:6px; font-weight:bold; font-size:14px;}
+.date-wrap input {padding:8px 12px; border:1px solid #cbd5e0; border-radius:6px; font-weight:bold; font-size:18px;}
 
 /* page */
 .page{display:none;padding:12px; max-width:1200px; margin:0 auto;}
@@ -29,8 +29,8 @@ header{display:flex;gap:8px;padding:8px;background:#fff;border-bottom:1px solid 
 /* input section */
 .staff-selector { display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-weight:bold; color:#475569; }
 .staff-selector select { font-size:16px; padding:8px; flex:1; min-width:120px; max-width:200px; border-radius:8px; border:1px solid #cbd5e0; background:#f8fafc; }
-#lockBtn, #handoffLockBtn { padding:8px 12px; border:1px solid #cbd5e0; background:#f1f5f9; color:#64748b; border-radius:8px; cursor:pointer; font-weight:bold; }
-#lockBtn.locked, #handoffLockBtn.locked { background:#3b82f6; color:white; }
+#lockBtn { padding:8px 12px; border:1px solid #cbd5e0; background:#f1f5f9; color:#64748b; border-radius:8px; cursor:pointer; font-weight:bold; }
+#lockBtn.locked { background:#3b82f6; color:white; }
 
 /* handoff */
 .handoff-wrap { display:flex; align-items:center; gap:8px; padding-left:10px; margin-left:5px; border-left:2px solid #cbd5e0; }
@@ -101,7 +101,6 @@ td,th{border:1px solid #cbd5e0;padding:4px;text-align:center;font-size:12px}
    <div class="handoff-wrap">
     <label><input type="checkbox" id="handoffToggle" onchange="toggleHandoff()"> 引き継ぎ</label>
     <select id="handoffSelect" disabled></select>
-    <button id="handoffLockBtn" onclick="toggleHandoffLock()">🔓 固定OFF</button>
    </div>
   </div>
  </div>
@@ -125,8 +124,9 @@ td,th{border:1px solid #cbd5e0;padding:4px;text-align:center;font-size:12px}
 <div id="monthly" class="page">
  <div class="card">
   <h3>📅 月次集計 商材選択</h3>
-  <div style="margin-bottom:10px;">
-   <button onclick="deselectAllMonthlyItems()" style="background:#e2e8f0; color:#475569; border:none; padding:6px 12px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">☑ 選択を全て解除</button>
+  <div style="margin-bottom:15px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+   <input type="month" id="monthlyMonthPicker" onchange="loadMonthlyData()" style="padding:6px 12px; border:1px solid #cbd5e0; border-radius:6px; font-weight:bold; font-size:16px; color:#475569;">
+   <button onclick="deselectAllMonthlyItems()" style="background:#e2e8f0; color:#475569; border:none; padding:8px 12px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">☑ 選択を全て解除</button>
   </div>
   <div id="monthlyItemSelect" style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:15px;"></div>
   <button onclick="calculateMonthly()" style="background:#2563eb; color:white; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; cursor:pointer;">集計</button>
@@ -167,8 +167,11 @@ td,th{border:1px solid #cbd5e0;padding:4px;text-align:center;font-size:12px}
 
  <div class="card full-width">
   <h3 style="color:#ef4444;">🧹 データ大掃除</h3>
-  <p style="font-size:12px; color:#64748b; margin-bottom:10px;">容量節約のため、1ヶ月以上前の不要な過去データを消去します。</p>
-  <button onclick="deleteOldData()" style="background:#ef4444; color:white; border:none; padding:8px 15px; border-radius:6px; font-weight:bold; cursor:pointer;">🗑️ 1ヶ月以上前のデータを一括削除</button>
+  <p style="font-size:12px; color:#64748b; margin-bottom:10px;">指定した月のデータを一括削除します。</p>
+  <div style="display:flex; gap:10px; align-items:center;">
+   <select id="deleteMonthSelect" style="padding:8px; border-radius:6px; border:1px solid #cbd5e0; font-size:16px; font-weight:bold;"></select>
+   <button onclick="deleteSelectedMonthData()" style="background:#ef4444; color:white; border:none; padding:8px 15px; border-radius:6px; font-weight:bold; cursor:pointer;">🗑️ 削除実行</button>
+  </div>
  </div>
 
  <div class="settings-grid">
@@ -220,6 +223,8 @@ _tz.setMinutes(_tz.getMinutes()-_tz.getTimezoneOffset());
 let currentDate=_tz.toISOString().slice(0,10);
 document.getElementById("globalDate").value=currentDate;
 
+document.getElementById("monthlyMonthPicker").value=currentDate.slice(0,7);
+
 const ADMIN_PASSWORD="0000";
 
 /* ================= TAB Controller ================= */
@@ -227,6 +232,7 @@ function showTab(id,tab){
  if(id==='settings'){
   const p=prompt("管理用パスワード:");
   if(p!==ADMIN_PASSWORD){ alert("NG"); return; }
+  renderDeleteMonthOptions();
  }
  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
  document.getElementById(id).classList.add("active");
@@ -303,21 +309,6 @@ function renderButtons(){
   document.getElementById("lockBtn").classList.remove("locked");
  }
 
- const savedHandoffStaff = localStorage.getItem("lockedHandoffStaff");
- if(savedHandoffStaff) {
-  document.getElementById("handoffToggle").checked = (localStorage.getItem("lockedHandoffCheck") === "true");
-  document.getElementById("handoffToggle").disabled = true;
-  hSel.value = savedHandoffStaff;
-  hSel.disabled = true;
-  document.getElementById("handoffLockBtn").textContent="🔒 固定ON";
-  document.getElementById("handoffLockBtn").classList.add("locked");
- }else{
-  document.getElementById("handoffToggle").disabled = false;
-  hSel.disabled = !document.getElementById("handoffToggle").checked;
-  document.getElementById("handoffLockBtn").textContent="🔓 固定OFF";
-  document.getElementById("handoffLockBtn").classList.remove("locked");
- }
-
  btn.innerHTML=itemList.map(it=>`
   <div class="item-box">
    <button class="item-btn" style="background:${it.color}" onclick="addRecord('${it.name}')">${it.name}</button>
@@ -356,7 +347,6 @@ function updateCounts(){
 /* ================= Input Actions ================= */
 function toggleLock(){
  const s=document.getElementById("staffSelect");
-
  if(lockedStaff){
   lockedStaff="";
   localStorage.removeItem("lockedStaff");
@@ -365,24 +355,6 @@ function toggleLock(){
   lockedStaff=s.value;
   localStorage.setItem("lockedStaff",lockedStaff);
   s.disabled = true;
- }
- renderButtons();
-}
-
-function toggleHandoffLock(){
- const hToggle=document.getElementById("handoffToggle");
- const hSel=document.getElementById("handoffSelect");
-
- if(localStorage.getItem("lockedHandoffStaff")){
-  localStorage.removeItem("lockedHandoffCheck");
-  localStorage.removeItem("lockedHandoffStaff");
-  hToggle.disabled = false;
-  hSel.disabled = !hToggle.checked;
- }else{
-  localStorage.setItem("lockedHandoffCheck", hToggle.checked);
-  localStorage.setItem("lockedHandoffStaff", hSel.value);
-  hToggle.disabled = true;
-  hSel.disabled = true;
  }
  renderButtons();
 }
@@ -460,22 +432,29 @@ function renderBoard(){
 }
 
 /* ================= Monthly Logic ================= */
-function getMonthRange(dateStr){
- const d=new Date(dateStr);
- const y=d.getFullYear(),m=d.getMonth();
+function getMonthRange(monthStr){
+ const [y, m] = monthStr.split("-").map(Number);
+ const lastDay = new Date(y, m, 0).getDate();
  return {
-  start:new Date(y,m,1).toISOString().slice(0,10),
-  end:new Date(y,m+1,0).toISOString().slice(0,10)
+  start: `${y}-${String(m).padStart(2,'0')}-01`,
+  end: `${y}-${String(m).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`
  };
 }
 
 async function loadMonthlyData(){
- const {start,end}=getMonthRange(currentDate);
+ const targetMonth = document.getElementById("monthlyMonthPicker").value;
+ if(!targetMonth) return;
+
+ const {start,end}=getMonthRange(targetMonth);
  const snap=await db.collection("sales")
   .where("date",">=",start).where("date","<=",end).get();
  monthlyRecords=snap.docs.map(d=>d.data());
  renderMonthlyItemSelector();
  renderMonthlyItemBoard();
+
+ document.getElementById("monthlyTotal").textContent="0 件";
+ document.getElementById("monthlyTop3").innerHTML="";
+ document.getElementById("monthlyTable").innerHTML="";
 }
 
 function renderMonthlyItemSelector(){
@@ -584,22 +563,57 @@ function renderStaffItemLists() {
   </li>`).join("") + `</ul>`;
 }
 
-async function deleteOldData() {
- if(!confirm("【警告】\n1ヶ月以上前の過去データをすべて削除します。\n本当によろしいですか？")) return;
- const oneMonthAgo = new Date();
- oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
- const y = oneMonthAgo.getFullYear();
- const m = String(oneMonthAgo.getMonth() + 1).padStart(2, '0');
- const d = String(oneMonthAgo.getDate()).padStart(2, '0');
- const limitStr = `${y}-${m}-${d}`;
+async function renderDeleteMonthOptions() {
+ const select = document.getElementById("deleteMonthSelect");
+ select.innerHTML = "<option value=''>読み込み中...</option>";
+ 
+ const snap = await db.collection("sales").get();
+ const months = new Set();
+ snap.forEach(doc => {
+  const d = doc.data().date;
+  if(d) months.add(d.slice(0, 7));
+ });
+ 
+ const sortedMonths = Array.from(months).sort((a,b) => b.localeCompare(a));
+ 
+ if(sortedMonths.length === 0) {
+  select.innerHTML = "<option value=''>データなし</option>";
+  return;
+ }
+ 
+ select.innerHTML = sortedMonths.map(m => {
+  const [y, mon] = m.split("-");
+  return `<option value="${m}">${y}年${parseInt(mon)}月分</option>`;
+ }).join("");
+}
 
- const snap = await db.collection("sales").where("date", "<", limitStr).get();
- if(snap.empty) return alert("削除する対象の古いデータはありませんでした。");
+async function deleteSelectedMonthData() {
+ const select = document.getElementById("deleteMonthSelect");
+ const targetMonth = select.value;
+ if(!targetMonth) return alert("削除する月を選択してください。");
+
+ const [y, m] = targetMonth.split("-");
+ if(!confirm(`【警告】\n${y}年${parseInt(m)}月分のデータをすべて削除します。\n本当によろしいですか？`)) return;
+
+ const start = `${targetMonth}-01`;
+ const end = `${targetMonth}-31`;
+
+ const snap = await db.collection("sales")
+  .where("date", ">=", start)
+  .where("date", "<=", end)
+  .get();
+
+ if(snap.empty) {
+  alert("対象のデータが見つかりませんでした。");
+  return;
+ }
 
  const batch = db.batch();
  snap.forEach(doc => batch.delete(doc.ref));
  await batch.commit();
- alert(`完了しました！\n${snap.size}件の古いデータを削除しました。`);
+
+ alert(`完了しました！\n${y}年${parseInt(m)}月分のデータ（${snap.size}件）を削除しました。`);
+ renderDeleteMonthOptions(); 
 }
 
 /* Drag & Drop logic */
