@@ -309,6 +309,7 @@ function renderButtons(){
   sSel.value=lockedStaff;
   sSel.disabled=true;
   
+  // ★復活：引き継ぎ設定の復元とロック
   document.getElementById("handoffToggle").checked = (localStorage.getItem("lockedHandoffCheck") === "true");
   document.getElementById("handoffToggle").disabled = true;
   const savedHandoffStaff = localStorage.getItem("lockedHandoffStaff");
@@ -322,6 +323,7 @@ function renderButtons(){
  }else{
   sSel.disabled=false;
 
+  // ★復活：引き継ぎ設定のロック解除
   document.getElementById("handoffToggle").disabled = false;
   hSel.disabled = !document.getElementById("handoffToggle").checked;
 
@@ -373,6 +375,7 @@ function toggleLock(){
  if(lockedStaff){
   lockedStaff="";
   localStorage.removeItem("lockedStaff");
+  // ★復活：引き継ぎロック情報も削除
   localStorage.removeItem("lockedHandoffCheck");
   localStorage.removeItem("lockedHandoffStaff");
   
@@ -383,6 +386,7 @@ function toggleLock(){
   lockedStaff=s.value;
   localStorage.setItem("lockedStaff",lockedStaff);
   
+  // ★復活：引き継ぎ設定のロック情報を保存
   localStorage.setItem("lockedHandoffCheck", hToggle.checked);
   localStorage.setItem("lockedHandoffStaff", hSel.value);
   
@@ -734,6 +738,7 @@ function renderGoalsOnInput(){
   const current = groupBy(itemRecords).length;
   const pct=Math.min(100, Math.round(current/target*100));
 
+  // ★復活：スタッフ別の成約内訳
   const staffCount = {};
   groupBy(itemRecords).forEach(g => {
    const s = g[0].staff;
