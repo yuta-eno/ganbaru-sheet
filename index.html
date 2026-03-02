@@ -80,7 +80,7 @@ td,th{border:1px solid #cbd5e0;padding:4px;text-align:center;font-size:12px}
 
 .goal-box{ background:linear-gradient(135deg,#fde047,#f97316); padding:15px; border-radius:12px; color:#000; font-weight:bold; box-shadow:0 4px 10px rgba(0,0,0,0.2); margin-bottom:10px; }
 .goal-progress{ background:white; height:14px; border-radius:8px; overflow:hidden; margin-top:6px; }
-.goal-bar{ height:100%; background:#22c55e; }
+.goal-bar{ height:100%; background:#22c55e; transition: width 0.5s ease; }
 </style>
 </head>
 
@@ -203,6 +203,17 @@ td,th{border:1px solid #cbd5e0;padding:4px;text-align:center;font-size:12px}
  </div>
 
  <div class="card full-width">
+  <h3>📊 グループ目標（商材の合算）管理</h3>
+  <p style="font-size:12px; color:#64748b; margin-top:-10px;">複数の商材をまとめて「イエナカ」などの一つの目標として合算メーターを作れます。</p>
+  <div class="add-form" style="flex-wrap: wrap;">
+   <input type="text" id="newGroupName" placeholder="グループ名 (例: イエナカ)">
+   <button onclick="addGroup()">追加</button>
+  </div>
+  <div id="newGroupItems" style="display:flex; flex-wrap:wrap; gap:8px; width:100%; margin-bottom:15px;"></div>
+  <div id="groupListUI"></div>
+ </div>
+
+ <div class="card full-width">
   <h3 style="display:flex; justify-content:space-between; align-items:center;">
    🎯 目標設定（表示中の日付）
    <button onclick="resetAllGoals()" style="background:#ef4444; color:white; border:none; padding:4px 10px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:bold;">🗑️ 全リセット</button>
@@ -221,7 +232,7 @@ firebase.initializeApp({
 const db=firebase.firestore();
 
 /* ================= Global Variables ================= */
-let staffList=[], itemList=[], records=[], monthlyRecords=[];
+let staffList=[], itemList=[], groupList=[], records=[], monthlyRecords=[];
 let goals={};
 let lockedStaff=localStorage.getItem("lockedStaff")||"";
 
@@ -277,11 +288,12 @@ function loadDailyData(){
 }
 
 db.collection("settings").orderBy("order").onSnapshot(snap=>{
- staffList=[]; itemList=[];
+ staffList=[]; itemList=[]; groupList=[];
  snap.forEach(d=>{
   const v=d.data(); v.id=d.id;
   if(v.type=="staff") staffList.push(v);
   if(v.type=="item") itemList.push(v);
+  if(v.type=="group") groupList.push(v); // ★グループデータの取得
  });
  renderStaffItemLists(); 
  updateAllViews();
@@ -306,7 +318,6 @@ function renderButtons(){
  sSel.innerHTML=opts;
  hSel.innerHTML=opts;
 
- // メインスタッフのロック復元
  if(lockedStaff){
   sSel.value=lockedStaff;
   sSel.disabled=true;
@@ -318,7 +329,6 @@ function renderButtons(){
   document.getElementById("lockBtn").classList.remove("locked");
  }
 
- // ★引継ぎスタッフのロック復元
  const savedHandoffStaff = localStorage.getItem("lockedHandoffStaff");
  if(savedHandoffStaff) {
   document.getElementById("handoffToggle").checked = (localStorage.getItem("lockedHandoffCheck") === "true");
@@ -372,6 +382,7 @@ function updateCounts(){
 /* ================= Input Actions ================= */
 function toggleLock(){
  const s=document.getElementById("staffSelect");
+
  if(lockedStaff){
   lockedStaff="";
   localStorage.removeItem("lockedStaff");
@@ -384,7 +395,6 @@ function toggleLock(){
  renderButtons();
 }
 
-// ★引継ぎスタッフ用の独立したロック機能
 function toggleHandoffLock(){
  const hToggle=document.getElementById("handoffToggle");
  const hSel=document.getElementById("handoffSelect");
@@ -605,6 +615,45 @@ function renderStaffItemLists() {
     <button class="delete-btn" onclick="deleteSetting('${it.id}')">削除</button>
    </div>
   </li>`).join("") + `</ul>`;
+
+ // ★追加：グループ作成用の商材チェックボックスと、既存グループリストの描画
+ const cbDiv = document.getElementById("newGroupItems");
+ if(cbDiv) {
+  cbDiv.innerHTML = itemList.map(it => `
+   <label style="font-size:13px; background:#f1f5f9; padding:4px 8px; border-radius:4px; border:1px solid #cbd5e0; cursor:pointer; font-weight:bold; color:#475569;">
+    <input type="checkbox" value="${it.name}" class="new-group-cb"> ${it.name}
+   </label>
+  `).join("");
+ }
+
+ const listDiv = document.getElementById("groupListUI");
+ if(listDiv) {
+  listDiv.innerHTML = `<ul class="list-ui">` + groupList.map(g => `
+   <li style="border-left: 5px solid #8b5cf6;">
+    <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
+     <div>
+      <strong style="font-size:15px; color:#1e293b;">${g.name}</strong>
+      <div style="font-size:11px; color:#64748b; margin-top:2px;">構成: ${g.items.join(", ")}</div>
+     </div>
+     <button class="delete-btn" onclick="deleteSetting('${g.id}')">削除</button>
+    </div>
+   </li>
+  `).join("") + `</ul>`;
+ }
+}
+
+// ★追加：グループ追加機能
+function addGroup(){
+ const n = document.getElementById("newGroupName").value;
+ const cbs = document.querySelectorAll(".new-group-cb:checked");
+ const items = Array.from(cbs).map(cb => cb.value);
+
+ if(!n) return alert("グループ名を入力してください");
+ if(items.length === 0) return alert("合算する商材を1つ以上選択してください");
+
+ db.collection("settings").add({type: "group", name: n, items: items, order: Date.now()});
+ document.getElementById("newGroupName").value = "";
+ cbs.forEach(cb => cb.checked = false);
 }
 
 async function renderDeleteMonthOptions() {
@@ -696,8 +745,15 @@ function renderGoalPanel(){
  goalPanel.style.gap="4px 10px"; 
  goalPanel.style.overflowX="auto";
 
- goalPanel.innerHTML=itemList.map(it=>{
-  const g=goals[it.name]?.target||0;
+ // ★修正：グループも目標設定パネルに表示させる
+ const combined = [...groupList.map(g => ({...g, isGroup: true})), ...itemList];
+
+ goalPanel.innerHTML=combined.map(it=>{
+  const targetName = it.isGroup ? `group_${it.name}` : it.name;
+  const displayName = it.isGroup ? `📦 ${it.name}` : it.name;
+  const fontColor = it.isGroup ? '#8b5cf6' : '#1e293b'; // グループは紫色に
+
+  const g=goals[targetName]?.target||0;
   let opts="";
   for(let i=0; i<=99; i++){
    const num = i < 10 ? "0" + i : i;
@@ -705,9 +761,9 @@ function renderGoalPanel(){
   }
   return `
    <div style="display:flex; align-items:center;">
-    <div style="font-weight:bold; font-size:14px; width:112px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${it.name}</div>
+    <div style="font-weight:bold; font-size:14px; width:112px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:${fontColor};" title="${it.name}">${displayName}</div>
     <select style="width:55px; padding:4px; border:1px solid #cbd5e0; border-radius:6px; font-size:16px; text-align:center; background:#fff; cursor:pointer;" 
-     onchange="setGoal('${it.name}',this.value)">
+     onchange="setGoal('${targetName}',this.value)">
      ${opts}
     </select>
    </div>`;
@@ -736,7 +792,41 @@ function renderGoalsOnInput(){
  const box=document.getElementById("goalDisplay");
  if(!box) return;
 
- const htmls = itemList.map(it=>{
+ // ★追加：グループ目標のメーター作成
+ const groupHtmls = groupList.map(g => {
+  const targetName = `group_${g.name}`;
+  const target = goals[targetName]?.target||0;
+  if(!target) return "";
+
+  // グループに属する商材のレコードだけを抽出
+  const groupRecords = records.filter(r => g.items.includes(r.item));
+  const current = groupBy(groupRecords).length;
+  const pct=Math.min(100, Math.round(current/target*100));
+
+  // 商材ごとの内訳を計算
+  const itemCount = {};
+  g.items.forEach(iName => itemCount[iName] = 0); // 0件の商材も表示するため初期化
+  groupBy(groupRecords).forEach(grp => {
+   const iName = grp[0].item;
+   itemCount[iName] = (itemCount[iName]||0) + 1;
+  });
+
+  const itemHtml = Object.entries(itemCount)
+   .map(r => `<span style="display:inline-block; margin-top:6px; margin-right:8px; font-size:13px; background:rgba(255,255,255,0.3); padding:2px 8px; border-radius:4px;">${r[0]} ${r[1]}件</span>`)
+   .join("");
+
+  return `
+  <div class="goal-box" style="background:linear-gradient(135deg, #8b5cf6, #6366f1); color:white;">
+   📦 ${g.name} (合算) 目標 ${target}件 / 現在 ${current}件 (${pct}%)
+   <div class="goal-progress">
+    <div class="goal-bar" style="width:${pct}%; background:#10b981;"></div>
+   </div>
+   ${itemHtml}
+  </div>`;
+ }).filter(h=>h!=="");
+
+ // 既存：単体商材目標のメーター作成
+ const itemHtmls = itemList.map(it=>{
   const target=goals[it.name]?.target||0;
   if(!target) return "";
   
@@ -744,15 +834,14 @@ function renderGoalsOnInput(){
   const current = groupBy(itemRecords).length;
   const pct=Math.min(100, Math.round(current/target*100));
 
-  // ★復活：スタッフ別の成約内訳
   const staffCount = {};
-  groupBy(itemRecords).forEach(g => {
-   const s = g[0].staff;
+  groupBy(itemRecords).forEach(grp => {
+   const s = grp[0].staff;
    staffCount[s] = (staffCount[s]||0) + 1;
   });
   const staffHtml = Object.entries(staffCount)
    .sort((a,b)=>b[1]-a[1])
-   .map(r => `<span style="display:inline-block; margin-top:6px; margin-right:8px; font-size:13px; background:rgba(255,255,255,0.4); padding:2px 8px; border-radius:4px;">${r[0]} ${r[1]}件</span>`)
+   .map(r => `<span style="display:inline-block; margin-top:6px; margin-right:8px; font-size:13px; background:rgba(255,255,255,0.4); padding:2px 8px; border-radius:4px; color:#000;">${r[0]} ${r[1]}件</span>`)
    .join("");
 
   return `
@@ -765,9 +854,12 @@ function renderGoalsOnInput(){
   </div>`;
  }).filter(h=>h!=="");
 
- if(htmls.length > 0) {
+ // グループ目標を上に、単体目標を下に結合
+ const allHtmls = [...groupHtmls, ...itemHtmls];
+
+ if(allHtmls.length > 0) {
   box.style.display = "block";
-  box.innerHTML = htmls.join("");
+  box.innerHTML = allHtmls.join("");
  } else {
   box.style.display = "none";
   box.innerHTML = "";
