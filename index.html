@@ -242,8 +242,8 @@ const db=firebase.firestore();
 /* ================= Global Variables ================= */
 let staffList=[], itemList=[], groupList=[], records=[], monthlyRecords=[];
 let goals={};
-let monthlyGoals={}; // ★追加：月間計画値データ
-let monthlySalesRecordsForGoal=[]; // ★追加：目標バー表示用の月間実績データ
+let monthlyGoals={}; 
+let monthlySalesRecordsForGoal=[]; 
 let lockedStaff=localStorage.getItem("lockedStaff")||"";
 
 let _tz=new Date();
@@ -280,8 +280,8 @@ document.getElementById("globalDate").onchange=e=>{
 /* ================= Realtime Listeners ================= */
 let unsubSales=null;
 let unsubGoals=null;
-let unsubMonthlyGoals=null; // ★追加
-let unsubMonthlySalesForGoal=null; // ★追加
+let unsubMonthlyGoals=null; 
+let unsubMonthlySalesForGoal=null; 
 
 function loadDailyData(){
  if(unsubSales) unsubSales();
@@ -298,7 +298,6 @@ function loadDailyData(){
   renderGoalsOnInput();
  });
 
- // ★追加：月間計画値と月間実績の取得
  const currentMonthStr = currentDate.slice(0, 7);
  const {start, end} = getMonthRange(currentMonthStr);
 
@@ -336,7 +335,7 @@ function updateAllViews(){
  renderBoard();
  updateCounts();
  renderGoalPanel(); 
- renderMonthlyGoalPanel(); // ★追加
+ renderMonthlyGoalPanel(); 
  renderGoalsOnInput();
 }
 
@@ -817,7 +816,6 @@ function resetAllGoals(){
  });
 }
 
-// ★追加：月間計画値パネルの描画
 function renderMonthlyGoalPanel(){
  const panel=document.getElementById("monthlyGoalPanel");
  if(!panel) return;
@@ -846,7 +844,6 @@ function renderMonthlyGoalPanel(){
  }).join("");
 }
 
-// ★追加：月間計画値の保存
 function setMonthlyGoal(item,val){
  const monthStr = currentDate.slice(0, 7);
  const docId = monthStr + "_" + item; 
@@ -857,7 +854,6 @@ function setMonthlyGoal(item,val){
  }
 }
 
-// ★追加：月間計画値のリセット
 function resetAllMonthlyGoals(){
  const monthStr = currentDate.slice(0, 7);
  if(!confirm(`表示中の月（${monthStr}）の計画値をすべてリセット（0件）にしますか？`)) return;
@@ -892,19 +888,21 @@ function renderGoalsOnInput(){
    .map(r => `<span style="display:inline-block; margin-top:6px; margin-right:8px; font-size:13px; background:rgba(255,255,255,0.3); padding:2px 8px; border-radius:4px;">${r[0]} ${r[1]}件</span>`)
    .join("");
 
-  // ★追加：月間計画値の進捗表示
+  // ★修正：月間表示を大きく見やすくし、背景を白にして目立たせる
   const monthTarget = monthlyGoals[targetName]?.target || 0;
   let monthHtml = "";
+  let pr = "0px";
   if(monthTarget > 0) {
    const groupMonthRecords = monthlySalesRecordsForGoal.filter(r => g.items.includes(r.item));
    const monthCurrent = groupBy(groupMonthRecords).length;
-   monthHtml = `<div style="position: absolute; top: 12px; right: 12px; font-size: 11px; font-weight: bold; background: rgba(255,255,255,0.25); padding: 3px 6px; border-radius: 4px; color: #fff;">月間: ${monthCurrent} / ${monthTarget}</div>`;
+   monthHtml = `<div style="position: absolute; top: 10px; right: 10px; font-size: 16px; font-weight: bold; background: #fff; padding: 6px 12px; border-radius: 8px; color: #6d28d9; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">月間: ${monthCurrent} / ${monthTarget}</div>`;
+   pr = "130px";
   }
 
   return `
   <div class="goal-box" style="background:linear-gradient(135deg, #8b5cf6, #6366f1); color:white; position:relative;">
    ${monthHtml}
-   🔥 ${g.name} (合算) 目標 ${target}件 / 現在 ${current}件 (${pct}%)
+   <div style="padding-right: ${pr}; line-height: 1.4;">🔥 ${g.name} (合算) 目標 ${target}件 / 現在 ${current}件 (${pct}%)</div>
    <div class="goal-progress">
     <div class="goal-bar" style="width:${pct}%; background:#10b981;"></div>
    </div>
@@ -930,19 +928,21 @@ function renderGoalsOnInput(){
    .map(r => `<span style="display:inline-block; margin-top:6px; margin-right:8px; font-size:13px; background:rgba(255,255,255,0.4); padding:2px 8px; border-radius:4px; color:#000;">${r[0]} ${r[1]}件</span>`)
    .join("");
 
-  // ★追加：月間計画値の進捗表示
+  // ★修正：月間表示を大きく見やすくし、背景を白にして目立たせる
   const monthTarget = monthlyGoals[it.name]?.target || 0;
   let monthHtml = "";
+  let pr = "0px";
   if(monthTarget > 0) {
    const itemMonthRecords = monthlySalesRecordsForGoal.filter(r => r.item == it.name);
    const monthCurrent = groupBy(itemMonthRecords).length;
-   monthHtml = `<div style="position: absolute; top: 12px; right: 12px; font-size: 11px; font-weight: bold; background: rgba(0,0,0,0.1); padding: 3px 6px; border-radius: 4px; color: #1e293b;">月間: ${monthCurrent} / ${monthTarget}</div>`;
+   monthHtml = `<div style="position: absolute; top: 10px; right: 10px; font-size: 16px; font-weight: bold; background: #fff; padding: 6px 12px; border-radius: 8px; color: #ea580c; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">月間: ${monthCurrent} / ${monthTarget}</div>`;
+   pr = "130px";
   }
 
   return `
   <div class="goal-box" style="position:relative;">
    ${monthHtml}
-   🔥 ${it.name} 目標 ${target}件 / 現在 ${current}件 (${pct}%)
+   <div style="padding-right: ${pr}; line-height: 1.4;">🔥 ${it.name} 目標 ${target}件 / 現在 ${current}件 (${pct}%)</div>
    <div class="goal-progress">
     <div class="goal-bar" style="width:${pct}%"></div>
    </div>
