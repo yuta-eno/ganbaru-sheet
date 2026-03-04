@@ -78,7 +78,7 @@ td,th{border:1px solid #cbd5e0;padding:4px;text-align:center;font-size:12px}
 .setting-input { flex:1; min-width:50px; padding:8px; border:1px solid #cbd5e0; border-radius:6px; font-weight:bold; }
 .color-picker { cursor:pointer; width:40px; height:36px; border:1px solid #cbd5e0; border-radius:4px; padding:2px; flex-shrink:0;}
 
-.goal-box{ background:linear-gradient(135deg,#fde047,#f97316); padding:15px; border-radius:12px; color:#000; font-weight:bold; box-shadow:0 4px 10px rgba(0,0,0,0.2); margin-bottom:10px; }
+.goal-box{ background:linear-gradient(135deg,#fde047,#f97316); padding:10px; border-radius:12px; color:#000; font-weight:bold; box-shadow:0 4px 10px rgba(0,0,0,0.2); margin-bottom:10px; }
 .goal-progress{ background:white; height:14px; border-radius:8px; overflow:hidden; margin-top:6px; }
 .goal-bar{ height:100%; background:#22c55e; transition: width 0.5s ease; }
 </style>
@@ -888,22 +888,20 @@ function renderGoalsOnInput(){
    .map(r => `<span style="display:inline-block; margin-top:6px; margin-right:8px; font-size:13px; background:rgba(255,255,255,0.3); padding:2px 8px; border-radius:4px;">${r[0]} ${r[1]}件</span>`)
    .join("");
 
-  // ★修正：月間表示を大きく見やすくし、背景を白にして目立たせる
+  // ★修正：絶対配置をやめ、フロー配置でテキストとメーターの間に配置。フォントを14pxに縮小。
   const monthTarget = monthlyGoals[targetName]?.target || 0;
   let monthHtml = "";
-  let pr = "0px";
   if(monthTarget > 0) {
    const groupMonthRecords = monthlySalesRecordsForGoal.filter(r => g.items.includes(r.item));
    const monthCurrent = groupBy(groupMonthRecords).length;
-   monthHtml = `<div style="position: absolute; top: 10px; right: 10px; font-size: 16px; font-weight: bold; background: #fff; padding: 6px 12px; border-radius: 8px; color: #6d28d9; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">月間: ${monthCurrent} / ${monthTarget}</div>`;
-   pr = "130px";
+   monthHtml = `<div style="font-size: 14px; font-weight: bold; background: #fff; padding: 4px 8px; border-radius: 6px; color: #6d28d9; display: inline-block; margin-top: 4px; margin-bottom: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">月間: ${monthCurrent} / ${monthTarget}</div>`;
   }
 
   return `
-  <div class="goal-box" style="background:linear-gradient(135deg, #8b5cf6, #6366f1); color:white; position:relative;">
+  <div class="goal-box" style="background:linear-gradient(135deg, #8b5cf6, #6366f1); color:white; padding-top: 10px;">
+   <div style="line-height: 1.4;">🔥 ${g.name} (合算) 目標 ${target}件 / 現在 ${current}件 (${pct}%)</div>
    ${monthHtml}
-   <div style="padding-right: ${pr}; line-height: 1.4;">🔥 ${g.name} (合算) 目標 ${target}件 / 現在 ${current}件 (${pct}%)</div>
-   <div class="goal-progress">
+   <div class="goal-progress" style="margin-top: 4px;">
     <div class="goal-bar" style="width:${pct}%; background:#10b981;"></div>
    </div>
    ${itemHtml}
@@ -928,22 +926,20 @@ function renderGoalsOnInput(){
    .map(r => `<span style="display:inline-block; margin-top:6px; margin-right:8px; font-size:13px; background:rgba(255,255,255,0.4); padding:2px 8px; border-radius:4px; color:#000;">${r[0]} ${r[1]}件</span>`)
    .join("");
 
-  // ★修正：月間表示を大きく見やすくし、背景を白にして目立たせる
+  // ★修正：絶対配置をやめ、フロー配置でテキストとメーターの間に配置。フォントを14pxに縮小。
   const monthTarget = monthlyGoals[it.name]?.target || 0;
   let monthHtml = "";
-  let pr = "0px";
   if(monthTarget > 0) {
    const itemMonthRecords = monthlySalesRecordsForGoal.filter(r => r.item == it.name);
    const monthCurrent = groupBy(itemMonthRecords).length;
-   monthHtml = `<div style="position: absolute; top: 10px; right: 10px; font-size: 16px; font-weight: bold; background: #fff; padding: 6px 12px; border-radius: 8px; color: #ea580c; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">月間: ${monthCurrent} / ${monthTarget}</div>`;
-   pr = "130px";
+   monthHtml = `<div style="font-size: 14px; font-weight: bold; background: #fff; padding: 4px 8px; border-radius: 6px; color: #ea580c; display: inline-block; margin-top: 4px; margin-bottom: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">月間: ${monthCurrent} / ${monthTarget}</div>`;
   }
 
   return `
-  <div class="goal-box" style="position:relative;">
+  <div class="goal-box" style="padding-top: 10px;">
+   <div style="line-height: 1.4;">🔥 ${it.name} 目標 ${target}件 / 現在 ${current}件 (${pct}%)</div>
    ${monthHtml}
-   <div style="padding-right: ${pr}; line-height: 1.4;">🔥 ${it.name} 目標 ${target}件 / 現在 ${current}件 (${pct}%)</div>
-   <div class="goal-progress">
+   <div class="goal-progress" style="margin-top: 4px;">
     <div class="goal-bar" style="width:${pct}%"></div>
    </div>
    ${staffHtml}
