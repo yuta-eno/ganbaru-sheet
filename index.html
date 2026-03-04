@@ -215,10 +215,18 @@ td,th{border:1px solid #cbd5e0;padding:4px;text-align:center;font-size:12px}
 
  <div class="card full-width">
   <h3 style="display:flex; justify-content:space-between; align-items:center;">
-   🎯 目標設定（表示中の日付）
+   🎯 今日の目標設定（表示中の日付）
    <button onclick="resetAllGoals()" style="background:#ef4444; color:white; border:none; padding:4px 10px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:bold;">🗑️ 全リセット</button>
   </h3>
   <div id="goalPanel"></div>
+ </div>
+
+ <div class="card full-width">
+  <h3 style="display:flex; justify-content:space-between; align-items:center;">
+   📅 月間計画値（表示中の月）
+   <button onclick="resetAllMonthlyGoals()" style="background:#ef4444; color:white; border:none; padding:4px 10px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:bold;">🗑️ 全リセット</button>
+  </h3>
+  <div id="monthlyGoalPanel"></div>
  </div>
 </div>
 
@@ -234,6 +242,8 @@ const db=firebase.firestore();
 /* ================= Global Variables ================= */
 let staffList=[], itemList=[], groupList=[], records=[], monthlyRecords=[];
 let goals={};
+let monthlyGoals={}; // ★追加：月間計画値データ
+let monthlySalesRecordsForGoal=[]; // ★追加：目標バー表示用の月間実績データ
 let lockedStaff=localStorage.getItem("lockedStaff")||"";
 
 let _tz=new Date();
@@ -270,6 +280,8 @@ document.getElementById("globalDate").onchange=e=>{
 /* ================= Realtime Listeners ================= */
 let unsubSales=null;
 let unsubGoals=null;
+let unsubMonthlyGoals=null; // ★追加
+let unsubMonthlySalesForGoal=null; // ★追加
 
 function loadDailyData(){
  if(unsubSales) unsubSales();
@@ -285,6 +297,25 @@ function loadDailyData(){
   renderGoalPanel();
   renderGoalsOnInput();
  });
+
+ // ★追加：月間計画値と月間実績の取得
+ const currentMonthStr = currentDate.slice(0, 7);
+ const {start, end} = getMonthRange(currentMonthStr);
+
+ if(unsubMonthlyGoals) unsubMonthlyGoals();
+ unsubMonthlyGoals=db.collection("monthlyGoals").where("month","==",currentMonthStr).onSnapshot(snap=>{
+  monthlyGoals={};
+  snap.forEach(d=>{ monthlyGoals[d.data().item]=d.data(); });
+  renderMonthlyGoalPanel();
+  renderGoalsOnInput();
+ });
+
+ if(unsubMonthlySalesForGoal) unsubMonthlySalesForGoal();
+ unsubMonthlySalesForGoal=db.collection("sales")
+  .where("date", ">=", start).where("date", "<=", end).onSnapshot(snap=>{
+  monthlySalesRecordsForGoal=snap.docs.map(d=>({...d.data(),id:d.id}));
+  renderGoalsOnInput();
+ });
 }
 
 db.collection("settings").orderBy("order").onSnapshot(snap=>{
@@ -293,7 +324,7 @@ db.collection("settings").orderBy("order").onSnapshot(snap=>{
   const v=d.data(); v.id=d.id;
   if(v.type=="staff") staffList.push(v);
   if(v.type=="item") itemList.push(v);
-  if(v.type=="group") groupList.push(v); // ★グループデータの取得
+  if(v.type=="group") groupList.push(v); 
  });
  renderStaffItemLists(); 
  updateAllViews();
@@ -305,6 +336,7 @@ function updateAllViews(){
  renderBoard();
  updateCounts();
  renderGoalPanel(); 
+ renderMonthlyGoalPanel(); // ★追加
  renderGoalsOnInput();
 }
 
@@ -616,7 +648,6 @@ function renderStaffItemLists() {
    </div>
   </li>`).join("") + `</ul>`;
 
- // ★追加：グループ作成用の商材チェックボックスと、既存グループリストの描画
  const cbDiv = document.getElementById("newGroupItems");
  if(cbDiv) {
   cbDiv.innerHTML = itemList.map(it => `
@@ -642,7 +673,6 @@ function renderStaffItemLists() {
  }
 }
 
-// ★追加：グループ追加機能
 function addGroup(){
  const n = document.getElementById("newGroupName").value;
  const cbs = document.querySelectorAll(".new-group-cb:checked");
@@ -745,13 +775,12 @@ function renderGoalPanel(){
  goalPanel.style.gap="4px 10px"; 
  goalPanel.style.overflowX="auto";
 
- // ★修正：グループも目標設定パネルに表示させる
  const combined = [...groupList.map(g => ({...g, isGroup: true})), ...itemList];
 
  goalPanel.innerHTML=combined.map(it=>{
   const targetName = it.isGroup ? `group_${it.name}` : it.name;
   const displayName = it.isGroup ? `📦 ${it.name}` : it.name;
-  const fontColor = it.isGroup ? '#8b5cf6' : '#1e293b'; // グループは紫色に
+  const fontColor = it.isGroup ? '#8b5cf6' : '#1e293b';
 
   const g=goals[targetName]?.target||0;
   let opts="";
@@ -788,24 +817,72 @@ function resetAllGoals(){
  });
 }
 
+// ★追加：月間計画値パネルの描画
+function renderMonthlyGoalPanel(){
+ const panel=document.getElementById("monthlyGoalPanel");
+ if(!panel) return;
+ 
+ panel.style.display="grid";
+ panel.style.gridTemplateRows="repeat(15, max-content)";
+ panel.style.gridAutoFlow="column";
+ panel.style.gap="4px 10px"; 
+ panel.style.overflowX="auto";
+
+ const combined = [...groupList.map(g => ({...g, isGroup: true})), ...itemList];
+
+ panel.innerHTML=combined.map(it=>{
+  const targetName = it.isGroup ? `group_${it.name}` : it.name;
+  const displayName = it.isGroup ? `📦 ${it.name}` : it.name;
+  const fontColor = it.isGroup ? '#8b5cf6' : '#1e293b';
+
+  const g=monthlyGoals[targetName]?.target||'';
+  
+  return `
+   <div style="display:flex; align-items:center;">
+    <div style="font-weight:bold; font-size:14px; width:112px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:${fontColor};" title="${it.name}">${displayName}</div>
+    <input type="number" placeholder="0" style="width:50px; padding:4px; border:1px solid #cbd5e0; border-radius:6px; font-size:14px; text-align:center;" value="${g}"
+     onchange="setMonthlyGoal('${targetName}',this.value)">
+   </div>`;
+ }).join("");
+}
+
+// ★追加：月間計画値の保存
+function setMonthlyGoal(item,val){
+ const monthStr = currentDate.slice(0, 7);
+ const docId = monthStr + "_" + item; 
+ if(val === "" || val <= 0) {
+  db.collection("monthlyGoals").doc(docId).delete(); 
+ } else {
+  db.collection("monthlyGoals").doc(docId).set({item: item, target: Number(val), month: monthStr});
+ }
+}
+
+// ★追加：月間計画値のリセット
+function resetAllMonthlyGoals(){
+ const monthStr = currentDate.slice(0, 7);
+ if(!confirm(`表示中の月（${monthStr}）の計画値をすべてリセット（0件）にしますか？`)) return;
+ db.collection("monthlyGoals").where("month", "==", monthStr).get().then(snap => {
+   const batch = db.batch();
+   snap.forEach(d => batch.delete(d.ref));
+   batch.commit().then(() => alert("表示中の月の計画値をすべてリセットしました！"));
+ });
+}
+
 function renderGoalsOnInput(){
  const box=document.getElementById("goalDisplay");
  if(!box) return;
 
- // ★追加：グループ目標のメーター作成
  const groupHtmls = groupList.map(g => {
   const targetName = `group_${g.name}`;
   const target = goals[targetName]?.target||0;
   if(!target) return "";
 
-  // グループに属する商材のレコードだけを抽出
   const groupRecords = records.filter(r => g.items.includes(r.item));
   const current = groupBy(groupRecords).length;
   const pct=Math.min(100, Math.round(current/target*100));
 
-  // 商材ごとの内訳を計算
   const itemCount = {};
-  g.items.forEach(iName => itemCount[iName] = 0); // 0件の商材も表示するため初期化
+  g.items.forEach(iName => itemCount[iName] = 0); 
   groupBy(groupRecords).forEach(grp => {
    const iName = grp[0].item;
    itemCount[iName] = (itemCount[iName]||0) + 1;
@@ -815,9 +892,19 @@ function renderGoalsOnInput(){
    .map(r => `<span style="display:inline-block; margin-top:6px; margin-right:8px; font-size:13px; background:rgba(255,255,255,0.3); padding:2px 8px; border-radius:4px;">${r[0]} ${r[1]}件</span>`)
    .join("");
 
+  // ★追加：月間計画値の進捗表示
+  const monthTarget = monthlyGoals[targetName]?.target || 0;
+  let monthHtml = "";
+  if(monthTarget > 0) {
+   const groupMonthRecords = monthlySalesRecordsForGoal.filter(r => g.items.includes(r.item));
+   const monthCurrent = groupBy(groupMonthRecords).length;
+   monthHtml = `<div style="position: absolute; top: 12px; right: 12px; font-size: 11px; font-weight: bold; background: rgba(255,255,255,0.25); padding: 3px 6px; border-radius: 4px; color: #fff;">月間: ${monthCurrent} / ${monthTarget}</div>`;
+  }
+
   return `
-  <div class="goal-box" style="background:linear-gradient(135deg, #8b5cf6, #6366f1); color:white;">
-   📦 ${g.name} (合算) 目標 ${target}件 / 現在 ${current}件 (${pct}%)
+  <div class="goal-box" style="background:linear-gradient(135deg, #8b5cf6, #6366f1); color:white; position:relative;">
+   ${monthHtml}
+   🔥 ${g.name} (合算) 目標 ${target}件 / 現在 ${current}件 (${pct}%)
    <div class="goal-progress">
     <div class="goal-bar" style="width:${pct}%; background:#10b981;"></div>
    </div>
@@ -825,7 +912,6 @@ function renderGoalsOnInput(){
   </div>`;
  }).filter(h=>h!=="");
 
- // 既存：単体商材目標のメーター作成
  const itemHtmls = itemList.map(it=>{
   const target=goals[it.name]?.target||0;
   if(!target) return "";
@@ -844,8 +930,18 @@ function renderGoalsOnInput(){
    .map(r => `<span style="display:inline-block; margin-top:6px; margin-right:8px; font-size:13px; background:rgba(255,255,255,0.4); padding:2px 8px; border-radius:4px; color:#000;">${r[0]} ${r[1]}件</span>`)
    .join("");
 
+  // ★追加：月間計画値の進捗表示
+  const monthTarget = monthlyGoals[it.name]?.target || 0;
+  let monthHtml = "";
+  if(monthTarget > 0) {
+   const itemMonthRecords = monthlySalesRecordsForGoal.filter(r => r.item == it.name);
+   const monthCurrent = groupBy(itemMonthRecords).length;
+   monthHtml = `<div style="position: absolute; top: 12px; right: 12px; font-size: 11px; font-weight: bold; background: rgba(0,0,0,0.1); padding: 3px 6px; border-radius: 4px; color: #1e293b;">月間: ${monthCurrent} / ${monthTarget}</div>`;
+  }
+
   return `
-  <div class="goal-box">
+  <div class="goal-box" style="position:relative;">
+   ${monthHtml}
    🔥 ${it.name} 目標 ${target}件 / 現在 ${current}件 (${pct}%)
    <div class="goal-progress">
     <div class="goal-bar" style="width:${pct}%"></div>
@@ -854,7 +950,6 @@ function renderGoalsOnInput(){
   </div>`;
  }).filter(h=>h!=="");
 
- // グループ目標を上に、単体目標を下に結合
  const allHtmls = [...groupHtmls, ...itemHtmls];
 
  if(allHtmls.length > 0) {
