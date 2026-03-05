@@ -229,7 +229,6 @@ td,th{border:1px solid #cbd5e0;padding:4px;text-align:center;font-size:12px}
   <div id="monthlyGoalPanel"></div>
  </div>
 </div>
-
 <script>
 /* ================= Firebase ================= */
 firebase.initializeApp({
@@ -239,12 +238,22 @@ firebase.initializeApp({
 });
 const db=firebase.firestore();
 
+/* ================= 店舗設定（自店舗用：過去データ引き継ぎ） ================= */
+const COL_SALES = "sales";
+const COL_SETTINGS = "settings";
+const COL_GOALS = "goals";
+const COL_MONTHLY = "monthlyGoals";
+
+const LS_LOCKED_STAFF = "lockedStaff";
+const LS_LOCKED_HANDOFF_CHECK = "lockedHandoffCheck";
+const LS_LOCKED_HANDOFF_STAFF = "lockedHandoffStaff";
+
 /* ================= Global Variables ================= */
 let staffList=[], itemList=[], groupList=[], records=[], monthlyRecords=[];
 let goals={};
 let monthlyGoals={}; 
 let monthlySalesRecordsForGoal=[]; 
-let lockedStaff=localStorage.getItem("lockedStaff")||"";
+let lockedStaff=localStorage.getItem(LS_LOCKED_STAFF)||"";
 
 let _tz=new Date();
 _tz.setMinutes(_tz.getMinutes()-_tz.getTimezoneOffset());
@@ -285,13 +294,13 @@ let unsubMonthlySalesForGoal=null;
 
 function loadDailyData(){
  if(unsubSales) unsubSales();
- unsubSales=db.collection("sales").where("date","==",currentDate).onSnapshot(snap=>{
+ unsubSales=db.collection(COL_SALES).where("date","==",currentDate).onSnapshot(snap=>{
   records=snap.docs.map(d=>({...d.data(),id:d.id}));
   updateAllViews();
  });
 
  if(unsubGoals) unsubGoals();
- unsubGoals=db.collection("goals").where("date","==",currentDate).onSnapshot(snap=>{
+ unsubGoals=db.collection(COL_GOALS).where("date","==",currentDate).onSnapshot(snap=>{
   goals={};
   snap.forEach(d=>{ goals[d.data().item]=d.data(); });
   renderGoalPanel();
@@ -302,7 +311,7 @@ function loadDailyData(){
  const {start, end} = getMonthRange(currentMonthStr);
 
  if(unsubMonthlyGoals) unsubMonthlyGoals();
- unsubMonthlyGoals=db.collection("monthlyGoals").where("month","==",currentMonthStr).onSnapshot(snap=>{
+ unsubMonthlyGoals=db.collection(COL_MONTHLY).where("month","==",currentMonthStr).onSnapshot(snap=>{
   monthlyGoals={};
   snap.forEach(d=>{ monthlyGoals[d.data().item]=d.data(); });
   renderMonthlyGoalPanel();
@@ -310,14 +319,14 @@ function loadDailyData(){
  });
 
  if(unsubMonthlySalesForGoal) unsubMonthlySalesForGoal();
- unsubMonthlySalesForGoal=db.collection("sales")
+ unsubMonthlySalesForGoal=db.collection(COL_SALES)
   .where("date", ">=", start).where("date", "<=", end).onSnapshot(snap=>{
   monthlySalesRecordsForGoal=snap.docs.map(d=>({...d.data(),id:d.id}));
   renderGoalsOnInput();
  });
 }
 
-db.collection("settings").orderBy("order").onSnapshot(snap=>{
+db.collection(COL_SETTINGS).orderBy("order").onSnapshot(snap=>{
  staffList=[]; itemList=[]; groupList=[];
  snap.forEach(d=>{
   const v=d.data(); v.id=d.id;
@@ -360,9 +369,9 @@ function renderButtons(){
   document.getElementById("lockBtn").classList.remove("locked");
  }
 
- const savedHandoffStaff = localStorage.getItem("lockedHandoffStaff");
+ const savedHandoffStaff = localStorage.getItem(LS_LOCKED_HANDOFF_STAFF);
  if(savedHandoffStaff) {
-  document.getElementById("handoffToggle").checked = (localStorage.getItem("lockedHandoffCheck") === "true");
+  document.getElementById("handoffToggle").checked = (localStorage.getItem(LS_LOCKED_HANDOFF_CHECK) === "true");
   document.getElementById("handoffToggle").disabled = true;
   hSel.value = savedHandoffStaff;
   hSel.disabled = true;
@@ -416,11 +425,11 @@ function toggleLock(){
 
  if(lockedStaff){
   lockedStaff="";
-  localStorage.removeItem("lockedStaff");
+  localStorage.removeItem(LS_LOCKED_STAFF);
   s.disabled = false;
  }else{
   lockedStaff=s.value;
-  localStorage.setItem("lockedStaff",lockedStaff);
+  localStorage.setItem(LS_LOCKED_STAFF,lockedStaff);
   s.disabled = true;
  }
  renderButtons();
@@ -430,14 +439,14 @@ function toggleHandoffLock(){
  const hToggle=document.getElementById("handoffToggle");
  const hSel=document.getElementById("handoffSelect");
 
- if(localStorage.getItem("lockedHandoffStaff")){
-  localStorage.removeItem("lockedHandoffCheck");
-  localStorage.removeItem("lockedHandoffStaff");
+ if(localStorage.getItem(LS_LOCKED_HANDOFF_STAFF)){
+  localStorage.removeItem(LS_LOCKED_HANDOFF_CHECK);
+  localStorage.removeItem(LS_LOCKED_HANDOFF_STAFF);
   hToggle.disabled = false;
   hSel.disabled = !hToggle.checked;
  }else{
-  localStorage.setItem("lockedHandoffCheck", hToggle.checked);
-  localStorage.setItem("lockedHandoffStaff", hSel.value);
+  localStorage.setItem(LS_LOCKED_HANDOFF_CHECK, hToggle.checked);
+  localStorage.setItem(LS_LOCKED_HANDOFF_STAFF, hSel.value);
   hToggle.disabled = true;
   hSel.disabled = true;
  }
@@ -457,7 +466,7 @@ function addRecord(item){
  const registrar=isH?base:"";
  const groupId=Date.now().toString();
 
- db.collection("sales").add({staff,registrar,item,date:currentDate,groupId});
+ db.collection(COL_SALES).add({staff,registrar,item,date:currentDate,groupId});
 }
 
 function removeRecord(item){
@@ -467,7 +476,7 @@ function removeRecord(item){
  const r=records.filter(r=>r.item==item && r.staff==targetStaff).pop();
  if(!r) return;
  
- db.collection("sales").where("groupId","==",r.groupId).get().then(snap=>{
+ db.collection(COL_SALES).where("groupId","==",r.groupId).get().then(snap=>{
   const batch=db.batch();
   snap.forEach(d=>batch.delete(d.ref));
   batch.commit();
@@ -531,7 +540,7 @@ async function loadMonthlyData(){
  if(!targetMonth) return;
 
  const {start,end}=getMonthRange(targetMonth);
- const snap=await db.collection("sales")
+ const snap=await db.collection(COL_SALES)
   .where("date",">=",start).where("date","<=",end).get();
  monthlyRecords=snap.docs.map(d=>d.data());
  renderMonthlyItemSelector();
@@ -554,7 +563,6 @@ function renderMonthlyItemSelector(){
 function deselectAllMonthlyItems(){
  document.querySelectorAll("#monthlyItemSelect input[type='checkbox']").forEach(cb => cb.checked = false);
 }
-
 function calculateMonthly(){
  const checked=[...document.querySelectorAll("#monthlyItemSelect input:checked")].map(c=>c.value);
  if(checked.length==0)return alert("商材選択してください");
@@ -609,22 +617,22 @@ function renderMonthlyItemBoard(){
 /* ================= Settings (Drag&Drop, Sweep, etc) ================= */
 function addStaff(){
  const n=document.getElementById("newStaff").value;
- if(n) db.collection("settings").add({type:"staff",name:n,order:Date.now()});
+ if(n) db.collection(COL_SETTINGS).add({type:"staff",name:n,order:Date.now()});
  document.getElementById("newStaff").value="";
 }
 function addItem(){
  const n=document.getElementById("newItem").value;
  const c=document.getElementById("newColor").value;
- if(n) db.collection("settings").add({type:"item",name:n,color:c,order:Date.now()});
+ if(n) db.collection(COL_SETTINGS).add({type:"item",name:n,color:c,order:Date.now()});
  document.getElementById("newItem").value="";
 }
 function editSetting(id,name,color){
  const data={name};
  if(color) data.color=color;
- db.collection("settings").doc(id).update(data);
+ db.collection(COL_SETTINGS).doc(id).update(data);
 }
 function deleteSetting(id){
- if(confirm("本当に削除しますか？")) db.collection("settings").doc(id).delete();
+ if(confirm("本当に削除しますか？")) db.collection(COL_SETTINGS).doc(id).delete();
 }
 
 function renderStaffItemLists() {
@@ -680,7 +688,7 @@ function addGroup(){
  if(!n) return alert("グループ名を入力してください");
  if(items.length === 0) return alert("合算する商材を1つ以上選択してください");
 
- db.collection("settings").add({type: "group", name: n, items: items, order: Date.now()});
+ db.collection(COL_SETTINGS).add({type: "group", name: n, items: items, order: Date.now()});
  document.getElementById("newGroupName").value = "";
  cbs.forEach(cb => cb.checked = false);
 }
@@ -689,7 +697,7 @@ async function renderDeleteMonthOptions() {
  const select = document.getElementById("deleteMonthSelect");
  select.innerHTML = "<option value=''>読み込み中...</option>";
  
- const snap = await db.collection("sales").get();
+ const snap = await db.collection(COL_SALES).get();
  const months = new Set();
  snap.forEach(doc => {
   const d = doc.data().date;
@@ -720,7 +728,7 @@ async function deleteSelectedMonthData() {
  const start = `${targetMonth}-01`;
  const end = `${targetMonth}-31`;
 
- const snap = await db.collection("sales")
+ const snap = await db.collection(COL_SALES)
   .where("date", ">=", start)
   .where("date", "<=", end)
   .get();
@@ -755,7 +763,7 @@ async function handleDrop(e, targetId) {
    const item = list.splice(draggedIdx, 1)[0];
    list.splice(targetIdx, 0, item);
    const batch = db.batch();
-   list.forEach((it, index) => { batch.update(db.collection("settings").doc(it.id), { order: index }); });
+   list.forEach((it, index) => { batch.update(db.collection(COL_SETTINGS).doc(it.id), { order: index }); });
    await batch.commit();
   }
  }
@@ -801,15 +809,15 @@ function renderGoalPanel(){
 function setGoal(item,val){
  const docId = currentDate + "_" + item; 
  if(val === "" || val == 0) {
-  db.collection("goals").doc(docId).delete(); 
+  db.collection(COL_GOALS).doc(docId).delete(); 
  } else {
-  db.collection("goals").doc(docId).set({item: item, target: Number(val), date: currentDate});
+  db.collection(COL_GOALS).doc(docId).set({item: item, target: Number(val), date: currentDate});
  }
 }
 
 function resetAllGoals(){
  if(!confirm(`表示中の日付（${currentDate}）の目標をすべてリセット（0件）にしますか？`)) return;
- db.collection("goals").where("date", "==", currentDate).get().then(snap => {
+ db.collection(COL_GOALS).where("date", "==", currentDate).get().then(snap => {
    const batch = db.batch();
    snap.forEach(d => batch.delete(d.ref));
    batch.commit().then(() => alert("表示中の目標をすべてリセットしました！"));
@@ -848,16 +856,16 @@ function setMonthlyGoal(item,val){
  const monthStr = currentDate.slice(0, 7);
  const docId = monthStr + "_" + item; 
  if(val === "" || val <= 0) {
-  db.collection("monthlyGoals").doc(docId).delete(); 
+  db.collection(COL_MONTHLY).doc(docId).delete(); 
  } else {
-  db.collection("monthlyGoals").doc(docId).set({item: item, target: Number(val), month: monthStr});
+  db.collection(COL_MONTHLY).doc(docId).set({item: item, target: Number(val), month: monthStr});
  }
 }
 
 function resetAllMonthlyGoals(){
  const monthStr = currentDate.slice(0, 7);
  if(!confirm(`表示中の月（${monthStr}）の計画値をすべてリセット（0件）にしますか？`)) return;
- db.collection("monthlyGoals").where("month", "==", monthStr).get().then(snap => {
+ db.collection(COL_MONTHLY).where("month", "==", monthStr).get().then(snap => {
    const batch = db.batch();
    snap.forEach(d => batch.delete(d.ref));
    batch.commit().then(() => alert("表示中の月の計画値をすべてリセットしました！"));
@@ -888,7 +896,6 @@ function renderGoalsOnInput(){
    .map(r => `<span style="display:inline-block; margin-top:6px; margin-right:8px; font-size:13px; background:rgba(255,255,255,0.3); padding:2px 8px; border-radius:4px;">${r[0]} ${r[1]}件</span>`)
    .join("");
 
-  // ★修正：絶対配置をやめ、フロー配置でテキストとメーターの間に配置。フォントを14pxに縮小。
   const monthTarget = monthlyGoals[targetName]?.target || 0;
   let monthHtml = "";
   if(monthTarget > 0) {
@@ -926,7 +933,6 @@ function renderGoalsOnInput(){
    .map(r => `<span style="display:inline-block; margin-top:6px; margin-right:8px; font-size:13px; background:rgba(255,255,255,0.4); padding:2px 8px; border-radius:4px; color:#000;">${r[0]} ${r[1]}件</span>`)
    .join("");
 
-  // ★修正：絶対配置をやめ、フロー配置でテキストとメーターの間に配置。フォントを14pxに縮小。
   const monthTarget = monthlyGoals[it.name]?.target || 0;
   let monthHtml = "";
   if(monthTarget > 0) {
