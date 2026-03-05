@@ -229,3 +229,745 @@ td,th{border:1px solid #cbd5e0;padding:4px;text-align:center;font-size:12px}
   <div id="monthlyGoalPanel"></div>
  </div>
 </div>
+<script>
+/* ================= Firebase ================= */
+firebase.initializeApp({
+ apiKey:"AIzaSyCmerraKVr1iJsRoiW53lxUtgDUcOGVXtY",
+ authDomain:"ganbaru-sheet-a32f3.firebaseapp.com",
+ projectId:"ganbaru-sheet-a32f3"
+});
+const db=firebase.firestore();
+
+/* ================= 店舗設定（ヴァリエ店用） ================= */
+const SHOP_ID = "varie"; // ★ヴァリエ用のID
+
+const COL_SALES = SHOP_ID + "_sales";
+const COL_SETTINGS = SHOP_ID + "_settings";
+const COL_GOALS = SHOP_ID + "_goals";
+const COL_MONTHLY = SHOP_ID + "_monthlyGoals";
+
+const LS_LOCKED_STAFF = SHOP_ID + "_lockedStaff";
+const LS_LOCKED_HANDOFF_CHECK = SHOP_ID + "_lockedHandoffCheck";
+const LS_LOCKED_HANDOFF_STAFF = SHOP_ID + "_lockedHandoffStaff";
+
+/* ================= Global Variables ================= */
+let staffList=[], itemList=[], groupList=[], records=[], monthlyRecords=[];
+let goals={};
+let monthlyGoals={}; 
+let monthlySalesRecordsForGoal=[]; 
+let lockedStaff=localStorage.getItem(LS_LOCKED_STAFF)||"";
+
+let _tz=new Date();
+_tz.setMinutes(_tz.getMinutes()-_tz.getTimezoneOffset());
+let currentDate=_tz.toISOString().slice(0,10);
+document.getElementById("globalDate").value=currentDate;
+
+document.getElementById("monthlyMonthPicker").value=currentDate.slice(0,7);
+
+const ADMIN_PASSWORD="0000";
+
+/* ================= TAB Controller ================= */
+function showTab(id,tab){
+ if(id==='settings'){
+  const p=prompt("管理用パスワード:");
+  if(p!==ADMIN_PASSWORD){ alert("NG"); return; }
+  renderDeleteMonthOptions();
+ }
+ document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+ document.getElementById(id).classList.add("active");
+ document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+ tab.classList.add("active");
+ 
+ updateAllViews();
+ if(id==="monthly") loadMonthlyData();
+}
+
+/* ================= Date Controller ================= */
+document.getElementById("globalDate").onchange=e=>{
+ currentDate=e.target.value;
+ loadDailyData(); 
+};
+
+/* ================= Realtime Listeners ================= */
+let unsubSales=null;
+let unsubGoals=null;
+let unsubMonthlyGoals=null; 
+let unsubMonthlySalesForGoal=null; 
+
+function loadDailyData(){
+ if(unsubSales) unsubSales();
+ unsubSales=db.collection(COL_SALES).where("date","==",currentDate).onSnapshot(snap=>{
+  records=snap.docs.map(d=>({...d.data(),id:d.id}));
+  updateAllViews();
+ });
+
+ if(unsubGoals) unsubGoals();
+ unsubGoals=db.collection(COL_GOALS).where("date","==",currentDate).onSnapshot(snap=>{
+  goals={};
+  snap.forEach(d=>{ goals[d.data().item]=d.data(); });
+  renderGoalPanel();
+  renderGoalsOnInput();
+ });
+
+ const currentMonthStr = currentDate.slice(0, 7);
+ const {start, end} = getMonthRange(currentMonthStr);
+
+ if(unsubMonthlyGoals) unsubMonthlyGoals();
+ unsubMonthlyGoals=db.collection(COL_MONTHLY).where("month","==",currentMonthStr).onSnapshot(snap=>{
+  monthlyGoals={};
+  snap.forEach(d=>{ monthlyGoals[d.data().item]=d.data(); });
+  renderMonthlyGoalPanel();
+  renderGoalsOnInput();
+ });
+
+ if(unsubMonthlySalesForGoal) unsubMonthlySalesForGoal();
+ unsubMonthlySalesForGoal=db.collection(COL_SALES)
+  .where("date", ">=", start).where("date", "<=", end).onSnapshot(snap=>{
+  monthlySalesRecordsForGoal=snap.docs.map(d=>({...d.data(),id:d.id}));
+  renderGoalsOnInput();
+ });
+}
+
+db.collection(COL_SETTINGS).orderBy("order").onSnapshot(snap=>{
+ staffList=[]; itemList=[]; groupList=[];
+ snap.forEach(d=>{
+  const v=d.data(); v.id=d.id;
+  if(v.type=="staff") staffList.push(v);
+  if(v.type=="item") itemList.push(v);
+  if(v.type=="group") groupList.push(v); 
+ });
+ renderStaffItemLists(); 
+ updateAllViews();
+});
+
+/* ================= Core Render ================= */
+function updateAllViews(){
+ renderButtons();
+ renderBoard();
+ updateCounts();
+ renderGoalPanel(); 
+ renderMonthlyGoalPanel(); 
+ renderGoalsOnInput();
+}
+
+/* ================= Input Panel (Buttons, Counts, Ranking) ================= */
+function renderButtons(){
+ const sSel=document.getElementById("staffSelect");
+ const hSel=document.getElementById("handoffSelect");
+ const btn=document.getElementById("btnContainer");
+
+ const opts=staffList.map(s=>`<option>${s.name}</option>`).join("");
+ sSel.innerHTML=opts;
+ hSel.innerHTML=opts;
+
+ if(lockedStaff){
+  sSel.value=lockedStaff;
+  sSel.disabled=true;
+  document.getElementById("lockBtn").textContent="🔒 固定ON";
+  document.getElementById("lockBtn").classList.add("locked");
+ }else{
+  sSel.disabled=false;
+  document.getElementById("lockBtn").textContent="🔓 固定OFF";
+  document.getElementById("lockBtn").classList.remove("locked");
+ }
+
+ const savedHandoffStaff = localStorage.getItem(LS_LOCKED_HANDOFF_STAFF);
+ if(savedHandoffStaff) {
+  document.getElementById("handoffToggle").checked = (localStorage.getItem(LS_LOCKED_HANDOFF_CHECK) === "true");
+  document.getElementById("handoffToggle").disabled = true;
+  hSel.value = savedHandoffStaff;
+  hSel.disabled = true;
+  document.getElementById("handoffLockBtn").textContent="🔒 固定ON";
+  document.getElementById("handoffLockBtn").classList.add("locked");
+ }else{
+  document.getElementById("handoffToggle").disabled = false;
+  hSel.disabled = !document.getElementById("handoffToggle").checked;
+  document.getElementById("handoffLockBtn").textContent="🔓 固定OFF";
+  document.getElementById("handoffLockBtn").classList.remove("locked");
+ }
+
+ btn.innerHTML=itemList.map(it=>`
+  <div class="item-box">
+   <button class="item-btn" style="background:${it.color}" onclick="addRecord('${it.name}')">${it.name}</button>
+   <div class="item-footer">
+    <div style="display:flex; flex-direction:column;">
+     <span class="my-count" id="count_${it.name}">0件</span>
+     <div class="rank-mini" id="rank_${it.name}"></div>
+    </div>
+    <button class="minus" onclick="removeRecord('${it.name}')">取消</button>
+   </div>
+  </div>
+ `).join("");
+ 
+ updateCounts();
+}
+
+function updateCounts(){
+ const currentStaff = lockedStaff || document.getElementById("staffSelect").value;
+ if(!currentStaff) return;
+
+ itemList.forEach(it=>{
+  const c = records.filter(r=>r.item==it.name && r.staff==currentStaff).length;
+  const countEl = document.getElementById("count_"+it.name);
+  if(countEl) countEl.textContent=c+"件";
+
+  const rank={};
+  records.filter(r=>r.item==it.name).forEach(r=>{
+   rank[r.staff]=(rank[r.staff]||0)+1;
+  });
+  const sorted=Object.entries(rank).sort((a,b)=>b[1]-a[1]).slice(0,3);
+  const rankEl = document.getElementById("rank_"+it.name);
+  if(rankEl) rankEl.innerHTML=sorted.map((r,i)=>`${i+1}位 ${r[0]}:${r[1]}件`).join("<br>");
+ });
+}
+
+/* ================= Input Actions ================= */
+function toggleLock(){
+ const s=document.getElementById("staffSelect");
+
+ if(lockedStaff){
+  lockedStaff="";
+  localStorage.removeItem(LS_LOCKED_STAFF);
+  s.disabled = false;
+ }else{
+  lockedStaff=s.value;
+  localStorage.setItem(LS_LOCKED_STAFF,lockedStaff);
+  s.disabled = true;
+ }
+ renderButtons();
+}
+
+function toggleHandoffLock(){
+ const hToggle=document.getElementById("handoffToggle");
+ const hSel=document.getElementById("handoffSelect");
+
+ if(localStorage.getItem(LS_LOCKED_HANDOFF_STAFF)){
+  localStorage.removeItem(LS_LOCKED_HANDOFF_CHECK);
+  localStorage.removeItem(LS_LOCKED_HANDOFF_STAFF);
+  hToggle.disabled = false;
+  hSel.disabled = !hToggle.checked;
+ }else{
+  localStorage.setItem(LS_LOCKED_HANDOFF_CHECK, hToggle.checked);
+  localStorage.setItem(LS_LOCKED_HANDOFF_STAFF, hSel.value);
+  hToggle.disabled = true;
+  hSel.disabled = true;
+ }
+ renderButtons();
+}
+
+function toggleHandoff(){
+ document.getElementById("handoffSelect").disabled=!document.getElementById("handoffToggle").checked;
+}
+
+function addRecord(item){
+ const base=lockedStaff||document.getElementById("staffSelect").value;
+ if(!base)return alert("スタッフ未選択");
+
+ const isH=document.getElementById("handoffToggle").checked;
+ const staff=isH?document.getElementById("handoffSelect").value:base;
+ const registrar=isH?base:"";
+ const groupId=Date.now().toString();
+
+ db.collection(COL_SALES).add({staff,registrar,item,date:currentDate,groupId});
+}
+
+function removeRecord(item){
+ const baseStaff = lockedStaff || document.getElementById("staffSelect").value;
+ const targetStaff = document.getElementById("handoffToggle").checked ? document.getElementById("handoffSelect").value : baseStaff;
+ 
+ const r=records.filter(r=>r.item==item && r.staff==targetStaff).pop();
+ if(!r) return;
+ 
+ db.collection(COL_SALES).where("groupId","==",r.groupId).get().then(snap=>{
+  const batch=db.batch();
+  snap.forEach(d=>batch.delete(d.ref));
+  batch.commit();
+ });
+}
+
+/* ================= Daily Board ================= */
+function groupBy(arr){
+ const m={};
+ arr.forEach(r=>{
+  if(!m[r.groupId])m[r.groupId]=[];
+  m[r.groupId].push(r);
+ });
+ return Object.values(m);
+}
+
+function renderBoard(){
+ const table=document.getElementById("boardTable");
+ const title=document.getElementById("boardTitle");
+ title.textContent=currentDate.replace(/-/g,"/")+" のがんばるシート";
+
+ let max=20;
+ itemList.forEach(it=>{
+  const g=groupBy(records.filter(r=>r.item==it.name));
+  if(g.length>max)max=g.length;
+ });
+
+ let html="<tr><th class='row-header'>商材</th><th>合計</th>";
+ for(let i=1;i<=max;i++)html+=`<th>${i}</th>`;
+ html+="</tr>";
+
+ itemList.forEach(it=>{
+  const g=groupBy(records.filter(r=>r.item==it.name));
+  html+=`<tr><th class='row-header' style="background:${it.color}">${it.name}</th><td style="font-weight:bold;">${g.length}件</td>`;
+  for(let i=0;i<max;i++){
+   if(!g[i]){html+="<td class='square'></td>";continue;}
+   const r=g[i][0];
+   if(!r.registrar){
+    html+=`<td class='square normal-name name-cell'>${r.staff}</td>`;
+   }else{
+    html+=`<td class='square name-cell'><div class='handoff-main'>成：${r.staff}</div><div class='handoff-sub'>${r.registrar}</div></td>`;
+   }
+  }
+  html+="</tr>";
+ });
+ table.innerHTML=html;
+}
+
+/* ================= Monthly Logic ================= */
+function getMonthRange(monthStr){
+ const [y, m] = monthStr.split("-").map(Number);
+ const lastDay = new Date(y, m, 0).getDate();
+ return {
+  start: `${y}-${String(m).padStart(2,'0')}-01`,
+  end: `${y}-${String(m).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`
+ };
+}
+
+async function loadMonthlyData(){
+ const targetMonth = document.getElementById("monthlyMonthPicker").value;
+ if(!targetMonth) return;
+
+ const {start,end}=getMonthRange(targetMonth);
+ const snap=await db.collection(COL_SALES)
+  .where("date",">=",start).where("date","<=",end).get();
+ monthlyRecords=snap.docs.map(d=>d.data());
+ renderMonthlyItemSelector();
+ renderMonthlyItemBoard();
+
+ document.getElementById("monthlyTotal").textContent="0 件";
+ document.getElementById("monthlyTop3").innerHTML="";
+ document.getElementById("monthlyTable").innerHTML="";
+}
+
+function renderMonthlyItemSelector(){
+ const div=document.getElementById("monthlyItemSelect");
+ div.innerHTML=itemList.map(it=>`
+  <label style="margin-right:10px; font-weight:bold; background:#f1f5f9; padding:6px 10px; border-radius:6px; border:1px solid #cbd5e0;">
+   <input type="checkbox" value="${it.name}"> ${it.name}
+  </label>
+ `).join("");
+}
+
+function deselectAllMonthlyItems(){
+ document.querySelectorAll("#monthlyItemSelect input[type='checkbox']").forEach(cb => cb.checked = false);
+}
+function calculateMonthly(){
+ const checked=[...document.querySelectorAll("#monthlyItemSelect input:checked")].map(c=>c.value);
+ if(checked.length==0)return alert("商材選択してください");
+
+ const filtered=monthlyRecords.filter(r=>checked.includes(r.item));
+
+ const groups={};
+ filtered.forEach(r=>{ if(!groups[r.groupId])groups[r.groupId]=r; });
+ const total=Object.keys(groups).length;
+ document.getElementById("monthlyTotal").textContent=total+" 件";
+
+ const staffCount={};
+ Object.values(groups).forEach(r=>{
+  staffCount[r.staff]=(staffCount[r.staff]||0)+1;
+ });
+
+ const sorted = Object.entries(staffCount).sort((a,b)=>b[1]-a[1]);
+ const medals = ["🥇", "🥈", "🥉"];
+ document.getElementById("monthlyTop3").innerHTML=sorted.slice(0,3).map((r,i)=>
+  `<div style="margin-bottom:8px; font-size:18px;">${medals[i]} <strong>${r[0]}</strong>：${r[1]}件</div>`
+ ).join("");
+
+ let html="<tr><th style='background:#f8fafc;'>スタッフ</th><th style='background:#f8fafc;'>件数</th></tr>";
+ sorted.forEach(r=>{
+  html+=`<tr><td style="font-weight:bold;">${r[0]}</td><td>${r[1]}</td></tr>`;
+ });
+ document.getElementById("monthlyTable").innerHTML=html;
+}
+
+function renderMonthlyItemBoard(){
+ const itemCount={};
+ const groups={};
+ monthlyRecords.forEach(r=>{
+  if(!groups[r.groupId]) groups[r.groupId]=[];
+  groups[r.groupId].push(r);
+ });
+
+ Object.values(groups).forEach(g=>{
+  g.forEach(r=>{
+   itemCount[r.item]=(itemCount[r.item]||0)+1;
+  });
+ });
+
+ let html="<tr><th style='background:#f8fafc;'>商材</th><th style='background:#f8fafc;'>月累計件数</th></tr>";
+ itemList.forEach(it=>{
+  const c=itemCount[it.name]||0;
+  html+=`<tr><th style="background:${it.color};">${it.name}</th><td style="font-weight:bold;">${c}</td></tr>`;
+ });
+ document.getElementById("monthlyItemBoard").innerHTML=html;
+}
+
+/* ================= Settings (Drag&Drop, Sweep, etc) ================= */
+function addStaff(){
+ const n=document.getElementById("newStaff").value;
+ if(n) db.collection(COL_SETTINGS).add({type:"staff",name:n,order:Date.now()});
+ document.getElementById("newStaff").value="";
+}
+function addItem(){
+ const n=document.getElementById("newItem").value;
+ const c=document.getElementById("newColor").value;
+ if(n) db.collection(COL_SETTINGS).add({type:"item",name:n,color:c,order:Date.now()});
+ document.getElementById("newItem").value="";
+}
+function editSetting(id,name,color){
+ const data={name};
+ if(color) data.color=color;
+ db.collection(COL_SETTINGS).doc(id).update(data);
+}
+function deleteSetting(id){
+ if(confirm("本当に削除しますか？")) db.collection(COL_SETTINGS).doc(id).delete();
+}
+
+function renderStaffItemLists() {
+ document.getElementById("staffListUI").innerHTML=`<ul class="list-ui">` + staffList.map(s=>`
+  <li draggable="true" ondragstart="handleDragStart(event,'staff','${s.id}')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'${s.id}')" ondragend="handleDragEnd(event)">
+   <div style="display:flex; align-items:center; gap:8px; width:100%;">
+    <div class="drag-handle">☰</div>
+    <input class="setting-input" value="${s.name}" onchange="editSetting('${s.id}',this.value,null)">
+    <button class="delete-btn" onclick="deleteSetting('${s.id}')">削除</button>
+   </div>
+  </li>`).join("") + `</ul>`;
+
+ document.getElementById("itemListUI").innerHTML=`<ul class="list-ui">` + itemList.map(it=>`
+  <li draggable="true" ondragstart="handleDragStart(event,'item','${it.id}')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'${it.id}')" ondragend="handleDragEnd(event)" style="border-left: 5px solid ${it.color};">
+   <div style="display:flex; align-items:center; gap:8px; width:100%;">
+    <div class="drag-handle">☰</div>
+    <input class="setting-input" value="${it.name}" onchange="editSetting('${it.id}',this.value,'${it.color}')">
+    <input type="color" value="${it.color}" list="paleColors" class="color-picker" onchange="editSetting('${it.id}','${it.name}',this.value)">
+    <button class="delete-btn" onclick="deleteSetting('${it.id}')">削除</button>
+   </div>
+  </li>`).join("") + `</ul>`;
+
+ const cbDiv = document.getElementById("newGroupItems");
+ if(cbDiv) {
+  cbDiv.innerHTML = itemList.map(it => `
+   <label style="font-size:13px; background:#f1f5f9; padding:4px 8px; border-radius:4px; border:1px solid #cbd5e0; cursor:pointer; font-weight:bold; color:#475569;">
+    <input type="checkbox" value="${it.name}" class="new-group-cb"> ${it.name}
+   </label>
+  `).join("");
+ }
+
+ const listDiv = document.getElementById("groupListUI");
+ if(listDiv) {
+  listDiv.innerHTML = `<ul class="list-ui">` + groupList.map(g => `
+   <li style="border-left: 5px solid #8b5cf6;">
+    <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
+     <div>
+      <strong style="font-size:15px; color:#1e293b;">${g.name}</strong>
+      <div style="font-size:11px; color:#64748b; margin-top:2px;">構成: ${g.items.join(", ")}</div>
+     </div>
+     <button class="delete-btn" onclick="deleteSetting('${g.id}')">削除</button>
+    </div>
+   </li>
+  `).join("") + `</ul>`;
+ }
+}
+
+function addGroup(){
+ const n = document.getElementById("newGroupName").value;
+ const cbs = document.querySelectorAll(".new-group-cb:checked");
+ const items = Array.from(cbs).map(cb => cb.value);
+
+ if(!n) return alert("グループ名を入力してください");
+ if(items.length === 0) return alert("合算する商材を1つ以上選択してください");
+
+ db.collection(COL_SETTINGS).add({type: "group", name: n, items: items, order: Date.now()});
+ document.getElementById("newGroupName").value = "";
+ cbs.forEach(cb => cb.checked = false);
+}
+
+async function renderDeleteMonthOptions() {
+ const select = document.getElementById("deleteMonthSelect");
+ select.innerHTML = "<option value=''>読み込み中...</option>";
+ 
+ const snap = await db.collection(COL_SALES).get();
+ const months = new Set();
+ snap.forEach(doc => {
+  const d = doc.data().date;
+  if(d) months.add(d.slice(0, 7));
+ });
+ 
+ const sortedMonths = Array.from(months).sort((a,b) => b.localeCompare(a));
+ 
+ if(sortedMonths.length === 0) {
+  select.innerHTML = "<option value=''>データなし</option>";
+  return;
+ }
+ 
+ select.innerHTML = sortedMonths.map(m => {
+  const [y, mon] = m.split("-");
+  return `<option value="${m}">${y}年${parseInt(mon)}月分</option>`;
+ }).join("");
+}
+
+async function deleteSelectedMonthData() {
+ const select = document.getElementById("deleteMonthSelect");
+ const targetMonth = select.value;
+ if(!targetMonth) return alert("削除する月を選択してください。");
+
+ const [y, m] = targetMonth.split("-");
+ if(!confirm(`【警告】\n${y}年${parseInt(m)}月分のデータをすべて削除します。\n本当によろしいですか？`)) return;
+
+ const start = `${targetMonth}-01`;
+ const end = `${targetMonth}-31`;
+
+ const snap = await db.collection(COL_SALES)
+  .where("date", ">=", start)
+  .where("date", "<=", end)
+  .get();
+
+ if(snap.empty) {
+  alert("対象のデータが見つかりませんでした。");
+  return;
+ }
+
+ const batch = db.batch();
+ snap.forEach(doc => batch.delete(doc.ref));
+ await batch.commit();
+
+ alert(`完了しました！\n${y}年${parseInt(m)}月分のデータ（${snap.size}件）を削除しました。`);
+ renderDeleteMonthOptions(); 
+}
+
+/* Drag & Drop logic */
+let dragType = null;
+function handleDragStart(e, type, id) { dragType = type; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', id); e.target.classList.add('dragging'); }
+function handleDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; const li = e.target.closest('li'); if (li && !li.classList.contains('dragging')) li.classList.add('over'); return false; }
+function handleDragLeave(e) { const li = e.target.closest('li'); if (li) li.classList.remove('over'); }
+async function handleDrop(e, targetId) {
+ e.stopPropagation(); e.preventDefault();
+ const li = e.target.closest('li'); if (li) li.classList.remove('over');
+ const sourceId = e.dataTransfer.getData('text/plain');
+ if (sourceId && sourceId !== targetId && dragType) {
+  const list = (dragType === 'staff') ? [...staffList] : [...itemList];
+  const draggedIdx = list.findIndex(i => i.id === sourceId);
+  const targetIdx = list.findIndex(i => i.id === targetId);
+  if (draggedIdx > -1 && targetIdx > -1) {
+   const item = list.splice(draggedIdx, 1)[0];
+   list.splice(targetIdx, 0, item);
+   const batch = db.batch();
+   list.forEach((it, index) => { batch.update(db.collection(COL_SETTINGS).doc(it.id), { order: index }); });
+   await batch.commit();
+  }
+ }
+ return false;
+}
+function handleDragEnd(e) { document.querySelectorAll('.list-ui li').forEach(el => { el.classList.remove('dragging', 'over'); }); }
+
+/* ================= Goals ================= */
+function renderGoalPanel(){
+ const goalPanel=document.getElementById("goalPanel");
+ if(!goalPanel) return;
+ 
+ goalPanel.style.display="grid";
+ goalPanel.style.gridTemplateRows="repeat(15, max-content)";
+ goalPanel.style.gridAutoFlow="column";
+ goalPanel.style.gap="4px 10px"; 
+ goalPanel.style.overflowX="auto";
+
+ const combined = [...groupList.map(g => ({...g, isGroup: true})), ...itemList];
+
+ goalPanel.innerHTML=combined.map(it=>{
+  const targetName = it.isGroup ? `group_${it.name}` : it.name;
+  const displayName = it.isGroup ? `📦 ${it.name}` : it.name;
+  const fontColor = it.isGroup ? '#8b5cf6' : '#1e293b';
+
+  const g=goals[targetName]?.target||0;
+  let opts="";
+  for(let i=0; i<=99; i++){
+   const num = i < 10 ? "0" + i : i;
+   opts+=`<option value="${i}" ${g==i?'selected':''}>${num}</option>`;
+  }
+  return `
+   <div style="display:flex; align-items:center;">
+    <div style="font-weight:bold; font-size:14px; width:112px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:${fontColor};" title="${it.name}">${displayName}</div>
+    <select style="width:55px; padding:4px; border:1px solid #cbd5e0; border-radius:6px; font-size:16px; text-align:center; background:#fff; cursor:pointer;" 
+     onchange="setGoal('${targetName}',this.value)">
+     ${opts}
+    </select>
+   </div>`;
+ }).join("");
+}
+
+function setGoal(item,val){
+ const docId = currentDate + "_" + item; 
+ if(val === "" || val == 0) {
+  db.collection(COL_GOALS).doc(docId).delete(); 
+ } else {
+  db.collection(COL_GOALS).doc(docId).set({item: item, target: Number(val), date: currentDate});
+ }
+}
+
+function resetAllGoals(){
+ if(!confirm(`表示中の日付（${currentDate}）の目標をすべてリセット（0件）にしますか？`)) return;
+ db.collection(COL_GOALS).where("date", "==", currentDate).get().then(snap => {
+   const batch = db.batch();
+   snap.forEach(d => batch.delete(d.ref));
+   batch.commit().then(() => alert("表示中の目標をすべてリセットしました！"));
+ });
+}
+
+function renderMonthlyGoalPanel(){
+ const panel=document.getElementById("monthlyGoalPanel");
+ if(!panel) return;
+ 
+ panel.style.display="grid";
+ panel.style.gridTemplateRows="repeat(15, max-content)";
+ panel.style.gridAutoFlow="column";
+ panel.style.gap="4px 10px"; 
+ panel.style.overflowX="auto";
+
+ const combined = [...groupList.map(g => ({...g, isGroup: true})), ...itemList];
+
+ panel.innerHTML=combined.map(it=>{
+  const targetName = it.isGroup ? `group_${it.name}` : it.name;
+  const displayName = it.isGroup ? `📦 ${it.name}` : it.name;
+  const fontColor = it.isGroup ? '#8b5cf6' : '#1e293b';
+
+  const g=monthlyGoals[targetName]?.target||'';
+  
+  return `
+   <div style="display:flex; align-items:center;">
+    <div style="font-weight:bold; font-size:14px; width:112px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:${fontColor};" title="${it.name}">${displayName}</div>
+    <input type="number" placeholder="0" style="width:50px; padding:4px; border:1px solid #cbd5e0; border-radius:6px; font-size:14px; text-align:center;" value="${g}"
+     onchange="setMonthlyGoal('${targetName}',this.value)">
+   </div>`;
+ }).join("");
+}
+
+function setMonthlyGoal(item,val){
+ const monthStr = currentDate.slice(0, 7);
+ const docId = monthStr + "_" + item; 
+ if(val === "" || val <= 0) {
+  db.collection(COL_MONTHLY).doc(docId).delete(); 
+ } else {
+  db.collection(COL_MONTHLY).doc(docId).set({item: item, target: Number(val), month: monthStr});
+ }
+}
+
+function resetAllMonthlyGoals(){
+ const monthStr = currentDate.slice(0, 7);
+ if(!confirm(`表示中の月（${monthStr}）の計画値をすべてリセット（0件）にしますか？`)) return;
+ db.collection(COL_MONTHLY).where("month", "==", monthStr).get().then(snap => {
+   const batch = db.batch();
+   snap.forEach(d => batch.delete(d.ref));
+   batch.commit().then(() => alert("表示中の月の計画値をすべてリセットしました！"));
+ });
+}
+
+function renderGoalsOnInput(){
+ const box=document.getElementById("goalDisplay");
+ if(!box) return;
+
+ const groupHtmls = groupList.map(g => {
+  const targetName = `group_${g.name}`;
+  const target = goals[targetName]?.target||0;
+  if(!target) return "";
+
+  const groupRecords = records.filter(r => g.items.includes(r.item));
+  const current = groupBy(groupRecords).length;
+  const pct=Math.min(100, Math.round(current/target*100));
+
+  const itemCount = {};
+  g.items.forEach(iName => itemCount[iName] = 0); 
+  groupBy(groupRecords).forEach(grp => {
+   const iName = grp[0].item;
+   itemCount[iName] = (itemCount[iName]||0) + 1;
+  });
+
+  const itemHtml = Object.entries(itemCount)
+   .map(r => `<span style="display:inline-block; margin-top:6px; margin-right:8px; font-size:13px; background:rgba(255,255,255,0.3); padding:2px 8px; border-radius:4px;">${r[0]} ${r[1]}件</span>`)
+   .join("");
+
+  const monthTarget = monthlyGoals[targetName]?.target || 0;
+  let monthHtml = "";
+  if(monthTarget > 0) {
+   const groupMonthRecords = monthlySalesRecordsForGoal.filter(r => g.items.includes(r.item));
+   const monthCurrent = groupBy(groupMonthRecords).length;
+   monthHtml = `<div style="font-size: 14px; font-weight: bold; background: #fff; padding: 4px 8px; border-radius: 6px; color: #6d28d9; display: inline-block; margin-top: 4px; margin-bottom: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">月間: ${monthCurrent} / ${monthTarget}</div>`;
+  }
+
+  return `
+  <div class="goal-box" style="background:linear-gradient(135deg, #8b5cf6, #6366f1); color:white; padding-top: 10px;">
+   <div style="line-height: 1.4;">🔥 ${g.name} (合算) 目標 ${target}件 / 現在 ${current}件 (${pct}%)</div>
+   ${monthHtml}
+   <div class="goal-progress" style="margin-top: 4px;">
+    <div class="goal-bar" style="width:${pct}%; background:#10b981;"></div>
+   </div>
+   ${itemHtml}
+  </div>`;
+ }).filter(h=>h!=="");
+
+ const itemHtmls = itemList.map(it=>{
+  const target=goals[it.name]?.target||0;
+  if(!target) return "";
+  
+  const itemRecords = records.filter(r=>r.item==it.name);
+  const current = groupBy(itemRecords).length;
+  const pct=Math.min(100, Math.round(current/target*100));
+
+  const staffCount = {};
+  groupBy(itemRecords).forEach(grp => {
+   const s = grp[0].staff;
+   staffCount[s] = (staffCount[s]||0) + 1;
+  });
+  const staffHtml = Object.entries(staffCount)
+   .sort((a,b)=>b[1]-a[1])
+   .map(r => `<span style="display:inline-block; margin-top:6px; margin-right:8px; font-size:13px; background:rgba(255,255,255,0.4); padding:2px 8px; border-radius:4px; color:#000;">${r[0]} ${r[1]}件</span>`)
+   .join("");
+
+  const monthTarget = monthlyGoals[it.name]?.target || 0;
+  let monthHtml = "";
+  if(monthTarget > 0) {
+   const itemMonthRecords = monthlySalesRecordsForGoal.filter(r => r.item == it.name);
+   const monthCurrent = groupBy(itemMonthRecords).length;
+   monthHtml = `<div style="font-size: 14px; font-weight: bold; background: #fff; padding: 4px 8px; border-radius: 6px; color: #ea580c; display: inline-block; margin-top: 4px; margin-bottom: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">月間: ${monthCurrent} / ${monthTarget}</div>`;
+  }
+
+  return `
+  <div class="goal-box" style="padding-top: 10px;">
+   <div style="line-height: 1.4;">🔥 ${it.name} 目標 ${target}件 / 現在 ${current}件 (${pct}%)</div>
+   ${monthHtml}
+   <div class="goal-progress" style="margin-top: 4px;">
+    <div class="goal-bar" style="width:${pct}%"></div>
+   </div>
+   ${staffHtml}
+  </div>`;
+ }).filter(h=>h!=="");
+
+ const allHtmls = [...groupHtmls, ...itemHtmls];
+
+ if(allHtmls.length > 0) {
+  box.style.display = "block";
+  box.innerHTML = allHtmls.join("");
+ } else {
+  box.style.display = "none";
+  box.innerHTML = "";
+ }
+}
+
+/* ================= Start ================= */
+loadDailyData();
+</script>
+
+</body>
+</html>
