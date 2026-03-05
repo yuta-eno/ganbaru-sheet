@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>GANBARU SHEET PRO</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+
+<style>
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f3f4f6}
+
+/* ★追加：iPadなどでのダブルタップズームを完全に防止し、連打をサクサクにする魔法 */
+button, input, select, .tab, label { touch-action: manipulation; }
+
+/* header */
+header{display:flex;gap:8px;padding:8px;background:#fff;border-bottom:1px solid #ddd;align-items:center;flex-wrap:wrap}
+.tab{padding:6px 14px;border-radius:8px;background:#e5e7eb;font-weight:bold;cursor:pointer}
+.tab.active{background:#2563eb;color:#fff}
+.date-wrap{margin-left:auto}
+.date-wrap input {padding:8px 12px; border:1px solid #cbd5e0; border-radius:6px; font-weight:bold; font-size:18px;}
+
+/* page */
+.page{display:none;padding:12px; max-width:1200px; margin:0 auto;}
+.page.active{display:block}
+
+/* card */
+.card{background:#fff;border-radius:12px;padding:15px;margin-bottom:15px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.card h3 { margin-top:0; border-bottom:2px solid #e2e8f0; padding-bottom:8px; color:#334155; margin-bottom:15px; }
+
+/* input section */
+.staff-selector { display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-weight:bold; color:#475569; }
+.staff-selector select { font-size:16px; padding:8px; flex:1; min-width:120px; max-width:200px; border-radius:8px; border:1px solid #cbd5e0; background:#f8fafc; }
+#lockBtn, #handoffLockBtn { padding:8px 12px; border:1px solid #cbd5e0; background:#f1f5f9; color:#64748b; border-radius:8px; cursor:pointer; font-weight:bold; }
+#lockBtn.locked, #handoffLockBtn.locked { background:#3b82f6; color:white; }
+
+/* handoff */
+.handoff-wrap { display:flex; align-items:center; gap:8px; padding-left:10px; margin-left:5px; border-left:2px solid #cbd5e0; }
+
+/* items */
+.items{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.item-box{ border:1px solid #ddd; border-radius:10px; padding:8px; background:white; }
+.item-btn{ 
+  width:100%; padding:12px; border:none; border-radius:8px; font-size:16px; font-weight:bold; cursor:pointer;
+  color:#000; text-shadow: 1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 0px 2px 4px rgba(0,0,0,0.2);
+}
+.item-footer{ display:flex; justify-content:space-between; margin-top:6px; font-size:14px; align-items:center;}
+.minus{ background:#f1f5f9; border:1px solid #e2e8f0; padding:4px 10px; border-radius:6px; font-weight:bold; cursor:pointer; color:#64748b; }
+.my-count { font-size:16px; font-weight:bold; color:#475569; }
+.rank-mini { font-size:12px; color:#64748b; margin-top:4px; line-height:1.2;}
+
+/* board */
+.board-wrap{ overflow-x:auto; }
+table{border-collapse:collapse;background:#fff;width:max-content;}
+td,th{border:1px solid #cbd5e0;padding:4px;text-align:center;font-size:12px}
+.square{width:60px;height:60px; vertical-align:middle;}
+.row-header{position:sticky;left:0;background:#f8fafc;font-weight:bold;z-index:1;}
+.normal-name{font-weight:bold;color:#000}
+.handoff-main{font-weight:bold;color:#dc2626}
+.handoff-sub{font-size:10px;color:#64748b}
+
+/* Settings & Goals Restored */
+.settings-grid { display: grid; grid-template-columns: 320px 1fr; gap: 20px; }
+@media (max-width: 768px) { .settings-grid { grid-template-columns: 1fr; } }
+.full-width { grid-column: 1 / -1; }
+.add-form { display:flex; gap:8px; align-items:center; margin-bottom:15px; }
+.add-form input[type="text"] { flex:1; min-width:0; padding:10px; border:1px solid #cbd5e0; border-radius:6px; font-size:14px; }
+.add-form input[type="color"] { width:45px; height:40px; padding:2px; border:1px solid #cbd5e0; border-radius:6px; cursor:pointer; flex-shrink:0;}
+.add-form button { padding:10px 15px; background:#64748b; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold; flex-shrink:0;}
+.list-ui { list-style:none; padding:0; margin:0; max-height:400px; overflow-y:auto; }
+.list-ui li { display:flex; justify-content:space-between; align-items:center; padding:6px 8px; border-bottom:1px solid #edf2f7; background:white; margin-bottom:4px; border-radius:6px; transition:0.2s;}
+.drag-handle { cursor: grab; font-size: 18px; color: #94a3b8; padding: 0 4px; user-select: none; }
+.drag-handle:active { cursor: grabbing; }
+.list-ui li.dragging { opacity: 0.4; background: #f8fafc; border: 1px dashed #cbd5e0; }
+.list-ui li.over { border-top: 3px solid #3b82f6; }
+.delete-btn { background:#fca5a5; color:#7f1d1d; border:none; padding:8px 12px; border-radius:6px; font-size:12px; cursor:pointer; font-weight:bold; flex-shrink:0;}
+.setting-input { flex:1; min-width:50px; padding:8px; border:1px solid #cbd5e0; border-radius:6px; font-weight:bold; }
+.color-picker { cursor:pointer; width:40px; height:36px; border:1px solid #cbd5e0; border-radius:4px; padding:2px; flex-shrink:0;}
+
+.goal-box{ background:linear-gradient(135deg,#fde047,#f97316); padding:10px; border-radius:12px; color:#000; font-weight:bold; box-shadow:0 4px 10px rgba(0,0,0,0.2); margin-bottom:10px; }
+.goal-progress{ background:white; height:14px; border-radius:8px; overflow:hidden; margin-top:6px; }
+.goal-bar{ height:100%; background:#22c55e; transition: width 0.5s ease; }
+</style>
+</head>
+
+<body>
+
+<header>
+ <div class="tab active" onclick="showTab('input',this)">入力</div>
+ <div class="tab" onclick="showTab('board',this)">がんばるシート</div>
+ <div class="tab" onclick="showTab('monthly',this)">📊 月次集計</div>
+ <div class="tab" onclick="showTab('settings',this)">設定</div>
+ <div class="date-wrap" style="display:flex; align-items:center; gap:8px;">
+  <button onclick="location.reload()" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e0; padding:8px 12px; border-radius:6px; font-weight:bold; font-size:16px; cursor:pointer; white-space:nowrap;">🔄 更新</button>
+  <input type="date" id="globalDate">
+ </div>
+</header>
+
+<div id="input" class="page active">
+ <div class="card">
+  <div class="staff-selector">
+   <label>スタッフ:</label>
+   <select id="staffSelect" onchange="updateCounts()"></select>
+   <button id="lockBtn" onclick="toggleLock()">🔓 固定OFF</button>
+
+   <div class="handoff-wrap">
+    <label><input type="checkbox" id="handoffToggle" onchange="toggleHandoff()"> 引き継ぎ</label>
+    <select id="handoffSelect" disabled></select>
+    <button id="handoffLockBtn" onclick="toggleHandoffLock()">🔓 固定OFF</button>
+   </div>
+  </div>
+ </div>
+
+ <div class="card">
+  <div class="items" id="btnContainer"></div>
+ </div>
+
+ <div class="card" id="goalDisplay" style="display:none; background:transparent; box-shadow:none; padding:0;"></div>
+</div>
+
+<div id="board" class="page">
+ <div class="card">
+  <h3 id="boardTitle"></h3>
+  <div class="board-wrap">
+   <table id="boardTable"></table>
+  </div>
+ </div>
+</div>
+
+<div id="monthly" class="page">
+ <div class="card">
+  <h3>📅 月次集計 商材選択</h3>
+  <div style="margin-bottom:15px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+   <input type="month" id="monthlyMonthPicker" onchange="loadMonthlyData()" style="padding:6px 12px; border:1px solid #cbd5e0; border-radius:6px; font-weight:bold; font-size:16px; color:#475569;">
+   <button onclick="deselectAllMonthlyItems()" style="background:#e2e8f0; color:#475569; border:none; padding:8px 12px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">☑ 選択を全て解除</button>
+  </div>
+  <div id="monthlyItemSelect" style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:15px;"></div>
+  <button onclick="calculateMonthly()" style="background:#2563eb; color:white; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; cursor:pointer;">集計</button>
+ </div>
+
+ <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:15px;">
+  <div class="card">
+   <h3>合計件数</h3>
+   <div id="monthlyTotal" style="font-size:32px; font-weight:bold; color:#2563eb; text-align:center; padding:10px;">0 件</div>
+  </div>
+
+  <div class="card">
+   <h3>🏆 TOP3</h3>
+   <div id="monthlyTop3" style="font-size:16px; line-height:1.8;"></div>
+  </div>
+ </div>
+
+ <div class="card">
+  <h3>スタッフ別件数一覧</h3>
+  <div class="board-wrap">
+   <table id="monthlyTable" style="width:100%; max-width:400px;"></table>
+  </div>
+ </div>
+
+ <div class="card">
+  <h3>📋 商材 月累計件数ボード</h3>
+  <div class="board-wrap">
+   <table id="monthlyItemBoard"></table>
+  </div>
+ </div>
+</div>
+
+<div id="settings" class="page">
+ <datalist id="paleColors">
+  <option value="#e0f2fe"></option><option value="#fce7f3"></option><option value="#dcfce7"></option><option value="#fef9c3"></option>
+  <option value="#f3e8ff"></option><option value="#ffedd5"></option><option value="#ccfbf1"></option><option value="#f1f5f9"></option>
+ </datalist>
+
+ <div class="card full-width">
+  <h3 style="color:#ef4444;">🧹 データ大掃除</h3>
+  <p style="font-size:12px; color:#64748b; margin-bottom:10px;">指定した月のデータを一括削除します。</p>
+  <div style="display:flex; gap:10px; align-items:center;">
+   <select id="deleteMonthSelect" style="padding:8px; border-radius:6px; border:1px solid #cbd5e0; font-size:16px; font-weight:bold;"></select>
+   <button onclick="deleteSelectedMonthData()" style="background:#ef4444; color:white; border:none; padding:8px 15px; border-radius:6px; font-weight:bold; cursor:pointer;">🗑️ 削除実行</button>
+  </div>
+ </div>
+
+ <div class="settings-grid">
+  <div class="card">
+   <h3>スタッフ管理</h3>
+   <div class="add-form">
+    <input type="text" id="newStaff" placeholder="名前">
+    <button onclick="addStaff()">追加</button>
+   </div>
+   <div id="staffListUI"></div>
+  </div>
+
+  <div class="card">
+   <h3>商材管理</h3>
+   <div class="add-form">
+    <input type="text" id="newItem" placeholder="新商材">
+    <input type="color" id="newColor" value="#e0f2fe" list="paleColors">
+    <button onclick="addItem()">追加</button>
+   </div>
+   <div id="itemListUI"></div>
+  </div>
+ </div>
+
+ <div class="card full-width">
+  <h3>📊 グループ目標（商材の合算）管理</h3>
+  <p style="font-size:12px; color:#64748b; margin-top:-10px;">複数の商材をまとめて「イエナカ」などの一つの目標として合算メーターを作れます。</p>
+  <div class="add-form" style="flex-wrap: wrap;">
+   <input type="text" id="newGroupName" placeholder="グループ名 (例: イエナカ)">
+   <button onclick="addGroup()">追加</button>
+  </div>
+  <div id="newGroupItems" style="display:flex; flex-wrap:wrap; gap:8px; width:100%; margin-bottom:15px;"></div>
+  <div id="groupListUI"></div>
+ </div>
+
+ <div class="card full-width">
+  <h3 style="display:flex; justify-content:space-between; align-items:center;">
+   🎯 今日の目標設定（表示中の日付）
+   <button onclick="resetAllGoals()" style="background:#ef4444; color:white; border:none; padding:4px 10px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:bold;">🗑️ 全リセット</button>
+  </h3>
+  <div id="goalPanel"></div>
+ </div>
+
+ <div class="card full-width">
+  <h3 style="display:flex; justify-content:space-between; align-items:center;">
+   📅 月間計画値（表示中の月）
+   <button onclick="resetAllMonthlyGoals()" style="background:#ef4444; color:white; border:none; padding:4px 10px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:bold;">🗑️ 全リセット</button>
+  </h3>
+  <div id="monthlyGoalPanel"></div>
+ </div>
+</div>
