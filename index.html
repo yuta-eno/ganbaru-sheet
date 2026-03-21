@@ -33,7 +33,9 @@ header{display:flex;gap:8px;padding:8px;background:#fff;border-bottom:1px solid 
 .board-wrap{ overflow-x:auto; }
 table{border-collapse:collapse;background:#fff;width:max-content;}
 td,th{border:1px solid #cbd5e0;padding:4px;text-align:center;font-size:12px}
-.square{width:60px;height:60px; vertical-align:middle;}
+.square{width:60px;height:60px; vertical-align:middle; cursor:pointer; transition:background-color 0.2s;}
+.square:hover{background-color:#f8fafc;}
+.checked-cell{background-color:#dcfce7 !important; border:2px solid #22c55e !important; color:#166534 !important; opacity:0.9;}
 .row-header{position:sticky;left:0;background:#f8fafc;font-weight:bold;z-index:1;}
 .normal-name{font-weight:bold;color:#000}
 .handoff-main{font-weight:bold;color:#dc2626}
@@ -191,6 +193,7 @@ td,th{border:1px solid #cbd5e0;padding:4px;text-align:center;font-size:12px}
 <div id="monthlyGoalPanel"></div>
 </div>
 </div>
+
 <script>
 firebase.initializeApp({
 apiKey:"AIzaSyCmerraKVr1iJsRoiW53lxUtgDUcOGVXtY",
@@ -417,9 +420,7 @@ const isH=document.getElementById("handoffToggle").checked;
 const staff=isH?document.getElementById("handoffSelect").value:base;
 const registrar=isH?base:"";
 const groupId=Date.now().toString();
-db.collection(COL_SALES).add({staff,registrar,item,date:currentDate,groupId});
-
-// ★スプレッドシートへ送信（+1）
+db.collection(COL_SALES).add({staff,registrar,item,date:currentDate,groupId,checked:false});
 sendToGAS(currentDate, SHOP_NAME_FOR_GAS, staff, item, 1);
 }
 
@@ -433,9 +434,13 @@ const batch=db.batch();
 snap.forEach(d=>batch.delete(d.ref));
 batch.commit();
 });
-
-// ★スプレッドシートへ送信（-1）
 sendToGAS(r.date, SHOP_NAME_FOR_GAS, r.staff, item, -1);
+}
+
+function toggleCheck(docId, currentState) {
+db.collection(COL_SALES).doc(docId).update({
+checked: !currentState
+});
 }
 
 function groupBy(arr){
@@ -465,10 +470,12 @@ html+=`<tr><th class='row-header' style="background:${it.color}">${it.name}</th>
 for(let i=0;i<max;i++){
 if(!g[i]){html+="<td class='square'></td>";continue;}
 const r=g[i][0];
+const checkedClass = r.checked ? " checked-cell" : "";
+const isChecked = r.checked ? true : false;
 if(!r.registrar){
-html+=`<td class='square normal-name name-cell'>${r.staff}</td>`;
+html+=`<td class='square normal-name name-cell${checkedClass}' onclick="toggleCheck('${r.id}', ${isChecked})">${r.staff}</td>`;
 }else{
-html+=`<td class='square name-cell'><div class='handoff-main'>成：${r.staff}</div><div class='handoff-sub'>${r.registrar}</div></td>`;
+html+=`<td class='square name-cell${checkedClass}' onclick="toggleCheck('${r.id}', ${isChecked})"><div class='handoff-main'>成：${r.staff}</div><div class='handoff-sub'>${r.registrar}</div></td>`;
 }
 }
 html+="</tr>";
