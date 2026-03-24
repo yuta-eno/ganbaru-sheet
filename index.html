@@ -192,11 +192,26 @@ td,th{border:1px solid #cbd5e0;padding:4px;text-align:center;font-size:12px}
 </h3>
 <div id="monthlyGoalPanel"></div>
 </div>
+
+<div class="card full-width">
+ <h3 style="color:#6d28d9; display:flex; justify-content:space-between; align-items:center;">
+  🤖 AIエージェント（管理者専用）
+  <button onclick="openAIPanel()" style="background:#6d28d9; color:white; border:none; padding:6px 12px; border-radius:6px; font-weight:bold; cursor:pointer;">開く</button>
+ </h3>
+ <div id="aiPanel" style="display:none; margin-top:15px; border-top:2px dashed #cbd5e0; padding-top:15px;">
+  <p style="font-size:12px; color:#64748b; margin-bottom:10px;">過去7日間のデータから、AIが自動でマネジメントレポートを作成します。</p>
+  <div style="display:flex; gap:10px; align-items:center; margin-bottom:15px; flex-wrap:wrap;">
+   <input type="password" id="geminiApiKey" placeholder="Gemini APIキー (AIza...)" style="flex:1; min-width:200px; padding:8px; border:1px solid #cbd5e0; border-radius:6px; font-size:14px;">
+   <button onclick="generateAIReport()" style="background:#2563eb; color:white; border:none; padding:10px 15px; border-radius:6px; font-weight:bold; cursor:pointer;" id="aiGenBtn">✨ レポート生成</button>
+  </div>
+  <div id="aiResultBoard" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:15px; min-height:100px; white-space:pre-wrap; font-size:14px; line-height:1.6; color:#1e293b;">ここにAIの分析レポートが表示されます...</div>
+ </div>
+</div>
 </div>
 
 <script>
 firebase.initializeApp({
-apiKey:"AIzaSyCmerraKVr1iJsRoiW53lxUtgDUcOGVXtY",
+apiKey:"AIzaSyB01LXYEPlqik70UCAHzkuz-e2tqaxkOYM",
 authDomain:"ganbaru-sheet-a32f3.firebaseapp.com",
 projectId:"ganbaru-sheet-a32f3"
 });
@@ -866,6 +881,100 @@ box.style.display = "none";
 box.innerHTML = "";
 }
 }
+
+/* ================= AIエージェント機能（管理者専用 6514） ================= */
+function openAIPanel() {
+ const p = prompt("AI起動パスワード:");
+ if (p !== "6514") {
+  alert("パスワードが違います");
+  return;
+ }
+ document.getElementById("aiPanel").style.display = "block";
+ const savedKey = localStorage.getItem("geminiApiKey");
+ if(savedKey) document.getElementById("geminiApiKey").value = savedKey;
+}
+
+async function generateAIReport() {
+ const apiKey = document.getElementById("geminiApiKey").value.trim();
+ if(!apiKey) return alert("APIキーを入力してください");
+ localStorage.setItem("geminiApiKey", apiKey); 
+
+ const btn = document.getElementById("aiGenBtn");
+ const board = document.getElementById("aiResultBoard");
+ 
+ btn.textContent = "⏳ 分析中...";
+ btn.disabled = true;
+ board.textContent = "過去7日間のデータを集計し、AIに分析を依頼しています...\n（※数秒〜十数秒かかります）";
+
+ try {
+  const d = new Date(currentDate);
+  d.setDate(d.getDate() - 7);
+  const startStr = d.toISOString().slice(0, 10);
+  
+  const snap = await db.collection(COL_SALES)
+   .where("date", ">=", startStr)
+   .where("date", "<=", currentDate)
+   .get();
+   
+  const counts = {};
+  snap.docs.forEach(doc => {
+   const r = doc.data();
+   if(!counts[r.staff]) counts[r.staff] = {};
+   if(!counts[r.staff][r.item]) counts[r.staff][r.item] = 0;
+   counts[r.staff][r.item]++;
+  });
+  
+  let summary = "";
+  for(const staff in counts) {
+   summary += `・${staff}: `;
+   const items = [];
+   for(const item in counts[staff]) {
+    items.push(`${item} ${counts[staff][item]}件`);
+   }
+   summary += items.join(", ") + "\n";
+  }
+  if(summary === "") summary = "過去7日間のご成約データはありません。";
+
+  const promptText = `
+あなたは全国トップクラスの成績を誇る「優秀なドコモショップの店長（兼データアナリスト）」です。
+以下の【過去7日間のご成約データ】を分析し、現場のスタッフのモチベーションが上がり、かつ具体的なアクションに繋がる「週間マネジメントレポート」を作成してください。
+
+# 前提条件と絶対ルール
+- 当店が扱う商材は、スマホ（新規・MNP）、ドコモ光、HOME5G、ルーターなどです。
+- ❌「獲得」や「訴求」という言葉は絶対に使わないでください。代わりに「ご成約」「ご紹介」という言葉を使い、お客様の立場に立った優しい言葉選びを徹底してください。
+- 単に数字を並べるだけでなく、「なぜその結果になったのか」の仮説と、「明日からどう動くべきか」のアドバイスを必ず含めてください。
+- ご成約数が低いスタッフに対しては、絶対に詰めたり責めたりせず、次に繋がるポジティブで具体的な解決策（ロープレのテーマや、お客様へのご紹介の工夫など）を提示してください。
+
+# 出力フォーマット（以下の構成を厳守）
+1. 🏆 今週のトップパフォーマーと賞賛コメント
+2. 📈 商材別の全体傾向（良かった点・課題点）
+3. 👨‍🏫 伸び悩んでいるスタッフへの具体策（ロープレ提案や、セットでのご紹介の切り口など）
+4. 📢 朝礼でそのまま使える、店長からの熱いメッセージ案
+
+# 過去7日間のご成約データ
+${summary}
+  `;
+
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+   method: "POST",
+   headers: { "Content-Type": "application/json" },
+   body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
+  });
+  
+  if(!res.ok) throw new Error("API通信エラー: " + res.status);
+  const data = await res.json();
+  const answer = data.candidates[0].content.parts[0].text;
+  
+  board.textContent = answer;
+ } catch(e) {
+  console.error(e);
+  board.textContent = "エラーが発生しました。APIキーが間違っているか、通信環境に問題があります。\n詳細: " + e.message;
+ } finally {
+  btn.textContent = "✨ レポート生成";
+  btn.disabled = false;
+ }
+}
+/* ========================================================= */
 
 loadDailyData();
 </script>
