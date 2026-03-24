@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>GANBARU SHEET PRO</title>
+<title>GANBARU SHEET PRO - AI Edition</title>
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
 <style>
@@ -33,7 +33,7 @@ header{display:flex;gap:8px;padding:8px;background:#fff;border-bottom:1px solid 
 .board-wrap{ overflow-x:auto; }
 table{border-collapse:collapse;background:#fff;width:max-content;}
 td,th{border:1px solid #cbd5e0;padding:4px;text-align:center;font-size:12px}
-.square{width:60px;height:60px; vertical-align:middle; cursor:pointer; transition:background-color 0.2s; position:relative;}
+.square{width:60px;height:60px; vertical-align:middle; cursor:pointer; transition:background-color 0.2s; position: relative;}
 .square:hover{background-color:#f8fafc;}
 .checked-cell{background-color:#dcfce7 !important; border:2px solid #22c55e !important; color:#166534 !important; opacity:0.9;}
 .row-header{position:sticky;left:0;background:#f8fafc;font-weight:bold;z-index:1;}
@@ -178,7 +178,7 @@ td,th{border:1px solid #cbd5e0;padding:4px;text-align:center;font-size:12px}
 </div>
 
 <div class="card">
- <h3 style="color:#6d28d9;">📋 分析レポート</h3>
+ <h3 style="color:#6d28d9;">📋 アナリストレポート</h3>
  <div id="aiResultBoard" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:20px; min-height:150px; white-space:pre-wrap; font-size:15px; line-height:1.8; color:#1e293b;">条件を選んで「レポート生成」ボタンを押してください。</div>
 </div>
 </div>
@@ -253,7 +253,7 @@ const COL_SALES = "sales";
 const COL_SETTINGS = "settings";
 const COL_GOALS = "goals";
 const COL_MONTHLY = "monthlyGoals";
-const COL_KNOWLEDGE = "knowledge"; // ナレッジ金庫
+const COL_KNOWLEDGE = "knowledge";
 
 const LS_LOCKED_STAFF = "lockedStaff";
 const LS_LOCKED_HANDOFF_CHECK = "lockedHandoffCheck";
@@ -944,36 +944,19 @@ ${staffHtml}
 </div>`;
 }).filter(h=>h!=="");
 const allHtmls = [...groupHtmls, ...itemHtmls];
-if(allHtmls.length > 0) {
-box.style.display = "block";
-box.innerHTML = allHtmls.join("");
-} else {
-box.style.display = "none";
-box.innerHTML = "";
-}
+if(allHtmls.length > 0) { box.style.display = "block"; box.innerHTML = allHtmls.join(""); } 
+else { box.style.display = "none"; box.innerHTML = ""; }
 }
 
-/* ================= AIエージェント機能（完全独立・ナレッジ高度化版） ================= */
+/* ================= AIエージェント機能（アナリスト版） ================= */
 function renderAISelectors() {
  const itemDiv = document.getElementById("aiItemSelect");
  const staffDiv = document.getElementById("aiStaffSelect");
- 
- itemDiv.innerHTML = itemList.map(it => `
-  <label class="ai-cb-label">
-   <input type="checkbox" value="${it.name}" class="ai-item-cb" checked> ${it.name}
-  </label>
- `).join("");
- 
- staffDiv.innerHTML = staffList.map(s => `
-  <label class="ai-cb-label">
-   <input type="checkbox" value="${s.name}" class="ai-staff-cb" checked> ${s.name}
-  </label>
- `).join("");
+ itemDiv.innerHTML = itemList.map(it => `<label class="ai-cb-label"><input type="checkbox" value="${it.name}" class="ai-item-cb" checked> ${it.name}</label>`).join("");
+ staffDiv.innerHTML = staffList.map(s => `<label class="ai-cb-label"><input type="checkbox" value="${s.name}" class="ai-staff-cb" checked> ${s.name}</label>`).join("");
 }
 
-function aiCheckAll(className, isCheck) {
- document.querySelectorAll('.' + className).forEach(cb => cb.checked = isCheck);
-}
+function aiCheckAll(className, isCheck) { document.querySelectorAll('.' + className).forEach(cb => cb.checked = isCheck); }
 
 async function generateAIReport() {
  const apiKey = document.getElementById("geminiApiKey").value.trim();
@@ -982,9 +965,7 @@ async function generateAIReport() {
 
  const selectedItems = Array.from(document.querySelectorAll('.ai-item-cb:checked')).map(cb => cb.value);
  const selectedStaff = Array.from(document.querySelectorAll('.ai-staff-cb:checked')).map(cb => cb.value);
- if(selectedItems.length === 0 || selectedStaff.length === 0) {
-  return alert("フォーカスする商材とスタッフをそれぞれ1つ以上選択してください。");
- }
+ if(selectedItems.length === 0 || selectedStaff.length === 0) return alert("商材とスタッフをそれぞれ選択してください。");
 
  const btn = document.getElementById("aiGenBtn");
  const board = document.getElementById("aiResultBoard");
@@ -993,121 +974,101 @@ async function generateAIReport() {
  
  btn.textContent = "⏳ 分析中...";
  btn.disabled = true;
- board.textContent = `【${timeframeText}】のデータと店長ナレッジを集計し、AIに高度な分析を依頼しています...\n（※数秒〜十数秒かかります）`;
+ board.textContent = `【${timeframeText}】のデータ、目標、店長ナレッジを集計しています...`;
 
  try {
   let startStr = "", endStr = currentDate;
   const d = new Date(currentDate);
-  
-  if (timeframeVal === "7") {
-   d.setDate(d.getDate() - 7);
-   startStr = d.toISOString().slice(0, 10);
-  } else if (timeframeVal === "30") {
-   d.setDate(d.getDate() - 30);
-   startStr = d.toISOString().slice(0, 10);
-  } else if (timeframeVal === "this_month") {
-   startStr = currentDate.slice(0, 7) + "-01";
-  } else if (timeframeVal === "last_month") {
+  if (timeframeVal === "7") { d.setDate(d.getDate() - 7); startStr = d.toISOString().slice(0, 10); } 
+  else if (timeframeVal === "30") { d.setDate(d.getDate() - 30); startStr = d.toISOString().slice(0, 10); } 
+  else if (timeframeVal === "this_month") { startStr = currentDate.slice(0, 7) + "-01"; } 
+  else if (timeframeVal === "last_month") {
    const [y, m] = currentDate.slice(0, 7).split("-").map(Number);
-   let ly = y, lm = m - 1;
-   if(lm === 0) { ly--; lm = 12; }
+   let ly = y, lm = m - 1; if(lm === 0) { ly--; lm = 12; }
    const lastDay = new Date(ly, lm, 0).getDate();
-   startStr = `${ly}-${String(lm).padStart(2,'0')}-01`;
-   endStr = `${ly}-${String(lm).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
+   startStr = `${ly}-${String(lm).padStart(2,'0')}-01`; endStr = `${ly}-${String(lm).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
   }
 
-  // 実績データの取得
-  const snap = await db.collection(COL_SALES)
-   .where("date", ">=", startStr)
-   .where("date", "<=", endStr)
-   .get();
-   
-  // ★ナレッジ金庫からもデータを全取得
+  const snap = await db.collection(COL_SALES).where("date", ">=", startStr).where("date", "<=", endStr).get();
   const kSnap = await db.collection(COL_KNOWLEDGE).get();
-  const kMap = {};
-  kSnap.forEach(doc => { kMap[doc.id] = doc.data().memo; });
+  const kMap = {}; kSnap.forEach(doc => { kMap[doc.id] = doc.data().memo; });
 
-  // 絞り込みと集計
   const counts = {};
   let kList = [];
   snap.docs.forEach(doc => {
    const r = doc.data();
    if(selectedItems.includes(r.item) && selectedStaff.includes(r.staff)) {
-    // 定量データの集計
     if(!counts[r.staff]) counts[r.staff] = {};
     if(!counts[r.staff][r.item]) counts[r.staff][r.item] = 0;
     counts[r.staff][r.item]++;
-    // ナレッジ（店長メモ）の集計
-    if(kMap[doc.id]) {
-     kList.push(`・${r.staff}さんの${r.item}ご成約時の店長メモ: 「${kMap[doc.id]}」`);
-    }
+    if(kMap[doc.id]) kList.push(`・${r.staff}さんの${r.item}ご成約時の店長メモ: 「${kMap[doc.id]}」`);
    }
   });
   
-  let summary = "";
-  for(const staff in counts) {
-   summary += `・${staff}: `;
-   const items = [];
-   for(const item in counts[staff]) {
-    items.push(`${item} ${counts[staff][item]}件`);
-   }
-   summary += items.join(", ") + "\n";
-  }
+  let summary = ""; for(const staff in counts) { summary += `・${staff}: ` + Object.entries(counts[staff]).map(e=>`${e[0]} ${e[1]}件`).join(", ") + "\n"; }
   if(summary === "") summary = "指定された条件でのご成約データはありませんでした。";
-
   let kSummary = kList.length > 0 ? kList.join("\n") : "特筆すべき店長ナレッジはまだ登録されていません。";
 
-  // ★店長こだわりの高度化・神プロンプト★
+  // ★目標データの構築
+  let dailyGoalText = "";
+  selectedItems.forEach(item => { if(goals[item]) dailyGoalText += `・${item}: 目標 ${goals[item].target}件\n`; });
+  if(!dailyGoalText) dailyGoalText = "本日の目標は未設定です。";
+
+  let monthlyGoalText = "";
+  selectedItems.forEach(item => { 
+   const monthStr = currentDate.slice(0, 7);
+   if(monthlyGoals[item]) monthlyGoalText += `・${item}: 月間目標 ${monthlyGoals[item].target}件\n`; 
+  });
+  if(!monthlyGoalText) monthlyGoalText = "今月の目標は未設定です。";
+
+  // ★データアナリスト版プロンプト
   const promptText = `
-あなたは全国トップクラスの業績を誇り、スタッフ育成のプロフェッショナルである「優秀なドコモショップの店長（兼 トップセールスコンサルタント）」です。
-以下の【ご成約データ】と【店長ナレッジ】をベースにしつつ、さらにあなたの推論を用いて、他店では真似できないレベルの【高度なオリジナル・ご成約ナレッジ】を独自に作成し、スタッフへ共有するマネジメントレポートを作成してください。
+あなたはドコモショップの数値を客観的かつ的確に分析する「優秀なデータアナリスト兼チームサポーター」です。
+以下の【ご成約実績データ】【目標データ】【店長ナレッジ】を総合的に分析し、店舗の目標達成に向けた「アナリストレポート」を作成してください。
 
-# ❌絶対ルール（語彙とマインドセット）
-- 「獲得」や「訴求」という言葉は絶対に使わず、必ず「ご成約」「ご紹介」と言い換えてください。（お客様ファーストの徹底）
-- 数字が低いスタッフを決して詰めたり責めたりせず、必ず「どうすれば上手くいくか」というポジティブな解決策を提示してください。
+# ❌絶対ルール
+- 「獲得」や「訴求」という言葉は絶対に使わず、必ず「ご成約」「ご紹介」と言い換えること。
+- 感情論や精神論は避け、数字ベースで客観的に分析すること。ただし、数字が低いスタッフを決して責めず、次にどう動くべきかポジティブな行動を促すこと。
 
-# 🧠AIエージェントへの特別指令（高度なナレッジの独自生成）
-提供されたデータやメモのまとめにとどまらず、通信業界のトップ層が実践している以下のような「高度なセールステクニック」をAIであるあなた自身で具体化し、明日からスタッフがそのまま使える『トークスクリプト（話法例）』として必ず書き起こしてください。
-・潜在ニーズを引き出すヒアリング手法（例：お客様の日常のちょっとした不満から、光回線やHOME5G、ルーターの必要性に自然と気づかせる話法）
-・心理的ハードルを下げるご提案（例：スマホ料金との合算や割引による「実質負担額」の魅力的な見せ方、お得感の演出）
-・決断を後押しするクロージングの工夫（例：お客様に「今日決めることのメリット」を感じていただくための言葉の選び方）
+# 📊分析ミッション
+1. 【目標進捗の分析】: 設定された月間目標および日々の目標に対して、現在の実績とペースがどうかを客観的に評価してください。
+2. 【目標達成のためのネクストアクション】: 残りの期間で目標をクリアするために、誰が・どの商材に注力してご案内すべきか、具体的なアクションを提示してください。
+3. 【トップパフォーマーへの相談促進】: ピックアップされた商材の中で、最もご成約数が多い第1位のスタッフを称賛し、他のスタッフへ「〇〇さんにアドバイスをもらいましょう」と具体的に促してください。
+4. 【店長ナレッジの横展開】: 蓄積された【店長ナレッジ】の中から最も効果的と思われるものを1つだけ厳選し、「このノウハウを全員で真似しましょう」と共有してください。
 
-# 📊データとインプット
-期間：${timeframeText}
+# 📥インプットデータ
+分析対象期間：${timeframeText}
 対象商材：${selectedItems.join(", ")}
-【集計データ】：\n${summary}
-【店長からのナレッジメモ】：\n${kSummary}
+
+【月間目標値（当月）】
+${monthlyGoalText}
+
+【本日の目標値】
+${dailyGoalText}
+
+【期間内のご成約実績データ】
+${summary}
+
+【蓄積された店長ナレッジ】
+${kSummary}
 
 # 📝出力フォーマット（以下の構成を厳守）
-1. 📈 【期間の全体トレンドと評価】（良かった点・今後の課題）
-2. 💡 【AI考案：今週の最強・ご成約ナレッジ】（今回フォーカスした商材に関する、AIオリジナルの高度な提案の切り口と具体的なトークスクリプトを1〜2つ）
-3. 👨‍🏫 【スタッフ別パーソナルアドバイス】（選択されたスタッフ全員に対し、「定量面（数字）」の評価と、「定性面（上記AIナレッジや店長メモをどう活かすか）」の具体的なアドバイス）
-4. 📢 【明日の朝礼メッセージ案】（現場のモチベーションが一気に高まり、今日から行動したくなる熱いメッセージ）
+1. 📊 【目標に対する進捗アナリティクス】（月間および日々の目標達成率とペースの客観的分析）
+2. 🎯 【目標達成に向けたネクストアクション】（注力すべき商材と具体的な行動指針）
+3. 🥇 【トップパフォーマー（〇〇さん）に聞いてみよう！】（1位のスタッフの称賛と、他スタッフへの相談の促進）
+4. 💡 【本日のピックアップ・ナレッジ】（店長メモから1つ厳選して全体に共有）
   `;
 
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-   method: "POST",
-   headers: { "Content-Type": "application/json" },
+   method: "POST", headers: { "Content-Type": "application/json" },
    body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
   });
   
-  if(!res.ok) {
-   const errorData = await res.text();
-   throw new Error(`HTTP ${res.status}\nGoogleからの回答: ${errorData}`);
-  }
+  if(!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
-  const answer = data.candidates[0].content.parts[0].text;
-  
-  board.textContent = answer;
- } catch(e) {
-  console.error(e);
-  board.textContent = "エラーが発生しました。APIキーが間違っているか、通信環境に問題があります。\n詳細: " + e.message;
- } finally {
-  btn.textContent = "✨ 選択した条件でレポート生成";
-  btn.disabled = false;
- }
+  board.textContent = data.candidates[0].content.parts[0].text;
+ } catch(e) { board.textContent = "エラー: " + e.message; } finally { btn.textContent = "✨ 選択した条件でレポート生成"; btn.disabled = false; }
 }
-/* ========================================================= */
 
 loadDailyData();
 </script>
