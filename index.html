@@ -33,13 +33,14 @@ header{display:flex;gap:8px;padding:8px;background:#fff;border-bottom:1px solid 
 .board-wrap{ overflow-x:auto; }
 table{border-collapse:collapse;background:#fff;width:max-content;}
 td,th{border:1px solid #cbd5e0;padding:4px;text-align:center;font-size:12px}
-.square{width:60px;height:60px; vertical-align:middle; cursor:pointer; transition:background-color 0.2s;}
+.square{width:60px;height:60px; vertical-align:middle; cursor:pointer; transition:background-color 0.2s; position:relative;}
 .square:hover{background-color:#f8fafc;}
 .checked-cell{background-color:#dcfce7 !important; border:2px solid #22c55e !important; color:#166534 !important; opacity:0.9;}
 .row-header{position:sticky;left:0;background:#f8fafc;font-weight:bold;z-index:1;}
 .normal-name{font-weight:bold;color:#000}
 .handoff-main{font-weight:bold;color:#dc2626}
 .handoff-sub{font-size:10px;color:#64748b}
+.knowledge-mark { position: absolute; top: 2px; right: 2px; font-size: 14px; }
 .settings-grid { display: grid; grid-template-columns: 320px 1fr; gap: 20px; }
 @media (max-width: 768px) { .settings-grid { grid-template-columns: 1fr; } }
 .full-width { grid-column: 1 / -1; }
@@ -181,6 +182,7 @@ td,th{border:1px solid #cbd5e0;padding:4px;text-align:center;font-size:12px}
  <div id="aiResultBoard" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:20px; min-height:150px; white-space:pre-wrap; font-size:15px; line-height:1.8; color:#1e293b;">条件を選んで「レポート生成」ボタンを押してください。</div>
 </div>
 </div>
+
 <div id="settings" class="page">
 <datalist id="paleColors">
 <option value="#e0f2fe"></option><option value="#fce7f3"></option><option value="#dcfce7"></option><option value="#fef9c3"></option>
@@ -251,6 +253,8 @@ const COL_SALES = "sales";
 const COL_SETTINGS = "settings";
 const COL_GOALS = "goals";
 const COL_MONTHLY = "monthlyGoals";
+const COL_KNOWLEDGE = "knowledge"; // ナレッジ金庫
+
 const LS_LOCKED_STAFF = "lockedStaff";
 const LS_LOCKED_HANDOFF_CHECK = "lockedHandoffCheck";
 const LS_LOCKED_HANDOFF_STAFF = "lockedHandoffStaff";
@@ -273,6 +277,7 @@ body: formData
 }
 
 let staffList=[], itemList=[], groupList=[], records=[], monthlyRecords=[];
+let knowledgeBase={};
 let goals={};
 let monthlyGoals={}; 
 let monthlySalesRecordsForGoal=[]; 
@@ -284,7 +289,7 @@ let currentDate=_tz.toISOString().slice(0,10);
 document.getElementById("globalDate").value=currentDate;
 document.getElementById("monthlyMonthPicker").value=currentDate.slice(0,7);
 const ADMIN_PASSWORD="0000";
-const AI_PASSWORD="6514"; // AI専用パスワード
+const AI_PASSWORD="6514";
 
 function showTab(id,tab){
 if(id==='settings'){
@@ -316,6 +321,7 @@ let unsubSales=null;
 let unsubGoals=null;
 let unsubMonthlyGoals=null; 
 let unsubMonthlySalesForGoal=null; 
+let unsubKnowledge=null;
 
 function loadDailyData(){
 if(unsubSales) unsubSales();
@@ -323,6 +329,14 @@ unsubSales=db.collection(COL_SALES).where("date","==",currentDate).onSnapshot(sn
 records=snap.docs.map(d=>({...d.data(),id:d.id}));
 updateAllViews();
 });
+
+if(unsubKnowledge) unsubKnowledge();
+unsubKnowledge=db.collection(COL_KNOWLEDGE).onSnapshot(snap=>{
+knowledgeBase = {};
+snap.forEach(doc => { knowledgeBase[doc.id] = doc.data().memo; });
+renderBoard();
+});
+
 if(unsubGoals) unsubGoals();
 unsubGoals=db.collection(COL_GOALS).where("date","==",currentDate).onSnapshot(snap=>{
 goals={};
@@ -496,6 +510,21 @@ checked: !currentState
 });
 }
 
+function openKnowledgeInput(docId, staffName, itemName) {
+ const existing = knowledgeBase[docId] || "";
+ const memo = prompt(`【${staffName}さん / ${itemName}】\n店長ナレッジを入力してください:`, existing);
+ if (memo === null) return;
+ if (memo === "") {
+  db.collection(COL_KNOWLEDGE).doc(docId).delete();
+ } else {
+  db.collection(COL_KNOWLEDGE).doc(docId).set({memo: memo, updatedAt: Date.now()});
+ }
+}
+
+function showKnowledge(docId, staffName) {
+ alert(`💡 ${staffName}さんのご成約ナレッジ\n\n${knowledgeBase[docId]}`);
+}
+
 function groupBy(arr){
 const m={};
 arr.forEach(r=>{
@@ -525,10 +554,14 @@ if(!g[i]){html+="<td class='square'></td>";continue;}
 const r=g[i][0];
 const checkedClass = r.checked ? " checked-cell" : "";
 const isChecked = r.checked ? true : false;
+const hasK = knowledgeBase[r.id] ? "<span class='knowledge-mark'>💡</span>" : "";
+const kAction = knowledgeBase[r.id] ? `onclick="showKnowledge('${r.id}','${r.staff}')"` : `onclick="toggleCheck('${r.id}', ${isChecked})"`;
+const longPressAction = `oncontextmenu="event.preventDefault(); openKnowledgeInput('${r.id}','${r.staff}','${r.item}')"`;
+
 if(!r.registrar){
-html+=`<td class='square normal-name name-cell${checkedClass}' onclick="toggleCheck('${r.id}', ${isChecked})">${r.staff}</td>`;
+html+=`<td class='square normal-name name-cell${checkedClass}' ${kAction} ${longPressAction}>${hasK}${r.staff}</td>`;
 }else{
-html+=`<td class='square name-cell${checkedClass}' onclick="toggleCheck('${r.id}', ${isChecked})"><div class='handoff-main'>成：${r.staff}</div><div class='handoff-sub'>${r.registrar}</div></td>`;
+html+=`<td class='square name-cell${checkedClass}' ${kAction} ${longPressAction}>${hasK}<div class='handoff-main'>成：${r.staff}</div><div class='handoff-sub'>${r.registrar}</div></td>`;
 }
 }
 html+="</tr>";
@@ -724,7 +757,7 @@ return;
 const batch = db.batch();
 snap.forEach(doc => batch.delete(doc.ref));
 await batch.commit();
-alert(`完了しました！\n${y}年${parseInt(m)}月分のデータ（${snap.size}件）を削除しました。`);
+alert(`完了しました！\n${y}年${parseInt(m)}月分のデータ（${snap.size}件）を削除しました。\n※店長ナレッジ（💡）は削除されず、AIの学習に残り続けます。`);
 renderDeleteMonthOptions(); 
 }
 
@@ -920,7 +953,7 @@ box.innerHTML = "";
 }
 }
 
-/* ================= AIエージェント機能（完全独立版） ================= */
+/* ================= AIエージェント機能（完全独立・ナレッジ高度化版） ================= */
 function renderAISelectors() {
  const itemDiv = document.getElementById("aiItemSelect");
  const staffDiv = document.getElementById("aiStaffSelect");
@@ -960,24 +993,20 @@ async function generateAIReport() {
  
  btn.textContent = "⏳ 分析中...";
  btn.disabled = true;
- board.textContent = `【${timeframeText}】のデータを集計し、AIに分析を依頼しています...\n（※数秒〜十数秒かかります）`;
+ board.textContent = `【${timeframeText}】のデータと店長ナレッジを集計し、AIに高度な分析を依頼しています...\n（※数秒〜十数秒かかります）`;
 
  try {
-  // 期間の計算
-  let startStr = "", endStr = "";
+  let startStr = "", endStr = currentDate;
   const d = new Date(currentDate);
   
   if (timeframeVal === "7") {
-   const startD = new Date(d); startD.setDate(startD.getDate() - 7);
-   startStr = startD.toISOString().slice(0, 10);
-   endStr = currentDate;
+   d.setDate(d.getDate() - 7);
+   startStr = d.toISOString().slice(0, 10);
   } else if (timeframeVal === "30") {
-   const startD = new Date(d); startD.setDate(startD.getDate() - 30);
-   startStr = startD.toISOString().slice(0, 10);
-   endStr = currentDate;
+   d.setDate(d.getDate() - 30);
+   startStr = d.toISOString().slice(0, 10);
   } else if (timeframeVal === "this_month") {
    startStr = currentDate.slice(0, 7) + "-01";
-   endStr = currentDate;
   } else if (timeframeVal === "last_month") {
    const [y, m] = currentDate.slice(0, 7).split("-").map(Number);
    let ly = y, lm = m - 1;
@@ -987,20 +1016,31 @@ async function generateAIReport() {
    endStr = `${ly}-${String(lm).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
   }
 
-  // データ取得
+  // 実績データの取得
   const snap = await db.collection(COL_SALES)
    .where("date", ">=", startStr)
    .where("date", "<=", endStr)
    .get();
    
+  // ★ナレッジ金庫からもデータを全取得
+  const kSnap = await db.collection(COL_KNOWLEDGE).get();
+  const kMap = {};
+  kSnap.forEach(doc => { kMap[doc.id] = doc.data().memo; });
+
   // 絞り込みと集計
   const counts = {};
+  let kList = [];
   snap.docs.forEach(doc => {
    const r = doc.data();
    if(selectedItems.includes(r.item) && selectedStaff.includes(r.staff)) {
+    // 定量データの集計
     if(!counts[r.staff]) counts[r.staff] = {};
     if(!counts[r.staff][r.item]) counts[r.staff][r.item] = 0;
     counts[r.staff][r.item]++;
+    // ナレッジ（店長メモ）の集計
+    if(kMap[doc.id]) {
+     kList.push(`・${r.staff}さんの${r.item}ご成約時の店長メモ: 「${kMap[doc.id]}」`);
+    }
    }
   });
   
@@ -1015,8 +1055,10 @@ async function generateAIReport() {
   }
   if(summary === "") summary = "指定された条件でのご成約データはありませんでした。";
 
-  // ★店長こだわりの神プロンプト（定量・定性対応版）★
-    const promptText = `
+  let kSummary = kList.length > 0 ? kList.join("\n") : "特筆すべき店長ナレッジはまだ登録されていません。";
+
+  // ★店長こだわりの高度化・神プロンプト★
+  const promptText = `
 あなたは全国トップクラスの業績を誇り、スタッフ育成のプロフェッショナルである「優秀なドコモショップの店長（兼 トップセールスコンサルタント）」です。
 以下の【ご成約データ】と【店長ナレッジ】をベースにしつつ、さらにあなたの推論を用いて、他店では真似できないレベルの【高度なオリジナル・ご成約ナレッジ】を独自に作成し、スタッフへ共有するマネジメントレポートを作成してください。
 
@@ -1041,10 +1083,6 @@ async function generateAIReport() {
 2. 💡 【AI考案：今週の最強・ご成約ナレッジ】（今回フォーカスした商材に関する、AIオリジナルの高度な提案の切り口と具体的なトークスクリプトを1〜2つ）
 3. 👨‍🏫 【スタッフ別パーソナルアドバイス】（選択されたスタッフ全員に対し、「定量面（数字）」の評価と、「定性面（上記AIナレッジや店長メモをどう活かすか）」の具体的なアドバイス）
 4. 📢 【明日の朝礼メッセージ案】（現場のモチベーションが一気に高まり、今日から行動したくなる熱いメッセージ）
-  `;
-  
-# ご成約データ
-${summary}
   `;
 
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
