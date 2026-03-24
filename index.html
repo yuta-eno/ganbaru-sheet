@@ -955,8 +955,8 @@ async function generateAIReport() {
 ${summary}
   `;
 
-  // ★変更箇所：最新モデル指定 ＆ 英語の詳細なエラーを画面に出す
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`, {
+  // ★変更箇所：正式なモデル名「gemini-1.5-flash」に戻す
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
    method: "POST",
    headers: { "Content-Type": "application/json" },
    body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
