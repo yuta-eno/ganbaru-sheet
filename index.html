@@ -59,6 +59,7 @@ td,th{border:1px solid #cbd5e0;padding:4px;text-align:center;font-size:12px}
 .goal-box{ background:linear-gradient(135deg,#fde047,#f97316); padding:10px; border-radius:12px; color:#000; font-weight:bold; box-shadow:0 4px 10px rgba(0,0,0,0.2); margin-bottom:10px; }
 .goal-progress{ background:white; height:14px; border-radius:8px; overflow:hidden; margin-top:6px; }
 .goal-bar{ height:100%; background:#22c55e; transition: width 0.5s ease; }
+.ai-cb-label { font-size:13px; background:#f1f5f9; padding:6px 10px; border-radius:6px; border:1px solid #cbd5e0; cursor:pointer; font-weight:bold; color:#475569; display:inline-block; }
 </style>
 </head>
 <body>
@@ -67,6 +68,7 @@ td,th{border:1px solid #cbd5e0;padding:4px;text-align:center;font-size:12px}
 <div class="tab active" onclick="showTab('input',this)">入力</div>
 <div class="tab" onclick="showTab('board',this)">がんばるシート</div>
 <div class="tab" onclick="showTab('monthly',this)">📊 月次集計</div>
+<div class="tab" style="background:#6d28d9; color:white;" onclick="showTab('ai',this)">🤖 AI分析</div>
 <div class="tab" onclick="showTab('settings',this)">設定</div>
 <div class="date-wrap" style="display:flex; align-items:center; gap:8px;">
 <button onclick="location.reload()" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e0; padding:8px 12px; border-radius:6px; font-weight:bold; font-size:16px; cursor:pointer; white-space:nowrap;">🔄 更新</button>
@@ -136,6 +138,49 @@ td,th{border:1px solid #cbd5e0;padding:4px;text-align:center;font-size:12px}
 </div>
 </div>
 
+<div id="ai" class="page">
+<div class="card">
+ <h3 style="color:#6d28d9;">🤖 AIエージェント 分析パネル</h3>
+ <p style="font-size:12px; color:#64748b; margin-bottom:15px;">期間、商材、スタッフを指定して、定量・定性の両面からマネジメントレポートを作成します。</p>
+ 
+ <div style="display:flex; gap:10px; align-items:center; margin-bottom:20px; flex-wrap:wrap; background:#f8fafc; padding:10px; border-radius:8px; border:1px solid #e2e8f0;">
+  <input type="password" id="geminiApiKey" placeholder="Gemini APIキー" style="flex:1; min-width:200px; padding:8px; border:1px solid #cbd5e0; border-radius:6px; font-size:14px;">
+  <select id="aiTimeframe" style="padding:8px; border:1px solid #cbd5e0; border-radius:6px; font-weight:bold;">
+   <option value="7">過去7日間</option>
+   <option value="30">過去1ヶ月間 (30日)</option>
+   <option value="this_month">今月 (1日〜本日)</option>
+   <option value="last_month">先月 (1ヶ月分)</option>
+  </select>
+ </div>
+
+ <div style="margin-bottom:20px;">
+  <h4 style="margin:0 0 10px 0; color:#334155; display:flex; align-items:center; gap:10px;">
+   🎯 フォーカスする商材
+   <button onclick="aiCheckAll('ai-item-cb', true)" style="background:#e2e8f0; border:none; padding:4px 8px; border-radius:4px; font-size:11px; cursor:pointer;">全選択</button>
+   <button onclick="aiCheckAll('ai-item-cb', false)" style="background:#e2e8f0; border:none; padding:4px 8px; border-radius:4px; font-size:11px; cursor:pointer;">全解除</button>
+  </h4>
+  <div id="aiItemSelect" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+ </div>
+
+ <div style="margin-bottom:20px;">
+  <h4 style="margin:0 0 10px 0; color:#334155; display:flex; align-items:center; gap:10px;">
+   👨‍🏫 分析するスタッフ
+   <button onclick="aiCheckAll('ai-staff-cb', true)" style="background:#e2e8f0; border:none; padding:4px 8px; border-radius:4px; font-size:11px; cursor:pointer;">全選択</button>
+   <button onclick="aiCheckAll('ai-staff-cb', false)" style="background:#e2e8f0; border:none; padding:4px 8px; border-radius:4px; font-size:11px; cursor:pointer;">全解除</button>
+  </h4>
+  <div id="aiStaffSelect" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+ </div>
+
+ <div style="text-align:center;">
+  <button onclick="generateAIReport()" id="aiGenBtn" style="background:linear-gradient(135deg, #6d28d9, #4f46e5); color:white; border:none; padding:12px 30px; border-radius:8px; font-size:16px; font-weight:bold; cursor:pointer; box-shadow:0 4px 6px rgba(0,0,0,0.1); width:100%; max-width:300px;">✨ 選択した条件でレポート生成</button>
+ </div>
+</div>
+
+<div class="card">
+ <h3 style="color:#6d28d9;">📋 分析レポート</h3>
+ <div id="aiResultBoard" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:20px; min-height:150px; white-space:pre-wrap; font-size:15px; line-height:1.8; color:#1e293b;">条件を選んで「レポート生成」ボタンを押してください。</div>
+</div>
+</div>
 <div id="settings" class="page">
 <datalist id="paleColors">
 <option value="#e0f2fe"></option><option value="#fce7f3"></option><option value="#dcfce7"></option><option value="#fef9c3"></option>
@@ -192,21 +237,6 @@ td,th{border:1px solid #cbd5e0;padding:4px;text-align:center;font-size:12px}
 </h3>
 <div id="monthlyGoalPanel"></div>
 </div>
-
-<div class="card full-width">
- <h3 style="color:#6d28d9; display:flex; justify-content:space-between; align-items:center;">
-  🤖 AIエージェント（管理者専用）
-  <button onclick="openAIPanel()" style="background:#6d28d9; color:white; border:none; padding:6px 12px; border-radius:6px; font-weight:bold; cursor:pointer;">開く</button>
- </h3>
- <div id="aiPanel" style="display:none; margin-top:15px; border-top:2px dashed #cbd5e0; padding-top:15px;">
-  <p style="font-size:12px; color:#64748b; margin-bottom:10px;">過去7日間のデータから、AIが自動でマネジメントレポートを作成します。</p>
-  <div style="display:flex; gap:10px; align-items:center; margin-bottom:15px; flex-wrap:wrap;">
-   <input type="password" id="geminiApiKey" placeholder="Gemini APIキー (AIza...)" style="flex:1; min-width:200px; padding:8px; border:1px solid #cbd5e0; border-radius:6px; font-size:14px;">
-   <button onclick="generateAIReport()" style="background:#2563eb; color:white; border:none; padding:10px 15px; border-radius:6px; font-weight:bold; cursor:pointer;" id="aiGenBtn">✨ レポート生成</button>
-  </div>
-  <div id="aiResultBoard" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:15px; min-height:100px; white-space:pre-wrap; font-size:14px; line-height:1.6; color:#1e293b;">ここにAIの分析レポートが表示されます...</div>
- </div>
-</div>
 </div>
 
 <script>
@@ -254,12 +284,20 @@ let currentDate=_tz.toISOString().slice(0,10);
 document.getElementById("globalDate").value=currentDate;
 document.getElementById("monthlyMonthPicker").value=currentDate.slice(0,7);
 const ADMIN_PASSWORD="0000";
+const AI_PASSWORD="6514"; // AI専用パスワード
 
 function showTab(id,tab){
 if(id==='settings'){
 const p=prompt("管理用パスワード:");
 if(p!==ADMIN_PASSWORD){ alert("NG"); return; }
 renderDeleteMonthOptions();
+}
+if(id==='ai'){
+const p=prompt("AI起動パスワード:");
+if(p!==AI_PASSWORD){ alert("NG"); return; }
+renderAISelectors();
+const savedKey = localStorage.getItem("geminiApiKey");
+if(savedKey) document.getElementById("geminiApiKey").value = savedKey;
 }
 document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
 document.getElementById(id).classList.add("active");
@@ -882,16 +920,26 @@ box.innerHTML = "";
 }
 }
 
-/* ================= AIエージェント機能（管理者専用 6514） ================= */
-function openAIPanel() {
- const p = prompt("AI起動パスワード:");
- if (p !== "6514") {
-  alert("パスワードが違います");
-  return;
- }
- document.getElementById("aiPanel").style.display = "block";
- const savedKey = localStorage.getItem("geminiApiKey");
- if(savedKey) document.getElementById("geminiApiKey").value = savedKey;
+/* ================= AIエージェント機能（完全独立版） ================= */
+function renderAISelectors() {
+ const itemDiv = document.getElementById("aiItemSelect");
+ const staffDiv = document.getElementById("aiStaffSelect");
+ 
+ itemDiv.innerHTML = itemList.map(it => `
+  <label class="ai-cb-label">
+   <input type="checkbox" value="${it.name}" class="ai-item-cb" checked> ${it.name}
+  </label>
+ `).join("");
+ 
+ staffDiv.innerHTML = staffList.map(s => `
+  <label class="ai-cb-label">
+   <input type="checkbox" value="${s.name}" class="ai-staff-cb" checked> ${s.name}
+  </label>
+ `).join("");
+}
+
+function aiCheckAll(className, isCheck) {
+ document.querySelectorAll('.' + className).forEach(cb => cb.checked = isCheck);
 }
 
 async function generateAIReport() {
@@ -899,29 +947,61 @@ async function generateAIReport() {
  if(!apiKey) return alert("APIキーを入力してください");
  localStorage.setItem("geminiApiKey", apiKey); 
 
+ const selectedItems = Array.from(document.querySelectorAll('.ai-item-cb:checked')).map(cb => cb.value);
+ const selectedStaff = Array.from(document.querySelectorAll('.ai-staff-cb:checked')).map(cb => cb.value);
+ if(selectedItems.length === 0 || selectedStaff.length === 0) {
+  return alert("フォーカスする商材とスタッフをそれぞれ1つ以上選択してください。");
+ }
+
  const btn = document.getElementById("aiGenBtn");
  const board = document.getElementById("aiResultBoard");
+ const timeframeVal = document.getElementById("aiTimeframe").value;
+ const timeframeText = document.getElementById("aiTimeframe").options[document.getElementById("aiTimeframe").selectedIndex].text;
  
  btn.textContent = "⏳ 分析中...";
  btn.disabled = true;
- board.textContent = "過去7日間のデータを集計し、AIに分析を依頼しています...\n（※数秒〜十数秒かかります）";
+ board.textContent = `【${timeframeText}】のデータを集計し、AIに分析を依頼しています...\n（※数秒〜十数秒かかります）`;
 
  try {
+  // 期間の計算
+  let startStr = "", endStr = "";
   const d = new Date(currentDate);
-  d.setDate(d.getDate() - 7);
-  const startStr = d.toISOString().slice(0, 10);
   
+  if (timeframeVal === "7") {
+   const startD = new Date(d); startD.setDate(startD.getDate() - 7);
+   startStr = startD.toISOString().slice(0, 10);
+   endStr = currentDate;
+  } else if (timeframeVal === "30") {
+   const startD = new Date(d); startD.setDate(startD.getDate() - 30);
+   startStr = startD.toISOString().slice(0, 10);
+   endStr = currentDate;
+  } else if (timeframeVal === "this_month") {
+   startStr = currentDate.slice(0, 7) + "-01";
+   endStr = currentDate;
+  } else if (timeframeVal === "last_month") {
+   const [y, m] = currentDate.slice(0, 7).split("-").map(Number);
+   let ly = y, lm = m - 1;
+   if(lm === 0) { ly--; lm = 12; }
+   const lastDay = new Date(ly, lm, 0).getDate();
+   startStr = `${ly}-${String(lm).padStart(2,'0')}-01`;
+   endStr = `${ly}-${String(lm).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
+  }
+
+  // データ取得
   const snap = await db.collection(COL_SALES)
    .where("date", ">=", startStr)
-   .where("date", "<=", currentDate)
+   .where("date", "<=", endStr)
    .get();
    
+  // 絞り込みと集計
   const counts = {};
   snap.docs.forEach(doc => {
    const r = doc.data();
-   if(!counts[r.staff]) counts[r.staff] = {};
-   if(!counts[r.staff][r.item]) counts[r.staff][r.item] = 0;
-   counts[r.staff][r.item]++;
+   if(selectedItems.includes(r.item) && selectedStaff.includes(r.staff)) {
+    if(!counts[r.staff]) counts[r.staff] = {};
+    if(!counts[r.staff][r.item]) counts[r.staff][r.item] = 0;
+    counts[r.staff][r.item]++;
+   }
   });
   
   let summary = "";
@@ -933,29 +1013,30 @@ async function generateAIReport() {
    }
    summary += items.join(", ") + "\n";
   }
-  if(summary === "") summary = "過去7日間のご成約データはありません。";
+  if(summary === "") summary = "指定された条件でのご成約データはありませんでした。";
 
+  // ★店長こだわりの神プロンプト（定量・定性対応版）★
   const promptText = `
 あなたは全国トップクラスの成績を誇る「優秀なドコモショップの店長（兼データアナリスト）」です。
-以下の【過去7日間のご成約データ】を分析し、現場のスタッフのモチベーションが上がり、かつ具体的なアクションに繋がる「週間マネジメントレポート」を作成してください。
+以下の【ご成約データ】を分析し、現場のスタッフのモチベーションが上がり、かつ具体的なアクションに繋がる「マネジメントレポート」を作成してください。
 
 # 前提条件と絶対ルール
-- 当店が扱う商材は、スマホ（新規・MNP）、ドコモ光、HOME5G、ルーターなどです。
+- 分析対象期間：${timeframeText}
+- フォーカスする商材：${selectedItems.join(", ")}
+- 対象スタッフ：${selectedStaff.join(", ")}
 - ❌「獲得」や「訴求」という言葉は絶対に使わないでください。代わりに「ご成約」「ご紹介」という言葉を使い、お客様の立場に立った優しい言葉選びを徹底してください。
-- 単に数字を並べるだけでなく、「なぜその結果になったのか」の仮説と、「明日からどう動くべきか」のアドバイスを必ず含めてください。
-- ご成約数が低いスタッフに対しては、絶対に詰めたり責めたりせず、次に繋がるポジティブで具体的な解決策（ロープレのテーマや、お客様へのご紹介の工夫など）を提示してください。
+- 👨‍🏫【重要】各スタッフに対して、「定量面（数字の推移、目標進捗など）」と「定性面（お客様へのヒアリング、ご提案の切り口、マインドなど）」の両方から、明日からどう動くべきかのパーソナルアドバイスを必ず導き出してください。
+- 数字が低いスタッフに対しては、絶対に詰めたり責めたりせず、次に繋がるポジティブで具体的な解決策（ロープレのテーマなど）を提示してください。
 
 # 出力フォーマット（以下の構成を厳守）
-1. 🏆 今週のトップパフォーマーと賞賛コメント
-2. 📈 商材別の全体傾向（良かった点・課題点）
-3. 👨‍🏫 伸び悩んでいるスタッフへの具体策（ロープレ提案や、セットでのご紹介の切り口など）
-4. 📢 朝礼でそのまま使える、店長からの熱いメッセージ案
+1. 📈 選択された商材・期間のトレンド分析（全体傾向）
+2. 👨‍🏫 スタッフ別 パーソナルアドバイス（必ずスタッフごとに定量面と定性面を書くこと）
+3. 📢 明日の朝礼メッセージ案
 
-# 過去7日間のご成約データ
+# ご成約データ
 ${summary}
   `;
 
-  // ★大本命の修正箇所：使えるリストにあった最新の「gemini-2.5-flash」に変更！！！
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
    method: "POST",
    headers: { "Content-Type": "application/json" },
@@ -974,7 +1055,7 @@ ${summary}
   console.error(e);
   board.textContent = "エラーが発生しました。APIキーが間違っているか、通信環境に問題があります。\n詳細: " + e.message;
  } finally {
-  btn.textContent = "✨ レポート生成";
+  btn.textContent = "✨ 選択した条件でレポート生成";
   btn.disabled = false;
  }
 }
