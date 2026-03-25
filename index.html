@@ -144,15 +144,18 @@ td,th{border:1px solid #cbd5e0;padding:4px;text-align:center;font-size:12px}
  <h3 style="color:#6d28d9;">🤖 AIエージェント 分析パネル</h3>
  <p style="font-size:12px; color:#64748b; margin-bottom:15px;">期間、商材、スタッフを指定して、真因の深掘りと行動コミットを促すレポートを作成します。</p>
  
- <div style="display:flex; gap:10px; align-items:center; margin-bottom:20px; flex-wrap:wrap; background:#f8fafc; padding:10px; border-radius:8px; border:1px solid #e2e8f0;">
-  <input type="password" id="geminiApiKey" placeholder="Gemini APIキー" style="flex:1; min-width:200px; padding:8px; border:1px solid #cbd5e0; border-radius:6px; font-size:14px;">
-  <select id="aiTimeframe" style="padding:8px; border:1px solid #cbd5e0; border-radius:6px; font-weight:bold;">
-   <option value="7">過去7日間</option>
-   <option value="30">過去1ヶ月間 (30日)</option>
-   <option value="this_month">今月 (1日〜本日)</option>
-   <option value="last_month">先月 (1ヶ月分)</option>
-  </select>
- </div>
+ <details style="margin-bottom:20px; background:#f8fafc; padding:10px; border-radius:8px; border:1px solid #e2e8f0; cursor:pointer;">
+  <summary style="font-weight:bold; color:#475569; user-select:none;">🔑 APIキー・期間設定 (クリックで開閉)</summary>
+  <div style="display:flex; gap:10px; align-items:center; margin-top:15px; flex-wrap:wrap; cursor:default;">
+   <input type="password" id="geminiApiKey" placeholder="Gemini APIキー" style="flex:1; min-width:200px; padding:8px; border:1px solid #cbd5e0; border-radius:6px; font-size:14px;">
+   <select id="aiTimeframe" style="padding:8px; border:1px solid #cbd5e0; border-radius:6px; font-weight:bold;">
+    <option value="7">過去7日間</option>
+    <option value="30">過去1ヶ月間 (30日)</option>
+    <option value="this_month">今月 (1日〜本日)</option>
+    <option value="last_month">先月 (1ヶ月分)</option>
+   </select>
+  </div>
+ </details>
 
  <div style="margin-bottom:20px;">
   <h4 style="margin:0 0 10px 0; color:#334155; display:flex; align-items:center; gap:10px;">
@@ -948,7 +951,7 @@ if(allHtmls.length > 0) { box.style.display = "block"; box.innerHTML = allHtmls.
 else { box.style.display = "none"; box.innerHTML = ""; }
 }
 
-/* ================= AIエージェント機能（Google検索グラウンディング搭載版） ================= */
+/* ================= AIエージェント機能（検索精度向上＆UI改善版） ================= */
 function renderAISelectors() {
  const itemDiv = document.getElementById("aiItemSelect");
  const staffDiv = document.getElementById("aiStaffSelect");
@@ -1041,12 +1044,15 @@ async function generateAIReport() {
   });
   if(!monthlyGoalText) monthlyGoalText = "今月の目標は未設定です。";
 
+  // ★変更：検索の精度を上げるための指示を強化
   const promptText = `
 あなたはドコモショップの業績を劇的に改善する、超・実践志向の「データアナリスト兼トップセールスマネージャー」です。
 提供された【ご成約実績データ】【目標データ】【いけてるナレッジ】を分析し、スタッフが「明日から具体的に何をすべきか」を強制的にコミットさせる、鋭く真因に迫るレポートを作成してください。
 
 # 🌐 【最重要指令】Google検索による正確な知識の担保（グラウンディング）
-ドコモの商材（料金プラン、サービス、補償内容など）に関する具体的なアドバイスやトークスクリプトを作成する際は、必ず自身の推測を捨て、Google検索ツールを用いて最新のドコモ公式情報を検索し、その事実のみに基づいて回答してください。
+ドコモの商材（料金プラン、サービス、補償内容、月額料金など）に関する具体的なアドバイスやトークスクリプトを作成する際は、必ず自身の推測を捨て、Google検索ツールを用いて最新の「NTTドコモ 公式サイト」の情報を検索し、その事実のみに基づいて回答してください。
+- 検索時は必ず「ドコモ 公式 [商材名] 月額」「ドコモ 公式 [商材名] 補償内容」などのキーワードを用い、最新の正確な金額と条件を取得すること。
+- 他キャリアや古い情報、推測による金額（プラチナ補償、スマートあんしん補償など）の提示は厳禁です。
 【絶対厳守の事前知識】：dカード GOLDの「dカードケータイ補償」は、画面割れなどの修理代金の補償には絶対に使えません。「水濡れ・全損・紛失・盗難」により修理不能となり、同一機種・同一カラーを再購入する場合のみ適用可能です。この事前知識と検索結果を照らし合わせ、絶対に他社の一般的なスマホ保険と混同したデタラメな説明をしないでください。
 
 # ❌ 絶対禁止事項（これを破るとレポートの価値がなくなります）
@@ -1082,7 +1088,6 @@ ${kSummary}
 4. 💡 【本日のピックアップ・ナレッジ】（いけてるメモから1つ厳選し、他スタッフがどう真似すべきかを解説）
   `;
 
-  // ★変更箇所：Google検索ツール（グラウンディング）を有効化！
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
    method: "POST", headers: { "Content-Type": "application/json" },
    body: JSON.stringify({ 
