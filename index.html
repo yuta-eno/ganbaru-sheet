@@ -142,7 +142,7 @@ td,th{border:1px solid #cbd5e0;padding:4px;text-align:center;font-size:12px}
 <div id="ai" class="page">
 <div class="card">
  <h3 style="color:#6d28d9;">🤖 AIエージェント 分析パネル</h3>
- <p style="font-size:12px; color:#64748b; margin-bottom:15px;">期間、商材、スタッフを指定して、定量・定性の両面からマネジメントレポートを作成します。</p>
+ <p style="font-size:12px; color:#64748b; margin-bottom:15px;">期間、商材、スタッフを指定して、真因の深掘りと行動コミットを促すレポートを作成します。</p>
  
  <div style="display:flex; gap:10px; align-items:center; margin-bottom:20px; flex-wrap:wrap; background:#f8fafc; padding:10px; border-radius:8px; border:1px solid #e2e8f0;">
   <input type="password" id="geminiApiKey" placeholder="Gemini APIキー" style="flex:1; min-width:200px; padding:8px; border:1px solid #cbd5e0; border-radius:6px; font-size:14px;">
@@ -948,7 +948,7 @@ if(allHtmls.length > 0) { box.style.display = "block"; box.innerHTML = allHtmls.
 else { box.style.display = "none"; box.innerHTML = ""; }
 }
 
-/* ================= AIエージェント機能（アナリスト版） ================= */
+/* ================= AIエージェント機能（厳密計算＆スパルタ行動コミット版） ================= */
 function renderAISelectors() {
  const itemDiv = document.getElementById("aiItemSelect");
  const staffDiv = document.getElementById("aiStaffSelect");
@@ -977,6 +977,7 @@ async function generateAIReport() {
  board.textContent = `【${timeframeText}】のデータ、目標、店長ナレッジを集計しています...`;
 
  try {
+  // 期間計算
   let startStr = "", endStr = currentDate;
   const d = new Date(currentDate);
   if (timeframeVal === "7") { d.setDate(d.getDate() - 7); startStr = d.toISOString().slice(0, 10); } 
@@ -989,74 +990,99 @@ async function generateAIReport() {
    startStr = `${ly}-${String(lm).padStart(2,'0')}-01`; endStr = `${ly}-${String(lm).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
   }
 
+  // データ取得
   const snap = await db.collection(COL_SALES).where("date", ">=", startStr).where("date", "<=", endStr).get();
   const kSnap = await db.collection(COL_KNOWLEDGE).get();
   const kMap = {}; kSnap.forEach(doc => { kMap[doc.id] = doc.data().memo; });
 
+  // ★修正：手動計算（ボード表示）と100%同じ「groupIdでのまとめ処理」を行う
+  const validDocs = snap.docs.map(d => ({...d.data(), id: d.id})).filter(r => selectedItems.includes(r.item) && selectedStaff.includes(r.staff));
+  const groupedMap = {};
+  validDocs.forEach(r => {
+   if(!groupedMap[r.groupId]) groupedMap[r.groupId] = [];
+   groupedMap[r.groupId].push(r);
+  });
+
   const counts = {};
   let kList = [];
-  snap.docs.forEach(doc => {
-   const r = doc.data();
-   if(selectedItems.includes(r.item) && selectedStaff.includes(r.staff)) {
-    if(!counts[r.staff]) counts[r.staff] = {};
-    if(!counts[r.staff][r.item]) counts[r.staff][r.item] = 0;
-    counts[r.staff][r.item]++;
-    if(kMap[doc.id]) kList.push(`・${r.staff}さんの${r.item}ご成約時の店長メモ: 「${kMap[doc.id]}」`);
-   }
+  
+  // groupIdごとに1件として集計（手動集計と完全一致）
+  Object.values(groupedMap).forEach(group => {
+   const r = group[0]; // 集計用代表データ
+   if(!counts[r.staff]) counts[r.staff] = {};
+   if(!counts[r.staff][r.item]) counts[r.staff][r.item] = 0;
+   counts[r.staff][r.item]++;
+   
+   // グループ内のどれかにナレッジがあれば抽出
+   group.forEach(doc => {
+    if(kMap[doc.id]) kList.push(`・${doc.staff}さんの${doc.item}ご成約時の店長メモ: 「${kMap[doc.id]}」`);
+   });
   });
   
-  let summary = ""; for(const staff in counts) { summary += `・${staff}: ` + Object.entries(counts[staff]).map(e=>`${e[0]} ${e[1]}件`).join(", ") + "\n"; }
+  let summary = ""; 
+  for(const staff in counts) { 
+   summary += `・${staff}: ` + Object.entries(counts[staff]).map(e=>`${e[0]} ${e[1]}件`).join(", ") + "\n"; 
+  }
   if(summary === "") summary = "指定された条件でのご成約データはありませんでした。";
   let kSummary = kList.length > 0 ? kList.join("\n") : "特筆すべき店長ナレッジはまだ登録されていません。";
 
-  // ★目標データの構築
+  // ★修正：月間目標の取得（選択された期間に合わせる）
+  let targetMonthStr = currentDate.slice(0, 7);
+  if (timeframeVal === "last_month") {
+   const [y, mStr] = currentDate.slice(0, 7).split("-").map(Number);
+   let ly = y, lm = mStr - 1; if(lm === 0) { ly--; lm = 12; }
+   targetMonthStr = `${ly}-${String(lm).padStart(2,'0')}`;
+  }
+  const mGoalSnap = await db.collection(COL_MONTHLY).where("month", "==", targetMonthStr).get();
+  const aiMonthlyGoals = {};
+  mGoalSnap.forEach(d => { aiMonthlyGoals[d.data().item] = d.data(); });
+
   let dailyGoalText = "";
   selectedItems.forEach(item => { if(goals[item]) dailyGoalText += `・${item}: 目標 ${goals[item].target}件\n`; });
   if(!dailyGoalText) dailyGoalText = "本日の目標は未設定です。";
 
   let monthlyGoalText = "";
   selectedItems.forEach(item => { 
-   const monthStr = currentDate.slice(0, 7);
-   if(monthlyGoals[item]) monthlyGoalText += `・${item}: 月間目標 ${monthlyGoals[item].target}件\n`; 
+   if(aiMonthlyGoals[item]) monthlyGoalText += `・${item}: 月間目標 ${aiMonthlyGoals[item].target}件\n`; 
   });
   if(!monthlyGoalText) monthlyGoalText = "今月の目標は未設定です。";
 
-  // ★データアナリスト版プロンプト
+  // ★超・実践アナリスト版プロンプト
   const promptText = `
-あなたはドコモショップの数値を客観的かつ的確に分析する「優秀なデータアナリスト兼チームサポーター」です。
-以下の【ご成約実績データ】【目標データ】【店長ナレッジ】を総合的に分析し、店舗の目標達成に向けた「アナリストレポート」を作成してください。
+あなたはドコモショップの業績を劇的に改善する、超・実践志向の「データアナリスト兼トップセールスマネージャー」です。
+提供された【ご成約実績データ】【目標データ】【店長ナレッジ】を分析し、スタッフが「明日から具体的に何をすべきか」を強制的にコミットさせる、鋭く真因に迫るレポートを作成してください。
 
-# ❌絶対ルール
-- 「獲得」や「訴求」という言葉は絶対に使わず、必ず「ご成約」「ご紹介」と言い換えること。
-- 感情論や精神論は避け、数字ベースで客観的に分析すること。ただし、数字が低いスタッフを決して責めず、次にどう動くべきかポジティブな行動を促すこと。
+# ❌ 絶対禁止事項（これを破るとレポートの価値がなくなります）
+- 「もっとヒアリングを頑張りましょう」「メリットを丁寧に伝えましょう」などの、当たり障りのない単調で表面的なアドバイスは【一切禁止】します。
+- AI自身で数値を勝手に捏造したり、足し算を間違えたりすることは厳禁です。提供されたデータを一言一句正確に使用してください。
+- 「獲得」「訴求」という言葉は使わず、「ご成約」「ご紹介」と言い換えてください。
 
-# 📊分析ミッション
-1. 【目標進捗の分析】: 設定された月間目標および日々の目標に対して、現在の実績とペースがどうかを客観的に評価してください。
-2. 【目標達成のためのネクストアクション】: 残りの期間で目標をクリアするために、誰が・どの商材に注力してご案内すべきか、具体的なアクションを提示してください。
-3. 【トップパフォーマーへの相談促進】: ピックアップされた商材の中で、最もご成約数が多い第1位のスタッフを称賛し、他のスタッフへ「〇〇さんにアドバイスをもらいましょう」と具体的に促してください。
-4. 【店長ナレッジの横展開】: 蓄積された【店長ナレッジ】の中から最も効果的と思われるものを1つだけ厳選し、「このノウハウを全員で真似しましょう」と共有してください。
+# 🧠 分析とフィードバックの極意（真因追及と行動コミット）
+1. 【真因の深掘り】: なぜ目標に届いていないのか？なぜ特定の商材だけ伸びないのか？表面的な数字だけでなく、考えられるボトルネック（例：提案の順番が悪い、単体販売に逃げている、金額の魅せ方が下手等）を鋭く指摘してください。
+2. 【明日からの行動コミット】: 「意識します」で終わらせず、「〇〇さんは明日、スマホのお手続きのお客様全員に、光セット割の実質負担額を必ず紙に書いて提示してください」など、逃げ道のない具体的な行動（ソナーアドバイス）を指示してください。
+3. 【超・実践的トークスクリプト】: 万人に共通するメリット（損をしない、手間が省ける）と、金額をお得に魅せる技術（1日換算、トータルでの実質負担減など、プライスフレーミング）を駆使した、現場でそのまま読める生々しいトークを必ず提示してください。
 
-# 📥インプットデータ
+# 📥 インプットデータ
 分析対象期間：${timeframeText}
 対象商材：${selectedItems.join(", ")}
 
-【月間目標値（当月）】
+【月間目標値（対象月）】
 ${monthlyGoalText}
 
 【本日の目標値】
 ${dailyGoalText}
 
-【期間内のご成約実績データ】
+【期間内のご成約実績データ（正確な数値）】
 ${summary}
 
-【蓄積された店長ナレッジ】
+【蓄積された店長ナレッジ（現場のリアルな成功事例）】
 ${kSummary}
 
-# 📝出力フォーマット（以下の構成を厳守）
-1. 📊 【目標に対する進捗アナリティクス】（月間および日々の目標達成率とペースの客観的分析）
-2. 🎯 【目標達成に向けたネクストアクション】（注力すべき商材と具体的な行動指針）
-3. 🥇 【トップパフォーマー（〇〇さん）に聞いてみよう！】（1位のスタッフの称賛と、他スタッフへの相談の促進）
-4. 💡 【本日のピックアップ・ナレッジ】（店長メモから1つ厳選して全体に共有）
+# 📝 出力フォーマット（以下の構成を厳守）
+1. 📊 【目標進捗と真因アナリティクス】（目標とのギャップと、その背後にある「真の原因」の鋭い考察）
+2. 🎯 【明日からの行動コミットとネクストアクション】（誰が・何を・どうやって行うか、逃げ道のない具体的な指示と、1位スタッフへのヒアリング促進）
+3. 💰 【AI考案：明日すぐ使える必殺トーク】（プライスフレーミング等を駆使した、お客様が「それなら安い！」と錯覚する超実践的トークスクリプト）
+4. 💡 【本日のピックアップ・ナレッジ】（店長メモから1つ厳選し、他スタッフがどう真似すべきかを解説）
   `;
 
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
