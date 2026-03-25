@@ -948,13 +948,11 @@ if(allHtmls.length > 0) { box.style.display = "block"; box.innerHTML = allHtmls.
 else { box.style.display = "none"; box.innerHTML = ""; }
 }
 
-/* ================= AIエージェント機能（厳密計算＆スパルタ行動コミット版） ================= */
+/* ================= AIエージェント機能（Google検索グラウンディング搭載版） ================= */
 function renderAISelectors() {
  const itemDiv = document.getElementById("aiItemSelect");
  const staffDiv = document.getElementById("aiStaffSelect");
- // ★変更：商材はデフォルトチェックなし（checkedを外す）
  itemDiv.innerHTML = itemList.map(it => `<label class="ai-cb-label"><input type="checkbox" value="${it.name}" class="ai-item-cb"> ${it.name}</label>`).join("");
- // ★変更：スタッフはデフォルトチェックあり（checkedを残す）
  staffDiv.innerHTML = staffList.map(s => `<label class="ai-cb-label"><input type="checkbox" value="${s.name}" class="ai-staff-cb" checked> ${s.name}</label>`).join("");
 }
 
@@ -974,7 +972,6 @@ async function generateAIReport() {
  const timeframeVal = document.getElementById("aiTimeframe").value;
  const timeframeText = document.getElementById("aiTimeframe").options[document.getElementById("aiTimeframe").selectedIndex].text;
  
- // ★変更：待機メッセージの変更
  btn.textContent = "⏳ ちょ待てよ...";
  btn.disabled = true;
  board.textContent = `ちょ待てよ...【${timeframeText}】のデータ、目標、いけてるナレッジを集計・分析中だぜ...\n（※数秒〜十数秒かかります）`;
@@ -1013,7 +1010,6 @@ async function generateAIReport() {
    counts[r.staff][r.item]++;
    
    group.forEach(doc => {
-    // ★変更：店長メモ → いけてるメモ
     if(kMap[doc.id]) kList.push(`・${doc.staff}さんの${doc.item}ご成約時のいけてるメモ: 「${kMap[doc.id]}」`);
    });
   });
@@ -1045,15 +1041,17 @@ async function generateAIReport() {
   });
   if(!monthlyGoalText) monthlyGoalText = "今月の目標は未設定です。";
 
-  // ★変更箇所：プロンプトから「店長」を削除し、「いけてるナレッジ」を徹底。dカードGOLDの正確な仕様を強制追加。
   const promptText = `
 あなたはドコモショップの業績を劇的に改善する、超・実践志向の「データアナリスト兼トップセールスマネージャー」です。
 提供された【ご成約実績データ】【目標データ】【いけてるナレッジ】を分析し、スタッフが「明日から具体的に何をすべきか」を強制的にコミットさせる、鋭く真因に迫るレポートを作成してください。
 
+# 🌐 【最重要指令】Google検索による正確な知識の担保（グラウンディング）
+ドコモの商材（料金プラン、サービス、補償内容など）に関する具体的なアドバイスやトークスクリプトを作成する際は、必ず自身の推測を捨て、Google検索ツールを用いて最新のドコモ公式情報を検索し、その事実のみに基づいて回答してください。
+【絶対厳守の事前知識】：dカード GOLDの「dカードケータイ補償」は、画面割れなどの修理代金の補償には絶対に使えません。「水濡れ・全損・紛失・盗難」により修理不能となり、同一機種・同一カラーを再購入する場合のみ適用可能です。この事前知識と検索結果を照らし合わせ、絶対に他社の一般的なスマホ保険と混同したデタラメな説明をしないでください。
+
 # ❌ 絶対禁止事項（これを破るとレポートの価値がなくなります）
 - 「もっとヒアリングを頑張りましょう」「メリットを丁寧に伝えましょう」などの、当たり障りのない単調で表面的なアドバイスは【一切禁止】します。
 - 「獲得」「訴求」という言葉は使わず、「ご成約」「ご紹介」と言い換えてください。
-- 【重要: ドコモ商材の正確な知識】dカード GOLDの「ケータイ補償」は、画面割れなどの修理代金の補償には絶対に使えません！「水濡れ・全損・紛失・盗難」により修理不能となり、同一機種・同一カラーを再購入する場合のみ適用可能です。デタラメなサービス説明は厳禁です。
 - AI自身で数値を勝手に捏造したり、足し算を間違えたりすることは厳禁です。提供されたデータを一言一句正確に使用してください。
 
 # 🧠 分析とフィードバックの極意（真因追及と行動コミット）
@@ -1080,13 +1078,17 @@ ${kSummary}
 # 📝 出力フォーマット（以下の構成を厳守）
 1. 📊 【目標進捗と真因アナリティクス】（目標とのギャップと、その背後にある「真の原因」の鋭い考察）
 2. 🎯 【明日からの行動コミットとネクストアクション】（誰が・何を・どうやって行うか、逃げ道のない具体的な指示と、1位スタッフへのヒアリング促進）
-3. 💰 【AI考案：明日すぐ使える必殺トーク】（プライスフレーミング等を駆使した、お客様が「それなら安い！」と錯覚する超実践的トークスクリプト）
+3. 💰 【AI考案：明日すぐ使える必殺トーク】（プライスフレーミング等とGoogle検索で得た正確な仕様を駆使した、お客様が「それなら安い！」と錯覚する超実践的トークスクリプト）
 4. 💡 【本日のピックアップ・ナレッジ】（いけてるメモから1つ厳選し、他スタッフがどう真似すべきかを解説）
   `;
 
+  // ★変更箇所：Google検索ツール（グラウンディング）を有効化！
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
    method: "POST", headers: { "Content-Type": "application/json" },
-   body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
+   body: JSON.stringify({ 
+     contents: [{ parts: [{ text: promptText }] }],
+     tools: [{ googleSearch: {} }]
+   })
   });
   
   if(!res.ok) {
