@@ -757,7 +757,7 @@ return;
 const batch = db.batch();
 snap.forEach(doc => batch.delete(doc.ref));
 await batch.commit();
-alert(`完了しました！\n${y}年${parseInt(m)}月分のデータ（${snap.size}件）を削除しました。\n※いけてるナレッジ（💡）は削除されず、AIの学習に残り続けます。\`);
+alert(`完了しました！\n${y}年${parseInt(m)}月分のデータ（${snap.size}件）を削除しました。\n※いけてるナレッジ（💡）は削除されず、AIの学習に残り続けます。`);
 renderDeleteMonthOptions(); 
 }
 
